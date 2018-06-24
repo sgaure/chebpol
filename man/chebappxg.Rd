@@ -1,0 +1,88 @@
+\name{chebappxg}
+\alias{chebappxg}
+\alias{chebappxgf}
+\title{Interpolation on a non-Chebyshev grid}
+\description{
+  A poor-man's approximation on non-Chebyshev grids.
+  If you for some reason can't evaluate your function on a
+  Chebyshev-grid, but instead have some other grid which still is a
+  Cartesian product of one-dimensional grids, you may use this function
+  to create an interpolation.
+}
+
+\usage{
+chebappxg(val, grid=NULL, mapdim=NULL)
+chebappxgf(fun, grid, ..., mapdim=NULL) 
+}
+
+\arguments{
+\item{val}{Array. Function values on a grid.}
+\item{grid}{A list. Each element is a sorted vector of grid-points for a
+  dimension. These need not be Chebyshev-knots, nor evenly spaced.}
+\item{fun}{The function to be approximated.}
+\item{...}{Further arguments to \code{fun}.}
+\item{mapdim}{Deprecated.}
+}
+
+
+\value{
+A \code{function(x)} defined on the hypercube, approximating the given
+function.
+}
+
+\details{
+
+  A call \code{fun <- chebappxg(val,grid)} does the following.  A
+  Chebyshev interpolation \code{ch} for \code{val} is created, on the
+  [-1,1] hypercube.  For each dimension a grid-map function \code{gm} is
+  created which maps the grid-points monotonically into Chebyshev
+  knots. For this, the function \code{\link{splinefun}} with
+  \code{method='monoH.FC'} is used.
+  When \code{fun(x)} is called, it translates to \code{ch(gm(x))}.
+  For uniform grids, the function \code{\link{ucappx}}
+  will produce a faster interpolation in that a closed form \code{gm} is used.
+
+  \code{chebappxgf} is used if the function, rather than its values, is
+  available. The function will be evaluated on the grid.
+
+  Even though this approach works in simple cases it is not a panacea.
+  The grid in each dimension should probably not be too irregularly
+  spaced. I.e. short and long gaps interspersed is likely to cause
+  problems.
+}
+
+\examples{
+## evenly spaced grid-points
+su <- seq(0,1,length.out=10)
+## irregularly spaced grid-points
+s <- su^3
+## create approximation on the irregularly spaced grid
+ch <- Vectorize(chebappxg(exp(s),list(s)))
+## test it:
+ch(su) - exp(su)
+# try one with three variables
+f <- function(x) exp(-sum(x^2))
+grid <- list(s,su,su^2)
+ch2 <- chebappxg(evalongrid(f,grid=grid),grid)
+# test it at 10 random points
+replicate(10,{a<-runif(3); ch2(a)-f(a)})
+
+# Try Runge's function on a uniformly spaced grid.
+# Ordinary polynomial fitting of high degree of Runge's function on a uniform grid
+# creates large oscillations near the end of the interval. Not so with chebappxgf
+f <- function(x) 1/(1+25*x^2)
+chg <- Vectorize(chebappxgf(f,seq(-1,1,length.out=15)))
+# also compare with Chebyshev interpolation
+ch <- Vectorize(chebappxf(f,15))
+\dontrun{
+ # plot it
+ s <- seq(-1,1,length.out=200)
+ plot(s, f(s), type='l', col='black')
+ lines(s, chg(s), col='blue')
+ lines(s, ch(s), col='red')
+ legend('topright',
+        legend=c('Runge function','chebappxg on uniform grid','Chebyshev'),
+        col=c('black','blue','red'), lty=1)
+}
+
+}

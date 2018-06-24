@@ -1,0 +1,211 @@
+
+R Under development (unstable) (2018-06-19 r74917) -- "Unsuffered Consequences"
+Copyright (C) 2018 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library(chebpol)
+> 
+> cat("Have FFTW:",havefftw(),'\n')
+Have FFTW: TRUE 
+> set.seed(42)
+> 
+> a <- array(rnorm(24),c(x=2,y=3,z=4))
+> chebcoef(a)
+, , 1
+
+          [,1]       [,2]        [,3]
+[1,] 0.1163838 -0.1845058 -0.05441405
+[2,] 0.1003040 -0.1881047 -0.34460793
+
+, , 2
+
+          [,1]      [,2]       [,3]
+[1,] 0.6814540 0.1657732 -0.1698602
+[2,] 0.7366121 1.1906619  0.9207479
+
+, , 3
+
+           [,1]         [,2]       [,3]
+[1,] -0.1722693 -0.076893692  0.4553401
+[2,] -0.3912158 -0.007852942 -0.3644832
+
+, , 4
+
+            [,1]       [,2]       [,3]
+[1,] -0.71622274  0.6073009 -0.6756479
+[2,]  0.02286217 -0.8479831  1.1899382
+
+> 
+> if(havefftw()) {
++ # A long one-dimensional
++ f <- function(x) ifelse(x==0,0,sin(1/x))
++ ch <- chebappxf(f,dims=50000)
++ cat('Long test:',ch(0.03),f(0.03),ch(0.031),f(0.031),'\n')
++ }
+Long test: 0.9400964 0.9405296 0.7465345 0.7460684 
+> f <- function(x) exp(-sum(x^2))
+> 
+> dims <- c(8,7,6)
+> ch <- chebappxf(f,dims)
+> s <- runif(3,-1,1)
+> ch(s)-f(s)
+[1] 0.0008013977
+> iv <- list(c(1,2),c(1,4),c(1,3))
+> ch <- chebappxf(f,dims,iv)
+> s <- c(1.4,2.3,1.9)
+> ch(s) - f(s)
+[1] -3.115592e-06
+> a <- c(1.01,1.01,1.01) ; ch(a)- f(a)
+[1] 0.0001730159
+> 
+> sum(evalongrid(f,dims))
+[1] 90.17567
+> # vector valued function
+> g <- function(x) c(sum(x),prod(x),exp(-sum(x^2)))
+> gv <- evalongrid(g,dims)
+> sum(gv)
+[1] 90.17567
+> dim(gv)
+[1] 3 8 7 6
+> 
+> 
+> chebknots(17)
+[[1]]
+ [1]  0.9957342  0.9618256  0.8951633  0.7980172  0.6736956  0.5264322
+ [7]  0.3612417  0.1837495  0.0000000 -0.1837495 -0.3612417 -0.5264322
+[13] -0.6736956 -0.7980172 -0.8951633 -0.9618256 -0.9957342
+
+> chebknots(c(x=3,y=4,z=5))
+$x
+[1]  0.8660254  0.0000000 -0.8660254
+
+$y
+[1]  0.9238795  0.3826834 -0.3826834 -0.9238795
+
+$z
+[1]  0.9510565  0.5877853  0.0000000 -0.5877853 -0.9510565
+
+> # test chebappxg
+> ## evenly spaced grid-points
+> su <- seq(0,1,length.out=10)
+> ## irregularly spaced grid-points
+> s <- su^3
+> ## create approximation on the irregularly spaced grid
+> ch <- Vectorize(chebappxg(exp(s),list(s)))
+> ## test it:
+> r <- runif(1); cat('true:',exp(r),'appx:',ch(r),'\n')
+true: 1.414461 appx: 1.422548 
+> 
+> #multivariate chebappxg
+> su <- seq(0,1,length.out=11)
+> grid <- list(su,su^2,su^3)
+> dims <- lapply(grid,length)
+> 
+> fv <- structure(apply(expand.grid(grid),1,f),dim=lapply(grid,length))
+> ch <- chebappxg(fv,grid)
+> s <- runif(3)
+> cat('true:',f(s),'appx:',ch(s),'\n')
+true: 0.4602206 appx: 0.461231 
+> 
+> # multi linear
+> s <- runif(3)
+> lip <- mlappx(fv,grid)
+> cat('true',f(s), 'appx:', ch(s), 'lip:',lip(s),'\n')
+true 0.3503825 appx: 0.3504539 lip: 0.349812 
+> 
+> # test dct transform
+> a <- array(rnorm(24),c(2,3,4))
+> chebcoef(a,TRUE)
+, , 1
+
+           [,1]      [,2]      [,3]
+[1,] -26.939001 -12.66278  18.24154
+[2,]  -8.272854   5.52333 -22.87475
+
+, , 2
+
+          [,1]      [,2]       [,3]
+[1,] -20.39115 -11.25950 -13.274138
+[2,] -13.14882 -16.08393  -4.362152
+
+, , 3
+
+          [,1]     [,2]       [,3]
+[1,]  66.94581 10.32754 -35.067934
+[2,] -15.66932 25.56388   5.373858
+
+, , 4
+
+          [,1]      [,2]      [,3]
+[1,] 21.410472  21.72729 -5.768413
+[2,] -3.574685 -15.15039  7.594488
+
+> 
+> # uniform grid stuff
+> # Runge function
+> f <- function(x) 1/(1+25*x^2)
+> grid <- seq(-1,1,length.out=15)
+> val <- f(grid)
+> uc <-ucappx(val)
+> # and the Chebyshev
+> ch <- chebappxf(f,15)
+> # test it at 10 random points
+> a <- runif(10)
+> cbind(uc(a),ch(a),sapply(a,f))
+            [,1]       [,2]       [,3]
+ [1,] 0.06407441 0.06621382 0.06809834
+ [2,] 0.06617528 0.06360246 0.06924614
+ [3,] 0.11594828 0.14931919 0.12230914
+ [4,] 0.99988501 0.99991029 0.99987086
+ [5,] 0.10352571 0.08572641 0.09736984
+ [6,] 0.05097054 0.07112733 0.05403676
+ [7,] 0.06067062 0.07089625 0.06613908
+ [8,] 0.15828227 0.18932872 0.16328805
+ [9,] 0.11594099 0.14929661 0.12229764
+[10,] 0.11554411 0.14804100 0.12166423
+> 
+> uc <- ucappxf(f,15,intervals=c(-1,1))
+> a <- runif(1,-1,1)
+> uc(a); ch(a); f(a)
+[1] 0.03903988
+[1] 0.03002706
+[1] 0.03866661
+> 
+> #polyharmonic splines
+> f <- function(x) 10/(10+sum(sqrt(x)))
+> knots <- matrix(runif(6000,0,20), 6)
+> phs <- polyh(f, knots, 3)
+> round(fivenum(phs(knots)-apply(knots,2,f)),6)
+[1] 0 0 0 0 0
+> # test it in a random point
+> a <- runif(6,0,20)
+> f(a); phs(a)
+[1] 0.3536114
+[1] 0.3539679
+> phs <- polyh(f,knots,5,FALSE); nphs <- polyh(f,knots,5,TRUE)
+Warning message:
+In polyh(f, knots, 5, FALSE) :
+  Failed to fit exactly, fallback to least squares fit. You could try normalize=TRUE.
+> phs(a); nphs(a)
+[1] 0.3537533
+[1] 0.3539086
+> phs <- polyh(f,knots,-1,FALSE); nphs <- polyh(f,knots,-1,TRUE)
+> phs(a); nphs(a)
+[1] 0.3561987
+[1] 0.3523617
+> 
+> proc.time()
+   user  system elapsed 
+  8.850   6.346   4.919 

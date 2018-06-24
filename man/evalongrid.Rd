@@ -1,0 +1,66 @@
+\name{evalongrid}
+\alias{evalongrid}
+\title{Evaluate a function on a grid}
+\concept{Chebyshev polynomial}
+\description{
+  Evaluate a function on a Chebyshev grid, or on a user-specified grid.
+}
+
+\usage{
+evalongrid(fun, dims, intervals=NULL, ..., grid=NULL)
+}
+
+\arguments{
+\item{fun}{Multivariate real-valued function to be evaluated. Must be defined on the
+hypercube described by \code{intervals}.}
+\item{dims}{A vector of integers. The number of grid-points in each dimension.}
+\item{intervals}{A list. Each entry is a vector of length 2 with
+  the lower and upper end of the interval in each dimension.}
+\item{...}{Further arguments to fun.}
+\item{grid}{Rather than specifying dims and intervals to get a Chebyshev
+  grid, you may specify your own \code{grid} as a list of vectors whose Cartesian
+  product will be the grid, as in \code{expand.grid(grid)}.}
+}
+
+\value{
+An array with the value of \code{fun} on each grid point. The \code{dim}
+attribute has been appropriately set for the grid.  If \code{fun}
+returns a vector, this will be the first dimension of the returned array.
+}
+
+\details{
+  The function \code{fun} should be a \code{function(x,...)}, where
+  \code{length(x)} equals \code{length(dims)} (or \code{length(grid)}).
+
+  If \code{grid} is provided, \code{fun} is evaluated on each point in
+  the Cartesian product of the vectors in \code{grid}.
+
+  If \code{intervals} is not provided, it is assumed that the
+  domain of the function is the hypercube [-1,1] x [-1,1] x ... x [-1,1].  
+  Thus, the function is evaluated on a standard Chebyshev grid.
+
+  If \code{intervals} is provided, it should be a \code{list} with
+  elements of length 2, providing minimum and maximum for each
+  dimension. 
+
+  The grid itself may be produced by
+  \code{expand.grid(\link{chebknots}(dims,intervals))}, or
+  \code{expand.grid(grid)}. 
+
+  This function does the same as \code{apply(expand.grid(grid),1,fun)}, but it's
+  faster and more memory-efficient for large grids because it does not actually expand the grid.
+}
+
+\examples{
+f <- function(x) {a <- sum(x^2); ifelse(a == 0,0,exp(-1/a))}
+## Standard Chebyshev grid
+evalongrid(f,dims=c(3,5))
+## Then Chebyshev on [0,1] x [2,3]
+evalongrid(f,dims=c(3,5),intervals=list(c(0,1),c(2,3)))
+## And on my own grid
+grid <- list(rnorm(3),rnorm(5))
+evalongrid(f,grid=grid)
+## vector valued function
+f <- function(x) c(prod(x),sum(x^2))
+evalongrid(f,grid=grid)
+}

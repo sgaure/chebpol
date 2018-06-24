@@ -1,0 +1,81 @@
+\name{chebappx}
+\alias{chebappx}
+\alias{chebappxf}
+\title{Chebyshev interpolation on a hypercube}
+\concept{Chebyshev polynomial}
+\description{
+  Given function, or function values on a Chebyshev grid, create an
+  interpolatin function defined in the whole hypercube.
+}
+\usage{
+chebappx(val, intervals=NULL)
+chebappxf(fun, dims, intervals=NULL, ...)
+}
+
+\arguments{
+\item{val}{The function values on the Chebyshev grid. \code{val} should be an
+  array with appropriate dimension attribute.}
+\item{intervals}{A list of minimum and maximum values. One for each
+  dimension of the hypercube. If NULL, assume [-1,1] in each dimension.}
+\item{fun}{The function to be approximated.}
+\item{dims}{Integer. The number of Chebyshev points in each dimension.}
+\item{...}{Further arguments to \code{fun}.}
+
+}
+\value{
+A function defined on the hypercube. A Chebyshev
+approximation to the function \code{fun}, or the values provided in \code{val}.
+}
+
+\details{
+  If \code{intervals} is not provided, it is assumed that the
+  domain of the function is the Cartesian product [-1,1] x [-1,1] x
+  ... x [-1,1].  Where the number of grid-points are given by
+  \code{dim(val)}.
+
+  For \code{chebappxf}, the function is provided instead, and the number of
+  grid points in each dimension is in the vector \code{dims}. The
+  function is evaluated on the Chebyshev grid.
+
+  If \code{intervals} is provided, it should be a \code{list} with
+  elements of length 2, providing minimum and maximum for each
+  dimension. Arguments to the function will be transformed from these
+  intervals into [-1,1] intervals.
+
+  The approximation function may be evaluated outside the hypercube, but
+  be aware that it may be highly erratic there, especially if of high
+  degree.
+}
+
+\examples{
+f <- function(x) exp(-sum(x^2))
+## we want 3 dimensions, i.e. something like
+## f(x,y,z) = exp(-(x^2 + y^2 + z^2))
+## 8 points in each dimension
+gridsize <- list(8,8,8)
+# get the function values on the Chebyshev grid
+values <- evalongrid(f,gridsize)
+# make an approximation
+ch <- chebappx(values)
+## test it:
+a <- runif(3,-1,1);ch(a)-f(a)
+
+## then one with domain [0.1,0.3] x [-1,-0.5] x [0.5,2]
+intervals <- list(c(0.1,0.3),c(-1,-0.5),c(0.5,2))
+# evaluate on the grid
+values <- evalongrid(f,gridsize,intervals)
+# make an approximation
+ch2 <- chebappx(values,intervals)
+a <- c(0.25,-0.68,1.43); ch2(a)-f(a)
+# outside of domain:
+a <- runif(3) ; ch2(a); f(a)
+
+# Make a function on [0,2] x [0,1]
+f <- function(y) uniroot(function(x) x-y[[1]]*cos(pi*x^2),lower=0,upper=1)$root*sum(y^2)
+# approximate it
+ch <- chebappxf(f,c(12,12),intervals=list(c(0,2),c(0,1)))
+
+# test it:
+a <- c(runif(1,0,2),runif(1,0,1)); ch(a); f(a)
+
+}

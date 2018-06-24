@@ -1,0 +1,16 @@
+Package: chebpol
+Version: 1.4
+Date: 2018-06-22
+Title: Multivariate Chebyshev Interpolation
+Author: Simen Gaure, Ragnar Frisch Centre for Economic Research, Oslo, Norway
+Maintainer: Simen Gaure <Simen.Gaure@frisch.uio.no>
+Copyright: 2013, Simen Gaure
+Imports: compiler, stats
+Suggests: 
+Description: Contains methods for creating multivariate Chebyshev
+  approximations of functions on a hypercube. Some methods for
+  non-Chebyshev grids are also provided, as well as an experimental
+  polyharmonic spline.
+License: Artistic-2.0
+Classification/MSC: 41A05, 41A10, 41A50, 41A63, 65D05, 65T40
+Classification/ACM: G.1.2

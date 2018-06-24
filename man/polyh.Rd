@@ -1,0 +1,61 @@
+
+\name{polyh}
+\alias{polyh}
+\title{Polyharmonic splines on scattered data}
+\concept{Polyharmonic splines}
+\description{
+Polyharmonic splines on scattered data.
+}
+
+\usage{
+  polyh(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) 
+}
+
+\arguments{
+\item{val}{array or function. Function values on scattered data, or the function
+  itself.}
+\item{knots}{matrix. Each column is a point in an M-dimensional space.}
+\item{k}{positive integer or negative numeric. The degree of the polyharmonic spline.}
+\item{normalize}{logical, vector or matrix. Should coordinates be normalized?}
+\item{nowarn}{logical. Avoid warning about fallback to least squares fit.}
+\item{...}{Further arguments to the function, if \code{is.function(val)}.}
+}
+
+
+
+\value{
+A \code{function(x)} defined on the multidimensional space, approximating the given
+function. 
+}
+
+\details{
+  \code{polyh} fits a polyharminc spline with radial basis function \code{x^k} for odd
+  \code{k}, and \code{x^k log(x)} for even \code{k}. If \code{k < 0},
+  the basis \code{exp(k x^2)} is used. There are more details in a vignette.
+
+  If \code{val} is a function it will be evaluated on the knots.
+
+  \code{normalize} can be used to change the scaling on the space. Set
+  \code{normalize=TRUE} to do an affine transformation on the knots 
+  into the unit hybercube. The default is to transform if any of the
+  knot-coordinates are outside the interval \eqn{[0,1]}. You may also
+  specify \code{normalize} as an \eqn{M x 2} matrix, where the
+  columns \eqn{a} and \eqn{b} are used for the normalization: \eqn{x -> a*(x-b)}.
+  \code{normalize} can be set to a vector of length 2 \code{c(a, b)} if
+  the same normalization should apply in each dimension.
+  Set \code{normalize=FALSE} if you do not want any scaling.
+
+}
+
+\examples{
+# a function on a 20-dimensional space
+r <- runif(20)
+r <- r/sum(r)
+f <- function(x) 1/mean(log1p(r*x))
+# 1000 random knots 
+knots <- matrix(runif(20000), 20)
+phs <- polyh(f, knots, 3)
+# test it in a random point
+s <- runif(20)
+c(true=f(s), phs(s))
+}  

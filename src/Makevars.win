@@ -1,0 +1,2 @@
+PKG_CPPFLAGS=-I$(LIB_FFTW)/include -DHAVE_FFTW
+PKG_LIBS=-L$(LIB_FFTW)/lib -l fftw3

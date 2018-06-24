@@ -1,0 +1,471 @@
+
+R Under development (unstable) (2018-06-19 r74917) -- "Unsuffered Consequences"
+Copyright (C) 2018 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> pkgname <- "chebpol"
+> source(file.path(R.home("share"), "R", "examples-header.R"))
+> options(warn = 1)
+> library('chebpol')
+> 
+> base::assign(".oldSearch", base::search(), pos = 'CheckExEnv')
+> base::assign(".old_wd", base::getwd(), pos = 'CheckExEnv')
+> cleanEx()
+> nameEx("chebappx")
+> ### * chebappx
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: chebappx
+> ### Title: Chebyshev interpolation on a hypercube
+> ### Aliases: chebappx chebappxf
+> 
+> ### ** Examples
+> 
+> f <- function(x) exp(-sum(x^2))
+> ## we want 3 dimensions, i.e. something like
+> ## f(x,y,z) = exp(-(x^2 + y^2 + z^2))
+> ## 8 points in each dimension
+> gridsize <- list(8,8,8)
+> # get the function values on the Chebyshev grid
+> values <- evalongrid(f,gridsize)
+> # make an approximation
+> ch <- chebappx(values)
+> ## test it:
+> a <- runif(3,-1,1);ch(a)-f(a)
+[1] 0.0001568667
+> 
+> ## then one with domain [0.1,0.3] x [-1,-0.5] x [0.5,2]
+> intervals <- list(c(0.1,0.3),c(-1,-0.5),c(0.5,2))
+> # evaluate on the grid
+> values <- evalongrid(f,gridsize,intervals)
+> # make an approximation
+> ch2 <- chebappx(values,intervals)
+> a <- c(0.25,-0.68,1.43); ch2(a)-f(a)
+[1] 8.363761e-07
+> # outside of domain:
+> a <- runif(3) ; ch2(a); f(a)
+[1] 0.1903552
+[1] 0.1877543
+> 
+> # Make a function on [0,2] x [0,1]
+> f <- function(y) uniroot(function(x) x-y[[1]]*cos(pi*x^2),lower=0,upper=1)$root*sum(y^2)
+> # approximate it
+> ch <- chebappxf(f,c(12,12),intervals=list(c(0,2),c(0,1)))
+> 
+> # test it:
+> a <- c(runif(1,0,2),runif(1,0,1)); ch(a); f(a)
+[1] 2.509817
+[1] 2.509777
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("chebappxg")
+> ### * chebappxg
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: chebappxg
+> ### Title: Interpolation on a non-Chebyshev grid
+> ### Aliases: chebappxg chebappxgf
+> 
+> ### ** Examples
+> 
+> ## evenly spaced grid-points
+> su <- seq(0,1,length.out=10)
+> ## irregularly spaced grid-points
+> s <- su^3
+> ## create approximation on the irregularly spaced grid
+> ch <- Vectorize(chebappxg(exp(s),list(s)))
+> ## test it:
+> ch(su) - exp(su)
+ [1] -2.220446e-16  3.804695e-03 -5.424556e-03  6.341634e-03  4.522374e-03
+ [6] -1.544399e-02 -1.190520e-02  1.992675e-02 -4.439449e-03 -4.440892e-16
+> # try one with three variables
+> f <- function(x) exp(-sum(x^2))
+> grid <- list(s,su,su^2)
+> ch2 <- chebappxg(evalongrid(f,grid=grid),grid)
+> # test it at 10 random points
+> replicate(10,{a<-runif(3); ch2(a)-f(a)})
+ [1]  8.377946e-05  6.577535e-03  5.321314e-03  9.687016e-04  1.436275e-03
+ [6]  1.209477e-03  2.925543e-03  8.674698e-04  1.073945e-03 -1.175096e-04
+> 
+> # Try Runge's function on a uniformly spaced grid.
+> # Ordinary polynomial fitting of high degree of Runge's function on a uniform grid
+> # creates large oscillations near the end of the interval. Not so with chebappxgf
+> f <- function(x) 1/(1+25*x^2)
+> chg <- Vectorize(chebappxgf(f,seq(-1,1,length.out=15)))
+> # also compare with Chebyshev interpolation
+> ch <- Vectorize(chebappxf(f,15))
+> ## Not run: 
+> ##D  # plot it
+> ##D  s <- seq(-1,1,length.out=200)
+> ##D  plot(s, f(s), type='l', col='black')
+> ##D  lines(s, chg(s), col='blue')
+> ##D  lines(s, ch(s), col='red')
+> ##D  legend('topright',
+> ##D         legend=c('Runge function','chebappxg on uniform grid','Chebyshev'),
+> ##D         col=c('black','blue','red'), lty=1)
+> ## End(Not run)
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("chebcoef")
+> ### * chebcoef
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: chebcoef
+> ### Title: Compute Chebyshev-coefficients given values on a Chebyshev grid
+> ### Aliases: chebcoef
+> 
+> ### ** Examples
+> 
+> ## Coefficients for a 2x3x4 grid
+> a <- array(rnorm(24),dim=c(2,3,4))
+> chebcoef(a)
+, , 1
+
+          [,1]        [,2]       [,3]
+[1,] 0.1498669 -0.07659978 -0.3265277
+[2,] 0.2293711 -0.26699621  0.2723339
+
+, , 2
+
+            [,1]       [,2]      [,3]
+[1,]  0.02886557 -0.2670725 0.3237704
+[2,] -0.49434553 -0.3299901 0.3834465
+
+, , 3
+
+            [,1]       [,2]       [,3]
+[1,] -0.09087167  0.7978719 -0.2871602
+[2,] -0.26820518 -0.7184146  0.8180705
+
+, , 4
+
+           [,1]       [,2]        [,3]
+[1,] -0.3692321 -0.5930184 -0.46615590
+[2,] -0.1982481  0.7308040  0.05486654
+
+> 
+> 
+> 
+> cleanEx()
+> nameEx("chebeval")
+> ### * chebeval
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: chebeval
+> ### Title: Evaluate a Chebyshev interpolation in a point
+> ### Aliases: chebeval
+> 
+> ### ** Examples
+> 
+> # make a function which is known to be unsuitable for Chebyshev approximation
+> f <- function(x) sign(x)
+> # make a standard Chebyshev interpolation
+> ch <- Vectorize(chebappxf(f,50))
+> # then do a truncated interpolation
+> val <- evalongrid(f,50)
+> coef <- chebcoef(val)
+> # truncate the high frequencies
+> coef[-(1:10)] <- 0
+> # make a truncated approximation
+> tch <- Vectorize(function(x) chebeval(x,coef))
+> # make a lower degree also
+> ch2 <- Vectorize(chebappxf(f,10))
+> # plot the functions
+> ## Not run: 
+> ##D s <- seq(-1,1,length.out=400)
+> ##D plot(s,ch(s),col='red',type='l')
+> ##D lines(s,tch(s),col='blue')
+> ##D lines(s,f(s))
+> ##D lines(s,ch2(s),col='green')
+> ## End(Not run)
+> 
+> 
+> 
+> cleanEx()
+> nameEx("chebknots")
+> ### * chebknots
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: chebknots
+> ### Title: Create a Chebyshev-grid
+> ### Aliases: chebknots
+> 
+> ### ** Examples
+> 
+> ## Standard knots for degree 3
+> chebknots(4)
+[[1]]
+[1]  0.9238795  0.3826834 -0.3826834 -0.9238795
+
+> ## Knots in the interval [2,3] for degree 3
+> chebknots(4,interval=c(2,3))
+[[1]]
+[1] 2.961940 2.691342 2.308658 2.038060
+
+> ## Multivariate knots
+> chebknots(c(x=3,y=4,z=3))
+$x
+[1]  0.8660254  0.0000000 -0.8660254
+
+$y
+[1]  0.9238795  0.3826834 -0.3826834 -0.9238795
+
+$z
+[1]  0.8660254  0.0000000 -0.8660254
+
+> ## Multivariate grid
+> ## Not run: 
+> ##D expand.grid(chebknots(c(x=3,y=4,z=5), list(c(1,3), c(4,6), c(800,900))))
+> ## End(Not run)
+> 
+> 
+> 
+> cleanEx()
+> nameEx("chebpol-package")
+> ### * chebpol-package
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: chebpol-package
+> ### Title: Methods for creating multivariate Chebyshev interpolations on
+> ###   hypercubes
+> ### Aliases: chebpol-package chebpol
+> ### Keywords: DCT Discrete Cosine Transform Chebyshev approximation
+> 
+> ### ** Examples
+> 
+> ## make some function values on a 50x50x50 grid
+> dims <- c(x=50,y=50,z=50)
+> f <- function(x) sqrt(1+x[1])*exp(x[2])*sin(5*x[3])^2
+> value <- evalongrid(f , dims)
+> ##fit a Chebyshev approximation to it. Note that the value-array contains the
+> ##grid-structure. 
+> ch <- chebappx(value)
+> ## To see the full grid, use the chebknots function and expand.grid
+> ## Not run: 
+> ##D head(cbind(expand.grid(chebknots(dims)), value=as.numeric(value),
+> ##D       appx=as.numeric(evalongrid(ch,dims))))
+> ## End(Not run)
+> ## evaluate between the grid points
+> m <- matrix(runif(15,-1,1),3)
+> ch(m)
+[1] 0.250111290 0.413217773 1.751485082 0.001678273 0.170949761
+> apply(m,2,f)
+[1] 0.250114652 0.413216825 1.751484232 0.001678009 0.170950464
+> ch(c(-0.3,0.2,0.16))
+[1] 0.5258745
+> 
+> 
+> 
+> cleanEx()
+> nameEx("evalongrid")
+> ### * evalongrid
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: evalongrid
+> ### Title: Evaluate a function on a grid
+> ### Aliases: evalongrid
+> 
+> ### ** Examples
+> 
+> f <- function(x) {a <- sum(x^2); ifelse(a == 0,0,exp(-1/a))}
+> ## Standard Chebyshev grid
+> evalongrid(f,dims=c(3,5))
+          [,1]       [,2]      [,3]       [,4]      [,5]
+[1,] 0.5463972 0.40138578 0.2635971 0.40138578 0.5463972
+[2,] 0.3310212 0.05533071 0.0000000 0.05533071 0.3310212
+[3,] 0.5463972 0.40138578 0.2635971 0.40138578 0.5463972
+> ## Then Chebyshev on [0,1] x [2,3]
+> evalongrid(f,dims=c(3,5),intervals=list(c(0,1),c(2,3)))
+          [,1]      [,2]      [,3]      [,4]      [,5]
+[1,] 0.9022755 0.8911381 0.8689764 0.8400496 0.8177098
+[2,] 0.8959733 0.8832618 0.8574039 0.8224805 0.7945613
+[3,] 0.8932498 0.8798220 0.8522416 0.8144193 0.7837026
+> ## And on my own grid
+> grid <- list(rnorm(3),rnorm(5))
+> evalongrid(f,grid=grid)
+          [,1]         [,2]      [,3]       [,4]      [,5]
+[1,] 0.7114564 0.1358873144 0.3912427 0.20449284 0.3441803
+[2,] 0.6785477 0.0008872401 0.2430129 0.02507725 0.1777160
+[3,] 0.7346671 0.2895616943 0.4823146 0.34351197 0.4474245
+> ## vector valued function
+> f <- function(x) c(prod(x),sum(x^2))
+> evalongrid(f,grid=grid)
+, , 1
+
+           [,1]      [,2]      [,3]
+[1,] -0.9993697 0.2929627 -1.333062
+[2,]  2.9373652 2.5786457  3.243196
+
+, , 2
+
+           [,1]      [,2]       [,3]
+[1,] -0.2064214 0.0605119 -0.2753461
+[2,]  0.5010197 0.1423002  0.8068505
+
+, , 3
+
+          [,1]       [,2]      [,3]
+[1,] 0.5139855 -0.1506735 0.6856069
+[2,] 1.0656127  0.7068932 1.3714435
+
+, , 4
+
+           [,1]       [,2]       [,3]
+[1,] -0.3053518 0.08951309 -0.4073097
+[2,]  0.6300315 0.27131195  0.9358623
+
+, , 5
+
+           [,1]      [,2]       [,3]
+[1,] -0.4625263 0.1355884 -0.6169652
+[2,]  0.9375677 0.5788482  1.2433985
+
+> 
+> 
+> 
+> cleanEx()
+> nameEx("mlappx")
+> ### * mlappx
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: mlappx
+> ### Title: Multilinear interpolation on a grid
+> ### Aliases: mlappx mlappxf
+> 
+> ### ** Examples
+> 
+> ## evenly spaced grid-points
+> su <- seq(0,1,length.out=10)
+> ## irregularly spaced grid-points
+> s <- su^3
+> ## create approximation on the irregularly spaced grid
+> ml1 <- Vectorize(mlappx(exp,list(s)))
+> ## test it, since exp is convex, the linear approximation lies above
+> ## the exp between the grid points
+> ml1(su) - exp(su)
+ [1] 0.0000000000 0.0007963441 0.0023666771 0.0036681447 0.0028930495
+ [6] 0.0111173403 0.0064666457 0.0191999204 0.0246303860 0.0000000000
+> 
+> ## multi linear approx
+> f <- function(x) exp(sum(x^2))
+> grid <- list(s,su)
+> 
+> ml2 <- mlappx(evalongrid(f,grid=grid),grid)
+> # an equivalent would be ml2 <- mlappx(f,grid)
+> 
+> a <- runif(2); ml2(a); f(a)
+[1] 1.240905
+[1] 1.232409
+> # we also get an approximation outside of the domain, of disputable quality
+> ml2(c(1,2)); f(c(1,2))
+[1] 19.97883
+[1] 148.4132
+> 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("polyh")
+> ### * polyh
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: polyh
+> ### Title: Polyharmonic splines on scattered data
+> ### Aliases: polyh
+> 
+> ### ** Examples
+> 
+> # a function on a 20-dimensional space
+> r <- runif(20)
+> r <- r/sum(r)
+> f <- function(x) 1/mean(log1p(r*x))
+> # 1000 random knots 
+> knots <- matrix(runif(20000), 20)
+> phs <- polyh(f, knots, 3)
+> # test it in a random point
+> s <- runif(20)
+> c(true=f(s), phs(s))
+    true          
+39.62214 39.45326 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("ucappx")
+> ### * ucappx
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: ucappx
+> ### Title: Interpolation on a uniform grid
+> ### Aliases: ucappx ucappxf
+> 
+> ### ** Examples
+> 
+> # Runge function
+> f <- function(x) 1/(1+25*x^2)
+> grid <- seq(-1,1,length.out=15)
+> val <- f(grid)
+> uc <- Vectorize(ucappx(val))
+> # and the Chebyshev
+> ch <- Vectorize(chebappxf(f,15))
+> # test it at 10 random points
+> t(replicate(10,{a<-runif(1,-1,1); c(arg=a, uc=uc(a), true=f(a), cheb=ch(a))}))
+             arg         uc       true       cheb
+ [1,] -0.4689827 0.14635393 0.15387885 0.18554061
+ [2,] -0.2557522 0.37189960 0.37947356 0.34624091
+ [3,]  0.1457067 0.65252118 0.65326974 0.69263291
+ [4,]  0.8164156 0.05101065 0.05661437 0.07971810
+ [5,] -0.5966361 0.10547895 0.10101656 0.09598420
+ [6,]  0.7967794 0.05221811 0.05927178 0.08218192
+ [7,]  0.8893505 0.05259894 0.04813800 0.03359016
+ [8,]  0.3215956 0.28711277 0.27889390 0.23413506
+ [9,]  0.2582281 0.36793014 0.37494700 0.34041615
+[10,] -0.8764275 0.05234288 0.04949729 0.04259415
+> 
+> 
+> 
+> ### * <FOOTER>
+> ###
+> cleanEx()
+> options(digits = 7L)
+> base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
+Time elapsed:  1.534 1.06 1.164 0 0 
+> grDevices::dev.off()
+null device 
+          1 
+> ###
+> ### Local variables: ***
+> ### mode: outline-minor ***
+> ### outline-regexp: "\\(> \\)?### [*]+" ***
+> ### End: ***
+> quit('no')
