@@ -14,3 +14,5 @@ Description: Contains methods for creating multivariate Chebyshev
 License: Artistic-2.0
 Classification/MSC: 41A05, 41A10, 41A50, 41A63, 65D05, 65T40
 Classification/ACM: G.1.2
+URL: https://github.com/sgaure/chebpol
+BugReports: https://github.com/sgaure/chebpol/issues
