@@ -29,7 +29,7 @@ function.
 }
 
 \details{
-  \code{polyh} fits a polyharminc spline with radial basis function \code{x^k} for odd
+  \code{polyh} fits a polyharmonic spline with radial basis function \code{x^k} for odd
   \code{k}, and \code{x^k log(x)} for even \code{k}. If \code{k < 0},
   the basis \code{exp(k x^2)} is used. There are more details in a vignette.
 

@@ -74,8 +74,11 @@ a <- runif(3) ; ch2(a); f(a)
 f <- function(y) uniroot(function(x) x-y[[1]]*cos(pi*x^2),lower=0,upper=1)$root*sum(y^2)
 # approximate it
 ch <- chebappxf(f,c(12,12),intervals=list(c(0,2),c(0,1)))
-
 # test it:
 a <- c(runif(1,0,2),runif(1,0,1)); ch(a); f(a)
 
+# Lambert's W:
+f <- function(y) uniroot(function(x) y - x*exp(x), lower=-1,upper=3)$root
+W <- chebappxf(f,100,c(-exp(-1),3*exp(3)))
+W(10*pi)*exp(W(10*pi))/pi
 }

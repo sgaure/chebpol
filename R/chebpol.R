@@ -4,6 +4,9 @@
   }
 }
 
+.onLoad <- function(libname,pkgname) {
+  options(chebpol.threads=1L)
+}
 
 # Chebyshev transformation.  I.e. coefficients for given function values in the knots.
 
@@ -43,10 +46,10 @@ chebcoef <- function(val, dct=FALSE) {
   structure(.Call(C_chebcoef,as.array(val),dct),dimnames=dimnames(val))
 }
 
-chebeval <- function(x,coef,intervals=NULL) {
-  if(is.null(intervals)) return(.Call(C_evalcheb,coef,x))
+chebeval <- function(x,coef,intervals=NULL,threads=getOption('chebpol.threads')) {
+  if(is.null(intervals)) return(.Call(C_evalcheb,coef,x,threads))
   # map into intervals
-  .Call(C_evalcheb,coef,mapply(function(x,i) 2*(x[[1]]-mean(i))/diff(i),x,intervals))
+  .Call(C_evalcheb,coef,mapply(function(x,i) 2*(x[[1]]-mean(i))/diff(i),x,intervals),threads)
 }
 
 # return a function which is a Chebyshev interpolation
@@ -58,23 +61,27 @@ chebappx <- function(val,intervals=NULL) {
   K <- length(dim(val))
    # allow for vector, e.g. intervals=c(0,1), put it inside list
   if(is.numeric(intervals) && length(intervals) == 2) intervals <- list(intervals)
-
   cf <- chebcoef(val)
-  x <- NULL; rm(x) # avoid cran check warning 
+
+  x <- threads <- NULL; rm(x,threads) # avoid cran check warning 
   if(is.null(intervals)) {
     # it's [-1,1] intervals, so drop transformation
-    fun <- structure(vectorfun(.Call(C_evalcheb,cf,x), K),arity=K)
+    fun <- structure(vectorfun(.Call(C_evalcheb,cf,x,threads), K,
+                               args=alist(x=,threads=getOption('chebpol.threads'))),
+                     arity=K)
     rm(val)
   } else {
     # it's intervals, create mapping into [-1,1]
     if(!is.list(intervals)) stop("intervals should be a list")
     if(any(sapply(intervals,length) != 2)) stop("interval elements should have length 2")
-    if(length(intervals) != length(dim(val))) stop("values should have the same dimension as intervals",
-               length(intervals),length(dim(val)))
+    if(length(intervals) != length(dim(val))) stop("values should have the same dimension as intervals ",
+               length(intervals),' ',length(dim(val)))
     ispan <- sapply(intervals,function(x) 2/diff(x))
     mid <- sapply(intervals,function(x) mean(x))
     imap <- cmpfun(function(x) (x-mid)*ispan)
-    fun <- structure(vectorfun(.Call(C_evalcheb,cf,imap(x)), K),
+
+    fun <- structure(vectorfun(.Call(C_evalcheb,cf,imap(x), threads), K,
+                               args=alist(x=,threads=getOption('chebpol.threads'))),
                      arity=length(dim(val)),domain=intervals)
     rm(val)
   }
@@ -105,7 +112,7 @@ chebappxg <- function(val,grid=NULL,mapdim=NULL) {
   # grid is a list of grid points. val is the values as in expand.grid(grid)
   # if grid is null it is assumed to be a chebyshev grid. The dimensions
   # must be present in val
-  x <- NULL; rm(x) # avoid cran check warning 
+  x <- threads <- NULL; rm(x,threads) # avoid cran check warning 
   if(is.null(grid)) return(chebappx(val))
   if(is.null(dim(val))) dim(val) <- length(val)
   if(!is.list(grid) && length(grid) == length(val)) grid <- list(grid)
@@ -125,7 +132,7 @@ chebappxg <- function(val,grid=NULL,mapdim=NULL) {
     apply(x,2,function(x) mapply(function(gm,x) gm(x),gridmaps,x))
   }
   ch <- chebappx(val)
-  structure(vectorfun(ch(gridmap(x)), length(grid)),
+  structure(vectorfun(ch(gridmap(x),threads), length(grid), args=alist(x=,threads=getOption('chebpol.threads'))),
             arity=length(grid),domain=intervals,grid=grid)
 }
 
@@ -143,7 +150,7 @@ chebappxgf <- function(fun, grid, ..., mapdim=NULL) {
 ugm <- function(x,n) sin(0.5*pi*x*(1-n)/n)
 
 ucappx <- function(val, intervals=NULL) {
-  x <- NULL; rm(x) # avoid cran check warning 
+  x <- threads <- NULL; rm(x,threads) # avoid cran check warning 
   if(is.null(dim(val))) dim(val) <- length(val)
   dims <- dim(val)
   ch <- chebappx(val)
@@ -158,7 +165,9 @@ ucappx <- function(val, intervals=NULL) {
   gm <- function(x) {
     if(is.matrix(x)) apply(x,2,gridmap) else gridmap(x)
   }
-  return(structure(vectorfun(ch(gm(x)), length(dims)), arity=length(dims)))
+  return(structure(vectorfun(ch(gm(x), threads), length(dims), 
+                             args=alist(x=,threads=getOption('chebpol.threads'))), 
+                   arity=length(dims)))
 }
 
 ucappxf <- function(fun, dims, intervals=NULL,...) {
@@ -173,7 +182,7 @@ ucappxf <- function(fun, dims, intervals=NULL,...) {
 }
 
 mlappx <- function(val, grid, ...) {
-  x <- NULL; rm(x) # avoid cran check warning 
+  x <- threads <- NULL; rm(x,threads) # avoid cran check warning 
   if(is.numeric(grid)) grid <- list(grid)
   if(is.function(val)) val <- evalongrid(val,grid=grid,...)
   gl <- prod(sapply(grid,length))
@@ -182,7 +191,8 @@ mlappx <- function(val, grid, ...) {
 #  if(adjust!=0) {
 #    val <- val + (val - .Call(C_predmlip,grid,as.numeric(val)))*adjust
 #  }
-  vectorfun(.Call(C_evalmlip,grid,as.numeric(val),x), length(grid))
+  vectorfun(.Call(C_evalmlip,grid,as.numeric(val),x,threads), length(grid), 
+            args=alist(x=,threads=getOption('chebpol.threads')))
 }
 
 havefftw <- function() .Call(C_havefftw)
@@ -241,6 +251,7 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
   # use abs when we call phi. The argument can't be negative, but numerically it can
   sqnm <- colSums(knots^2)
   #A <- phi(apply(knots,2, function(ck) colSums((ck-knots)^2)))
+#  A <- phi(.Call(C_sqdiffs,knots,knots))  
   # faster:
   A <- phi(abs(-2*crossprod(knots) + sqnm + rep(sqnm,each=N)))
   diag(A) <- phi(0) 
@@ -261,35 +272,42 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
   W <- NULL
   local(function(x) {
     if(is.vector(x) && length(x) == M) {
-      x <- normfun(x)
-      sum(w*phi(abs(-2*crossprod(x,knots) + sqnm + sum(x^2)))) + sum(v*c(1,x))
+      nx <- normfun(x)
+      sum(w*phi(abs(-2*crossprod(nx,knots) + sqnm + sum(nx^2)))) + sum(v*c(1,nx))
     } else {
       if(is.null(dim(x))) dim(x) <- c(M,length(x)/M)
       if(nrow(x) != M) stop('spline was built for dimension ',M,' not ',nrow(x))
-      apply(normfun(x),2,function(xx) sum(w*phi(abs(-2*crossprod(xx,knots) + sqnm + sum(xx^2)))) + sum(v*c(1,xx)))
+      nx <- normfun(x)
+      colSums(w*phi(abs(-2*crossprod(knots,nx) + sqnm + rep(colSums(nx^2),each=N)))) + colSums(v*rbind(1,nx))
     }
   }, list(w=w,v=v,knots=knots,phi=phi,sqnm=sqnm,M=M,normfun=normfun))
 }
 
 
-vectorfun <- function(e,arity) {
-  fun <- function(x) {}
-#  formals(f) <- eval(parse(text=sprintf('alist(%s=)',as.character(substitute(x)))))
+vectorfun <- function(e,arity,args=alist(x=)) {
+  fun <- function() {}
+  formals(fun) <- args
   body(fun) <- substitute(e)
   environment(fun) <- parent.frame()
   force(arity)
-  local(function(x) {
-    if(is.matrix(x)) return(fun(x))
-    if(length(x) == arity) return(fun(x))
-    if(arity == 1) return(fun(matrix(x,1)))
+  f <- local(function(x) {
+    mc <- match.call(expand.dots=TRUE)
+    mc[[1L]] <- quote(list)
+    arglist <- eval.parent(mc)
+    x <- arglist[[1]]
+    if(is.matrix(x) || length(x) == arity) return(do.call(fun,arglist))
+    if(arity == 1) {arglist[[1]] <- matrix(x,1); return(do.call(fun,arglist))}
     # try to coerce argument to matrix
     if(length(x) %% arity == 0) {
       numvec <- length(x) / arity
       if(numvec > 1)
         warning(sprintf('Coercing vector of length %d into %dx%d matrix',length(x),arity,numvec))
       dim(x) <- c(arity,numvec)
-      fun(x)
+      arglist[[1]] <- x
+      do.call(fun,arglist)
     } else
       stop(sprintf('Function should take %d arguments, you supplied a vector of length %d',arity,length(x)))
   }, list(fun=fun))
+  formals(f) <- args
+  f
 }

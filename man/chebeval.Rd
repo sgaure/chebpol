@@ -5,7 +5,7 @@
   Given Chebyshev coefficients, evaluate the interpolation in a point.
 }
 \usage{
-chebeval(x, coef, intervals=NULL)
+chebeval(x, coef, intervals=NULL, threads=getOption('chebpol.threads'))
 }
 
 \arguments{
@@ -14,6 +14,8 @@ chebeval(x, coef, intervals=NULL)
   \code{\link{chebcoef}}, possibly modified.}
 \item{intervals}{A list of minimum and maximum values. One for each
   dimension of the hypercube.}
+\item{threads}{And integer. In case \code{x} is a matrix of column
+  vectors, use this number of threads in parallel to evaluate.}
 }
 \value{
 A numeric. The interpolated value.

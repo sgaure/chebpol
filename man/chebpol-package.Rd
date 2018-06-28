@@ -56,7 +56,12 @@
   function on a grid (\code{\link{evalongrid}}), and a function for
   finding the Chebyshev coefficients (\code{\link{chebcoef}}).
 
-  All the functions generated accepts as an argument a matrix of column vectors.
+  All the functions generated accept as an argument a matrix of column
+  vectors. Except for the polyharmonic spline, the generated functions
+  also accept an argument \code{threads=getOption('chebpol.threads')} to
+  utilize more than one CPU if a matrix of column vectors is evaluated.
+  The polyharmonic spline will instead benefit from a multi-threaded
+  BLAS, such as Intel's MKL.
 }
 
 \examples{

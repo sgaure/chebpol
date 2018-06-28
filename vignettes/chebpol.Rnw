@@ -75,10 +75,9 @@ which simply evaluates \(f\) in the knots.
 
 Thus, given a function \(f\) we may compute its Chebyshev approximation and plot it:
 <<runge,echo=FALSE>>=
-pdf('crunge.pdf')
 library(chebpol)
 @ 
-<<runge>>=
+<<runge, fig=TRUE, png=TRUE>>=
 f <- function(x) cos(3*pi*x)/(1+25*(x-0.25)^2)
 ch <- chebappxf(f,15)
 s <- seq(-1,1,length.out=401)
@@ -87,12 +86,7 @@ lines(s,ch(s), col='red')
 kn <- chebknots(15)[[1]]
 points(kn,f(kn))
 @ 
-<<runge,echo=FALSE>>=
-invisible(dev.off())
-@ 
-\begin{center}
-  \includegraphics[width=\figsize]{crunge.pdf}
-\end{center}
+
 Even though there still are oscillations near the end points, 
 their amplitude will diminish as \(n\) grows.  The knots are the
 locations where the curves intersect.
@@ -141,7 +135,6 @@ invisible(dev.off())
   \includegraphics[width=\figsize]{ucrunge.pdf}
 \end{center}
 
-
 For the multivariate case, \code{ucappx} creates a separate map
 function \code{g} for each dimension, which may have different number of knots.
 One could imagine a case where
@@ -189,11 +182,7 @@ variant \code{chebappxgf}.
 In the multivariate case, it is assumed that the grid in each dimension is arbitrary,
 but the multi-dimensional grid is still a Cartesian product of these. 
 We may test this on a non-uniform grid.
-<<sqrt,echo=FALSE>>=
-library(chebpol)
-pdf('randgrid.pdf')
-@ 
-<<sqrt>>=
+<<sqrt,fig=TRUE,png=TRUE>>=
 f <- function(x) cos(3*pi*x)/(1+25*(x-0.25)^2)
 gr <- log(seq(exp(-1),exp(1),length=15))
 chg <- chebappxgf(f,gr)
@@ -201,12 +190,6 @@ plot(s, f(s), col='black', type='l')
 lines(s, chg(s), col='blue')
 points(gr,f(gr))
 @ 
-<<runge, echo=FALSE>>=
-invisible(dev.off())
-@ 
-\begin{center}
-  \includegraphics[width=\figsize]{randgrid.pdf}
-\end{center}
 
 \section{Multilinear interpolation}
 For demanding functions \pkg{chebpol} also contains a multilinear interpolation in \code{mlappx}. 
@@ -222,10 +205,7 @@ We try it out on an intricate function on \([-1,1]^4\) and
 evaluate the result along an intricate parametric curve.  Of course, if one is
 interested in this particular curve, one could interpolate along it instead. This is just an example of
 multilinear interpolation.
-<<ml,echo=FALSE>>=
-pdf('ml.pdf')
-@
-<<ml>>=
+<<ml,fig=TRUE,png=TRUE>>=
 f <- function(x) sign(sum(x^3)-0.1)*
                   sqrt(abs(25*prod(x)-4))/
                   (1+25*sum(x)^2)
@@ -240,12 +220,6 @@ wml <- sapply(s,function(x) ml(curve(x)))
 plot(s,wf,typ='l')  # function
 lines(s,wml,col='blue') # multilinear interpolation
 @ 
-<<ml,echo=FALSE>>=
-invisible(dev.off())
-@ 
-\begin{center}
-  \includegraphics[width=\figsize]{ml.pdf}
-\end{center}
 
 \section{Scattered data}
 In some cases multidimensional data points are not organized in a
@@ -253,34 +227,24 @@ grid, rather they are scattered.  For this case, there is an
 experimental implementation of polyharmonic splines in \code{polyh}.
 It accepts a function, or function values, and a
 matrix of centres (knots), one centre in each column. Here is a
-20-dimensional example with 1000 randomly placed knots:
+20-dimensional example with 3000 randomly placed knots:
 <<poly,echo=FALSE>>=
-set.seed(43)  # make sure we are reproducible
+set.seed(425)  # make sure we are reproducible
 @ 
 
-<<poly>>=
+<<poly,fig=TRUE,png=TRUE>>=
 r <- runif(20)
 r <- r/sum(r)
 f <- function(x) 1/mean(log1p(r*x))
-knots <- matrix(runif(20000), 20)
+knots <- matrix(runif(60000), 20)
 phs <- polyh(f, knots, 3)
 rr <- runif(20)
 curve <- function(x) abs(cos(5*pi*rr*x))
 s <- seq(0,1,length.out=1000)
-@ 
-<<poly,echo=FALSE>>=
-pdf('polyh.pdf')
-@ 
-<<poly>>=
 plot(s,sapply(s,function(x) f(curve(x))),typ='l')
 lines(s,sapply(s,function(x) phs(curve(x))),col='blue',lty=2)
 @ 
-<<poly, echo=FALSE>>=
-invisible(dev.off())
-@ 
-\begin{center}
-  \includegraphics[width=\figsize]{polyh.pdf}
-\end{center}
+
 \code{polyh(f,knots,k)} fits a function of the form \(P(x) =
 \sum_{i=1}^n w_i \phi(\|x-c_i\|) + L(x)+c\) such that \(P(c_i) =
 f(c_i)\) for each \(i\) where the \(c_i \in \RN^d\) are the knots,
@@ -304,7 +268,7 @@ parameter then may need to be tuned for the problem at hand. Note that \code{pol
 default transforms the knots and coordinates into a unit hypercube if any of the knots
 are outside, see the help entry for \code{polyh}.
 
-There do exist some accelleration schemes for low dimensions, but the current implementation
+There do exist some acceleration schemes for low dimensions, but the current implementation
 does not use any. It is an entirely straightforward implementation which fits by solving
 a linear system, and evaluates the \(P(x)\) directly.
 \end{document}

@@ -1,9 +1,11 @@
 #include <math.h>
+#include <Rmath.h>
 #include <R.h>
 #include <Rdefines.h>
 #include <R_ext/Rdynload.h>
 #include <R_ext/BLAS.h>
 #include <R_ext/Visibility.h>
+#include "config.h"
 #ifdef HAVE_FFTW
 #include <fftw3.h>
 #endif
@@ -24,12 +26,13 @@ static void chebcoef(double *x, int *dims, int *dimlen, double *F, int dct) {
   for(int i = 0; i < rank; i++) rdims[i] = dims[rank-i-1];
 
   // Plan and execute
+  
   fftw_plan plan = fftw_plan_r2r(rank, rdims, x, F, kind, FFTW_ESTIMATE|FFTW_PRESERVE_INPUT);
+  if(plan == NULL) error("FFTW can't create execution plan for transform");
   fftw_execute(plan);
   // A new plan with the same parameters is fast to create it says, so we destroy this to
   // clean up memory
   fftw_destroy_plan(plan);
-
   // adjust scale to fit our setup
   if(!dct) for(int i = 0; i < siz; i++) F[i] *= isiz;
 #else
@@ -61,7 +64,7 @@ static void chebcoef(double *x, int *dims, int *dimlen, double *F, int dct) {
     for(int k = 0; k < N; k++) {
       double *jkvec = &jmat[k*N];
       for(int i = 0; i < N; i++) {
-	jkvec[i] = cos(M_PI*k*(i+0.5)/N);
+	jkvec[i] = cospi(k*(i+0.5)/N);
       }
     }
   }
@@ -146,74 +149,27 @@ static SEXP R_chebcoef(SEXP x, SEXP sdct) {
   return resvec;
 }
 
-
-/*
-  The xvec is an array of pointers to vectors
-  Vector i is of length d=dims[i] and contains
-  the 1-dimensional Chebyshev vector on coordinate i of x
-  I.e. the d-vector cos((0:(d-1))*acos((x[i]))) where
-  x has been interval transformed into [-1,1]
-*/
-
-static double evalcheb(double *cf, double *xvec[], int *dims, const int rank) {
-  double res = 0.0;
-  double *xl;
+static double C_evalcheb(double *cf, double *x, int *dims, const int rank) {
+  if(rank == 0) return cf[0];
+  // Otherwise, use the Clenshaw algorithm
   int siz = 1;
   const int newrank = rank-1;
   const int N = dims[newrank];
 
-  if(newrank == 0) {
-    for(int i = 0; i < N; i++) res += cf[i]*xvec[0][i];
-    return res;
+  for(int i= 0; i < newrank; i++) siz *= dims[i];
+  double x0 = x[newrank], bn1=0, bn2=0, bn=0;
+  for(int i = N-1,j=siz*(N-1); i >= 0; i--,j-=siz) {
+    bn2 = bn1; bn1 = bn;
+    bn = 2*x0*bn1 - bn2 + C_evalcheb(&cf[j],x,dims,newrank);
   }
-  // loop over last dimension, recurse
-  // integer multiplication is slow, but it seems we have to
-  for(int i = 0; i < newrank; i++) siz *= dims[i];
-  xl = xvec[newrank];
-  for(int i = 0,j=0; i < N; i++,j+=siz) {
-    res += xl[i]*evalcheb(&cf[j],xvec,dims,newrank);
-  }
-  return res;
+  return bn - x0*bn1;
 }
 
-static double C_evalcheb(double *cf, double *x, int *dims, const int rank) {
-  double *xvec[rank];
-  double res;
-
-  if(rank == 1) {
-    double x0 = x[0];
-    // special case for rank=1. Clenshaw.
-    // Could we generalize this so as not to allocate extra memory for rank > 1 too?
-    double bn1=0, bn2 = 0, bn=0;
-    for(int i = dims[0]-1; i >= 0; i--) {
-      bn2 = bn1; bn1 = bn;
-      bn = 2*x0*bn1 - bn2 + cf[i];
-    }
-    return bn - x0*bn1;
-  }
-
-  // make cos(j*acos(x)) for each dimension. 
-  // Use recurrence relation (cos(nx) = 2cos(x)cos((n-1)x) - cos((n-2)x))
-  // I.e. the Chebyshev identity
-
-  for(int i = 0; i < rank; i++) {
-    double *xv = Calloc(dims[i],double);
-    xvec[i] = xv;
-    xv[0] = 1.0;
-    if(dims[i] == 1) break;
-    xv[1] = x[i];
-    for(int j = 2; j < dims[i]; j++) xv[j] = 2*x[i]*xv[j-1] - xv[j-2];
-  }
-
-  res = evalcheb(cf,xvec,dims,rank);
-  for(int i = 0; i < rank; i++) Free(xvec[i]);
-  return res;
-}
-
-static SEXP R_evalcheb(SEXP coef, SEXP inx) {
+static SEXP R_evalcheb(SEXP coef, SEXP inx, SEXP Rthreads) {
   int *dims;
   int siz = 1;
   double *cf = REAL(coef);
+  const int threads = INTEGER(AS_INTEGER(Rthreads))[0];
   SEXP resvec;
   SEXP dim;
   int rank;
@@ -231,7 +187,7 @@ static SEXP R_evalcheb(SEXP coef, SEXP inx) {
       error("coefficient rank(%d) does not match argument length(%d)",
 	    LENGTH(dim),LENGTH(inx));
   }
-  /* This shouldn't happen, but we check it anyway since we're bomb if it's wrong */
+  /* This shouldn't happen, but we check it anyway since we'll bomb if it's wrong */
   for(int i = 0; i < rank; i++)  siz *= dims[i];
   if(LENGTH(coef) != siz)
     error("coefficient length(%d) does not match data length(%d)",
@@ -240,9 +196,9 @@ static SEXP R_evalcheb(SEXP coef, SEXP inx) {
   double *xp = REAL(inx);
   int numvec = isMatrix(inx) ? ncols(inx) : 1;
   PROTECT(resvec = NEW_NUMERIC(numvec));
+#pragma omp parallel for num_threads(threads)
   for(int i = 0; i < ncols(inx); i++) {
-    REAL(resvec)[i] = C_evalcheb(cf, xp, dims, rank);
-    xp += rank;
+    REAL(resvec)[i] = C_evalcheb(cf, xp+i*rank, dims, rank);
   }
   UNPROTECT(1);
   return resvec;
@@ -255,18 +211,12 @@ void C_evalongrid(void (*fun)(double *x, double *y, int valuedim, void *ud),
   int mrank = rank-1;
   int stride = valuedim;
 
-  if(mrank == 0) {
-    /* we could have terminated on rank==0 with a single result[0] = fun(arg),
-       but we stop earlier to save some function calls */
-    for(int i = 0, j=0; i < dims[0]; i++, j+=valuedim) {
-      arg[0] = grid[0][i];
-      fun(arg,&result[j],valuedim,userdata);
-      //      result[i] = fun(arg);
-    }
+  if(rank == 0) {
+    fun(arg,&result[0],valuedim,userdata);
     return;
   }
-  for(int i = 0; i < mrank; i++) stride *= dims[i];
 
+  for(int i = 0; i < mrank; i++) stride *= dims[i];
   for(int i = 0,j = 0; i < dims[mrank]; i++, j += stride) {
     arg[mrank] = grid[mrank][i];
     C_evalongrid(fun, arg, grid, dims, mrank, valuedim, &result[j], userdata);
@@ -468,12 +418,14 @@ static double C_evalmlip(const int rank, double *x, double **grid, int *dims, do
 }
 
 /* Then a multilinear approximation */
-static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x) {
+static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads) {
   const int rank = LENGTH(sgrid);
   int gridsize = 1;
   int dims[rank];
+  int threads = INTEGER(AS_INTEGER(Rthreads))[0];
   double *grid[rank];
   SEXP resvec;
+
   if(!IS_NUMERIC(values)) error("values must be numeric");
   if(!IS_NUMERIC(x)) error("argument x must be numeric");  
   if(isMatrix(x) ? (nrows(x) != rank) : (LENGTH(x) != rank))
@@ -492,14 +444,40 @@ static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x) {
   const int numvec = isMatrix(x) ? ncols(x) : 1;
   double *xp = REAL(x);
   PROTECT(resvec = NEW_NUMERIC(numvec));
+#pragma omp parallel for num_threads(threads)
   for(int i = 0; i < numvec; i++) {
-    REAL(resvec)[i] = C_evalmlip(rank,xp,grid,dims,REAL(values));
-    xp += rank;
+    REAL(resvec)[i] = C_evalmlip(rank,xp+i*rank,grid,dims,REAL(values));
   }
   UNPROTECT(1);
   return resvec;
 }
 
+static SEXP R_sqdiffs(SEXP x1, SEXP x2) {
+  // each column in x1 should be subtracted from each column in x2,
+  // the squared column sums should be returned.
+  int r1 = nrows(x1), c1 = ncols(x1), r2 = nrows(x2), c2 = ncols(x2);
+  int N = c1*c2;
+  SEXP res = PROTECT(NEW_NUMERIC(N));
+  double *dres = REAL(res);
+  double *np = dres;
+  for(int i = 0; i < c1; i++) {
+    double *x1p = REAL(x1) + i*r1;
+    for(int j = 0; j < c2; j++) {
+      double *x2p = REAL(x2) + j*r2;
+      double csum = 0.0;
+      for(int k = 0; k < r1; k++) {
+	csum += (x1p[k] - x2p[k])*(x1p[k] - x2p[k]);
+      }
+      *np++ = csum;
+    }
+  }
+  SEXP snewdim = PROTECT(NEW_INTEGER(2));
+  INTEGER(snewdim)[0] = c1;
+  INTEGER(snewdim)[1] = c2;
+  setAttrib(res,R_DimSymbol,snewdim);
+  UNPROTECT(2);
+  return res;
+}
 
 static SEXP R_havefftw() {
   SEXP res;
@@ -514,12 +492,13 @@ static SEXP R_havefftw() {
 }
 
 R_CallMethodDef callMethods[] = {
-  {"evalcheb", (DL_FUNC) &R_evalcheb, 2},
+  {"evalcheb", (DL_FUNC) &R_evalcheb, 3},
   {"chebcoef", (DL_FUNC) &R_chebcoef, 2},
-  {"evalmlip", (DL_FUNC) &R_evalmlip, 3},
+  {"evalmlip", (DL_FUNC) &R_evalmlip, 4},
   {"predmlip", (DL_FUNC) &R_mlippred, 2},
   {"evalongrid", (DL_FUNC) &R_evalongrid, 2},
   {"havefftw", (DL_FUNC) &R_havefftw, 0},
+  {"sqdiffs", (DL_FUNC) &R_sqdiffs, 2},
   {NULL, NULL, 0}
 };
 
@@ -531,7 +510,6 @@ void attribute_visible R_init_chebpol(DllInfo *info) {
   R_RegisterCCallable("chebpol", "evalcheb", (DL_FUNC) C_evalcheb);
   R_RegisterCCallable("chebpol", "evalmlip", (DL_FUNC) C_evalmlip);
   R_RegisterCCallable("chebpol", "evalongrid", (DL_FUNC) C_evalongrid);
-
 }
 #ifdef HAVE_FFTW
 void attribute_visible R_unload_chebpol(DllInfo *info) {
