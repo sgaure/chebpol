@@ -269,7 +269,12 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
   }
   w <- wv[1:N]
   v <- wv[(N+1):length(wv)]
-  W <- NULL
+
+  # There's an alternative here: https://mathematica.stackexchange.com/questions/65763/understanding-polyharmonic-splines
+  # with W = B'
+  # solve W' A^{-1} W v = W' A^{-1} val  for v
+  # compute w as A^{-1} val - A^{-1} W v
+
   local(function(x) {
     if(is.vector(x) && length(x) == M) {
       nx <- normfun(x)
