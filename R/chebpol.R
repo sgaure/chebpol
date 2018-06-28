@@ -274,6 +274,12 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
   # with W = B'
   # solve W' A^{-1} W v = W' A^{-1} val  for v
   # compute w as A^{-1} val - A^{-1} W v
+  # It's slower than the above, at least with MKL.
+  # W <- t(rbind(1,knots))
+  # Ai <- solve(A)
+  # AiW <- crossprod(Ai,W)
+  # v <- as.numeric(solve(crossprod(W,AiW),t(AiW) %*% val))
+  # w <- as.numeric(Ai %*% val - AiW %*% v)
 
   local(function(x) {
     if(is.vector(x) && length(x) == M) {
