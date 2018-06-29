@@ -25,7 +25,6 @@ fi
 
 AC_LANG([C])
 AC_PROG_CC
-AC_OPENMP
 
 ## --- FFTW 3 ----------------------------------------------------------------
 AS_IF([test "x$use_fftw" = "xyes"], [

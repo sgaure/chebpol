@@ -1,6 +1,6 @@
 Package: chebpol
 Version: 1.4-2
-Date: 2018-06-28
+Date: 2018-06-29
 Title: Multivariate Chebyshev Interpolation
 Authors@R: person("Simen", "Gaure", email="Simen.Gaure@frisch.uio.no", role=c("aut","cre"))
 Copyright: 2013, Simen Gaure

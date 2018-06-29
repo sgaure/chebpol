@@ -196,7 +196,9 @@ static SEXP R_evalcheb(SEXP coef, SEXP inx, SEXP Rthreads) {
   double *xp = REAL(inx);
   int numvec = isMatrix(inx) ? ncols(inx) : 1;
   PROTECT(resvec = NEW_NUMERIC(numvec));
+#ifdef _OPENMP
 #pragma omp parallel for num_threads(threads)
+#endif
   for(int i = 0; i < ncols(inx); i++) {
     REAL(resvec)[i] = C_evalcheb(cf, xp+i*rank, dims, rank);
   }
@@ -444,7 +446,9 @@ static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads) {
   const int numvec = isMatrix(x) ? ncols(x) : 1;
   double *xp = REAL(x);
   PROTECT(resvec = NEW_NUMERIC(numvec));
+#ifdef _OPENMP
 #pragma omp parallel for num_threads(threads)
+#endif
   for(int i = 0; i < numvec; i++) {
     REAL(resvec)[i] = C_evalmlip(rank,xp+i*rank,grid,dims,REAL(values));
   }

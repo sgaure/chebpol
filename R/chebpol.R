@@ -188,10 +188,11 @@ mlappx <- function(val, grid, ...) {
   gl <- prod(sapply(grid,length))
   if(length(val) != gl)
     stop("length of values ",length(val)," do not match size of grid ",gl)
+  val <- as.numeric(val)
 #  if(adjust!=0) {
 #    val <- val + (val - .Call(C_predmlip,grid,as.numeric(val)))*adjust
 #  }
-  vectorfun(.Call(C_evalmlip,grid,as.numeric(val),x,threads), length(grid), 
+  vectorfun(.Call(C_evalmlip,grid,val,x,threads), length(grid), 
             args=alist(x=,threads=getOption('chebpol.threads')))
 }
 
