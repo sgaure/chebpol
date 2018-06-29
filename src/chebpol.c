@@ -155,14 +155,24 @@ static double C_evalcheb(double *cf, double *x, int *dims, const int rank) {
   int siz = 1;
   const int newrank = rank-1;
   const int N = dims[newrank];
+  double x2 = 2.0*x[newrank], bn1=0, bn2=0, bn=0;
 
+#if 1
+  // semantically unnecessary, just save a recursion level, it speeds up things.
+  if(newrank == 0) {
+    for(int i = N-1; i > 0; i--) {
+      bn2 = bn1; bn1 = bn;
+      bn = x2*bn1 - bn2 + cf[i];
+    }
+    return x[0]*bn - bn1 + cf[0];
+  }
+#endif
   for(int i= 0; i < newrank; i++) siz *= dims[i];
-  double x0 = x[newrank], bn1=0, bn2=0, bn=0;
   for(int i = N-1,j=siz*(N-1); i >= 0; i--,j-=siz) {
     bn2 = bn1; bn1 = bn;
-    bn = 2*x0*bn1 - bn2 + C_evalcheb(&cf[j],x,dims,newrank);
+    bn = x2*bn1 - bn2 + C_evalcheb(&cf[j],x,dims,newrank);
   }
-  return bn - x0*bn1;
+  return bn - x[newrank]*bn1;
 }
 
 static SEXP R_evalcheb(SEXP coef, SEXP inx, SEXP Rthreads) {
@@ -170,7 +180,6 @@ static SEXP R_evalcheb(SEXP coef, SEXP inx, SEXP Rthreads) {
   int siz = 1;
   double *cf = REAL(coef);
   const int threads = INTEGER(AS_INTEGER(Rthreads))[0];
-  SEXP resvec;
   SEXP dim;
   int rank;
 
@@ -194,20 +203,21 @@ static SEXP R_evalcheb(SEXP coef, SEXP inx, SEXP Rthreads) {
 	  LENGTH(coef),siz);
 
   double *xp = REAL(inx);
-  int numvec = isMatrix(inx) ? ncols(inx) : 1;
-  PROTECT(resvec = NEW_NUMERIC(numvec));
+  const int numvec = isMatrix(inx) ? ncols(inx) : 1;
+  SEXP resvec = PROTECT(NEW_NUMERIC(numvec));
+  double *out = REAL(resvec);
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(threads)
+#pragma omp parallel for num_threads(threads) schedule(static)
 #endif
-  for(int i = 0; i < ncols(inx); i++) {
-    REAL(resvec)[i] = C_evalcheb(cf, xp+i*rank, dims, rank);
+  for(int i = 0; i < numvec; i++) {
+    out[i] = C_evalcheb(cf, xp+i*rank, dims, rank);
   }
   UNPROTECT(1);
   return resvec;
 }
 
 // an R-free evalongrid. Recursive
-void C_evalongrid(void (*fun)(double *x, double *y, int valuedim, void *ud),
+static void C_evalongrid(void (*fun)(double *x, double *y, int valuedim, void *ud),
 		double *arg, double **grid,
 		const int *dims, const int rank, const int valuedim, double *result, void *userdata) {
   int mrank = rank-1;
@@ -225,7 +235,7 @@ void C_evalongrid(void (*fun)(double *x, double *y, int valuedim, void *ud),
   }
 }
 
-void C_call(double *x, double *y, const int valuedim, void *userdata) {
+static void C_call(double *x, double *y, const int valuedim, void *userdata) {
     // don't need x, because the arg-pointer which is used is set in the
     // R_fcall structure
 
@@ -426,7 +436,6 @@ static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads) {
   int dims[rank];
   int threads = INTEGER(AS_INTEGER(Rthreads))[0];
   double *grid[rank];
-  SEXP resvec;
 
   if(!IS_NUMERIC(values)) error("values must be numeric");
   if(!IS_NUMERIC(x)) error("argument x must be numeric");  
@@ -445,12 +454,13 @@ static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads) {
 				       gridsize,LENGTH(values));
   const int numvec = isMatrix(x) ? ncols(x) : 1;
   double *xp = REAL(x);
-  PROTECT(resvec = NEW_NUMERIC(numvec));
+  SEXP resvec = PROTECT(NEW_NUMERIC(numvec));
+  double *out = REAL(resvec);
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(threads)
+#pragma omp parallel for num_threads(threads) schedule(static)
 #endif
   for(int i = 0; i < numvec; i++) {
-    REAL(resvec)[i] = C_evalmlip(rank,xp+i*rank,grid,dims,REAL(values));
+    out[i] = C_evalmlip(rank,xp+i*rank,grid,dims,REAL(values));
   }
   UNPROTECT(1);
   return resvec;

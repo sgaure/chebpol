@@ -5,7 +5,8 @@
 }
 
 .onLoad <- function(libname,pkgname) {
-  options(chebpol.threads=1L)
+  if(is.na(thr <- as.integer(Sys.getenv('CHEBPOL_THREADS')))) thr <- 1L
+  options(chebpol.threads=thr)
 }
 
 # Chebyshev transformation.  I.e. coefficients for given function values in the knots.
@@ -78,7 +79,7 @@ chebappx <- function(val,intervals=NULL) {
                length(intervals),' ',length(dim(val)))
     ispan <- sapply(intervals,function(x) 2/diff(x))
     mid <- sapply(intervals,function(x) mean(x))
-    imap <- cmpfun(function(x) (x-mid)*ispan)
+    imap <- compiler::cmpfun(function(x) (x-mid)*ispan)
 
     fun <- structure(vectorfun(.Call(C_evalcheb,cf,imap(x), threads), K,
                                args=alist(x=,threads=getOption('chebpol.threads'))),
@@ -184,6 +185,10 @@ ucappxf <- function(fun, dims, intervals=NULL,...) {
 mlappx <- function(val, grid, ...) {
   x <- threads <- NULL; rm(x,threads) # avoid cran check warning 
   if(is.numeric(grid)) grid <- list(grid)
+  if(any(sapply(grid,is.unsorted))) {
+    if(!is.function(val)) stop('Grid points must be ordered in increasing order')
+    grid <- lapply(grid,sort)
+  }
   if(is.function(val)) val <- evalongrid(val,grid=grid,...)
   gl <- prod(sapply(grid,length))
   if(length(val) != gl)
@@ -237,12 +242,12 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
 
   ki <- k/2
   if(k < 0) {
-    phi <- local(cmpfun(function(r2) exp(k*r2)),list(k=k))
+    phi <- local(compiler::cmpfun(function(r2) exp(k*r2)),list(k=k))
   } else if(k %% 2L == 1L) {
-    phi <- local(cmpfun(function(r2) r2^ki), list(ki=ki))
+    phi <- local(compiler::cmpfun(function(r2) r2^ki), list(ki=ki))
   } else {
     ki <- as.integer(ki)-1L # trick to handle r2=0. Works because 0^0 = 1 in R
-    phi <- local(cmpfun(function(r2) r2^ki * log(r2^r2)),list(ki=ki))
+    phi <- local(compiler::cmpfun(function(r2) r2^ki * log(r2^r2)),list(ki=ki))
   }
 
   # would it be faster to apply phi only on lower tri?  Without crossprod?
@@ -319,7 +324,7 @@ vectorfun <- function(e,arity,args=alist(x=)) {
       do.call(fun,arglist)
     } else
       stop(sprintf('Function should take %d arguments, you supplied a vector of length %d',arity,length(x)))
-  }, list(fun=fun))
+  }, list(fun=compiler::cmpfun(fun)))
   formals(f) <- args
   f
 }
