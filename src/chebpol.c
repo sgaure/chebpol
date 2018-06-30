@@ -238,7 +238,7 @@ static void C_evalongrid(void (*fun)(double *x, double *y, int valuedim, void *u
 static void C_call(double *x, double *y, const int valuedim, void *userdata) {
     // don't need x, because the arg-pointer which is used is set in the
     // R_fcall structure
-
+  if(x == NULL) {}; // avoid warning
   double *fv = REAL(eval( *(SEXP*)userdata, R_BaseEnv));
   for(int i = 0; i < valuedim; i++) y[i] = fv[i];
 }
@@ -248,7 +248,7 @@ static SEXP R_evalongrid(SEXP fun, SEXP sgrid) {
   int rank = LENGTH(sgrid);
   double *grid[rank];
   int *dims;
-  double len=1.0;
+  R_xlen_t len=1.0;
   SEXP resvec;
   SEXP R_fcall;
   SEXP R_arg;
@@ -509,7 +509,7 @@ R_CallMethodDef callMethods[] = {
   {"evalcheb", (DL_FUNC) &R_evalcheb, 3},
   {"chebcoef", (DL_FUNC) &R_chebcoef, 2},
   {"evalmlip", (DL_FUNC) &R_evalmlip, 4},
-  {"predmlip", (DL_FUNC) &R_mlippred, 2},
+  //  {"predmlip", (DL_FUNC) &R_mlippred, 2},
   {"evalongrid", (DL_FUNC) &R_evalongrid, 2},
   {"havefftw", (DL_FUNC) &R_havefftw, 0},
   {"sqdiffs", (DL_FUNC) &R_sqdiffs, 2},
@@ -518,6 +518,7 @@ R_CallMethodDef callMethods[] = {
 
 
 void attribute_visible R_init_chebpol(DllInfo *info) {
+  if(info != NULL) {}; // avoid warning about unused parameter
   /* register our routines */
   R_registerRoutines(info,NULL,callMethods,NULL,NULL);
   R_useDynamicSymbols(info, FALSE);
@@ -527,6 +528,7 @@ void attribute_visible R_init_chebpol(DllInfo *info) {
 }
 #ifdef HAVE_FFTW
 void attribute_visible R_unload_chebpol(DllInfo *info) {
+  if(info == NULL) {};
   // Clean up fftw
   fftw_cleanup();
 }

@@ -211,6 +211,9 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
 # we compute r^2, so powers etc. are adjusted for that case
 # Hmm, I should take a look at http://dx.doi.org/10.1016/j.jat.2012.11.008 for the unit ball
 # perhaps some normalization should be added?
+# I also need to look at fast summation with NFFT
+# https://www-user.tu-chemnitz.de/~potts/nfft/fastsum.php
+# Likewise its interpolation applications which I don't understand yet.
   if(is.null(dim(knots))) dim(knots) <- c(1,length(knots))
   if(is.function(val)) val <- apply(knots,2,val,...)
   N <- ncol(knots)

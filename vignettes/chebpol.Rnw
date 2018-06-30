@@ -81,8 +81,8 @@ library(chebpol)
 f <- function(x) cos(3*pi*x)/(1+25*(x-0.25)^2)
 ch <- chebappxf(f,15)
 s <- seq(-1,1,length.out=401)
-plot(s,f(s),type='l')
-lines(s,ch(s), col='red')
+plot(s, f(s),type='l')
+lines(s, ch(s), col='red')
 kn <- chebknots(15)[[1]]
 points(kn,f(kn))
 @ 
@@ -94,6 +94,25 @@ locations where the curves intersect.
 In the multivariate case, the \code{dims} argument to \code{chebappxf} is
 a vector of integers, the number of knots in each dimension. The \code{chebappx}
 variant instead uses the \code{dim} attribute of its input to determine this.
+
+If you look at the function \code{ch} returned from \code{chebappxf}, you'll notice that it has 
+two arguments. The first one, \code{x}, is the point at which you want to evaluate the
+function. This \code{x} can also be a matrix where each column is a point, the interpolation
+function can handle more than one point. In the special case with a single argument function,
+any vector argument is treated as a matrix with one row, i.e. a series of points, just like
+ordinary R-functions like \code{exp} or \code{sin}. 
+
+The second argument to \code{ch} is called \code{threads}, it defaults
+to \code{getOption('chebpol.threads')}, and is the number of parallel
+threads which should be used to compute the interpolations. Thus,
+above we could have written \code{lines(s, ch(s,8))} to compute the
+401 points in \code{s} in 8 threads. Clearly, there is nothing to gain
+from specifying more threads than there are CPUs in your computer, nor
+more than there are input vectors. Most of the interpolation functions
+produced by \pkg{chebpol} has a \code{threads}-argument. The notable
+exception is \code{polyh} which instead relies on a parallel
+blas-library for parallelization. The \code{chebpol.threads} option is initialized
+from the environment variable \code{CHEBPOL\_THREADS} when the package is loaded.
 
 \section{Uniformly spaced grids}
 In some applications it is not feasible to evaluate the function \(f\) in the Chebyshev

@@ -15,7 +15,7 @@ AC_ARG_ENABLE([fftw],
 
 AC_ARG_ENABLE([check],
 	[AS_HELP_STRING([--enable-check],[enable pedantic syntax check])],
-	[EXTRA='-Wall -pedantic'; echo "PEDANTIC CHECK"])
+	[EXTRA='-Wall -pedantic -Wextra -Wconversion'; echo "PEDANTIC CHECK"])
 # some R 
 if test -n "${R_HOME}"; then
   CC=`${R_HOME}/bin/R CMD config CC`
@@ -67,7 +67,7 @@ if test "x$have_fftw" = "xyes" ; then
       FFTW_CFLAGS=
     fi
   fi
-  rm -f conftest.o conftest.c conftest.so
+  rm -f conftest.o conftest.c conftest.so conftest.R
 fi
 
 ## --- Output ----------------------------------------------------------------
