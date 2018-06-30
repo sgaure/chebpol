@@ -1,6 +1,6 @@
 Package: chebpol
 Version: 1.4-3
-Date: 2018-06-29
+Date: 2018-06-30
 Title: Multivariate Chebyshev Interpolation
 Authors@R: person("Simen", "Gaure", email="Simen.Gaure@frisch.uio.no", role=c("aut","cre"))
 Copyright: 2013, Simen Gaure
@@ -9,8 +9,8 @@ SystemRequirements: fftw3 (>= 3.1.2)
 Description: Contains methods for creating multivariate Chebyshev
   interpolations of functions on a hypercube. If available through fftw3, the DCT-II/FFT
   is used to compute the coefficients, so it is reasonably fast. Some interpolation methods for
-  multivariate non-Chebyshev grids are also provided, as well as polyharmonic
-  splines with a linear term.
+  multivariate non-Chebyshev grids are also provided, a multilinear, and a Lagrangian barycenter method,
+  as well as polyharmonic splines with a linear term.
 License: Artistic-2.0
 Classification/MSC: 41A05, 41A10, 41A50, 41A63, 65D05, 65T40
 Classification/ACM: G.1.2

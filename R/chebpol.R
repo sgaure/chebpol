@@ -143,6 +143,27 @@ chebappxgf <- function(fun, grid, ..., mapdim=NULL) {
   chebappxg(evalongrid(fun, ..., grid=grid),grid,mapdim)
 }
 
+
+# General grids, Lagrange
+lagappx <- function(val,dims=NULL,intervals=NULL,grid=NULL, ...) {
+  x <- threads <- NULL; rm(x,threads) # avoid warning about undefined vars
+  if(is.null(grid) & is.null(dims)) 
+    stop('Must specify grid or dims')
+  if(!is.null(dims)) grid <- chebknots(dims,intervals)
+  if(is.function(val)) val <- evalongrid(val, grid=grid, ...)
+  # calculate weights. 
+#  weights <- lapply(grid, function(g) 1/sapply(seq_along(g), function(i) prod((g[i] - g[-i]))))
+  weights <- lapply(grid, function(g) {
+    meanlog <- mean(sapply(seq_along(g), function(i) log(abs(g[i] - g[-i]))))
+    sign <- sapply(seq_along(g), function(i) prod(sign(g[i]-g[-i])))
+    sign*exp(-sapply(seq_along(g), function(i) {sum(log(abs(g[i] - g[-i])) - meanlog)}))
+  })
+
+  vectorfun(.Call(C_lagrange,x,val,grid,weights,threads), 
+            args=alist(x=,threads=getOption('chebpol.threads')),
+            arity=length(grid))
+}
+
 # we can actually find the grid-maps for uniform grids.
 # the Chebyshev knots are cos(pi*(j+0.5)/n) for j=0..n-1 These should
 # map into the n grid points. These have distance 2/(n-1), starting in -1, ending in 1
@@ -211,6 +232,9 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
 # we compute r^2, so powers etc. are adjusted for that case
 # Hmm, I should take a look at http://dx.doi.org/10.1016/j.jat.2012.11.008 for the unit ball
 # perhaps some normalization should be added?
+# I also need to look at fast summation with NFFT
+# https://www-user.tu-chemnitz.de/~potts/nfft/fastsum.php
+# Likewise its interpolation applications which I don't understand yet.
   if(is.null(dim(knots))) dim(knots) <- c(1,length(knots))
   if(is.function(val)) val <- apply(knots,2,val,...)
   N <- ncol(knots)

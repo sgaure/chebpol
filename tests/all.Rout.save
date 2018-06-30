@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2018-06-19 r74917) -- "Unsuffered Consequences"
+R Under development (unstable) (2018-06-26 r74931) -- "Unsuffered Consequences"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -206,6 +206,22 @@ In polyh(f, knots, 5, FALSE) :
 [1] 0.3561987
 [1] 0.3523617
 > 
+> 
+> #Lagrangian grids
+> 
+> f <- function(x) sum(log(1+x^2))
+> grid <- list(seq(-1,1,len=50), seq(-1,1,len=30)^3L, chebknots(20)[[1]])
+> lg <- lagappx(f,grid=grid)
+> x <- matrix(runif(3*1e2),3)
+> lg.v <- lg(x,2)
+> f.v <- apply(x,2,f)
+> round(fivenum(lg.v-f.v),7)
+[1] -0.0013609 -0.0003628  0.0003319  0.0010187  0.0022055
+> # check the some points:
+> f(sapply(grid,function(x) x[4])) - lg(sapply(grid,function(x) x[4]))
+[1] 0
+> 
+> 
 > proc.time()
    user  system elapsed 
-  8.850   6.346   4.919 
+  7.533   4.629   5.210 

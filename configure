@@ -1781,7 +1781,7 @@ fi
 
 # Check whether --enable-check was given.
 if test "${enable_check+set}" = set; then :
-  enableval=$enable_check; EXTRA='-Wall -pedantic'; echo "PEDANTIC CHECK"
+  enableval=$enable_check; EXTRA='-Wall -pedantic -Wextra'; echo "PEDANTIC CHECK"
 fi
 
 # some R
@@ -2828,7 +2828,7 @@ $as_echo "no, compiling with slow matrix method" >&6; }
       FFTW_CFLAGS=
     fi
   fi
-  rm -f conftest.o conftest.c conftest.so
+  rm -f conftest.o conftest.c conftest.so conftest.R
 fi
 
 ## --- Output ----------------------------------------------------------------
