@@ -149,7 +149,7 @@ static SEXP R_chebcoef(SEXP x, SEXP sdct) {
   return resvec;
 }
 
-static double C_lagrange(double *fv, double *x, double **knots, int *dims, const int rank, double **weights) {
+static double C_lagrange(double *fv, double *x, double **knots, int *dims, const int rank) {
   // Use Lagrange method to evaluate.
   // if f_k is the function value in x_k, then the interpolation in
   // x is (sum_i=0 (-1)^i f_i/(x-x_i)) / sum_i=0 (-1)^i /(x-x_i)
@@ -164,12 +164,13 @@ static double C_lagrange(double *fv, double *x, double **knots, int *dims, const
   for(int i = 0; i < newrank; i++) siz *= dims[i];
   double num=0, denom=0;
 
-#if 1
-  // save a recursion step
   // Special case:
   for(int i = 0; i < N; i++) {
-    if(xx == kn[i]) return C_lagrange(&fv[i*siz], x, knots, dims, newrank, weights);
+    if(xx == kn[i]) return C_lagrange(&fv[i*siz], x, knots, dims, newrank);
   }
+
+#if 1
+  // save a recursion step
   if(newrank == 0) {
     for(int i = 0; i < N; i++) {
       const double val = fv[i];
@@ -183,7 +184,7 @@ static double C_lagrange(double *fv, double *x, double **knots, int *dims, const
   }
 #endif 
   for(int i = 0,j=0; i < N; i++,j+=siz) {
-    const double val = C_lagrange(&fv[j], x, knots, dims, newrank, weights);
+    const double val = C_lagrange(&fv[j], x, knots, dims, newrank);
     double pole = 1.0 / (xx-kn[i]); // Should have used the weights instead of 1.0 and the sign
     if( (i&1) == 1) pole = -pole;
     if(i == 0 || i == N-1) pole = 0.5*pole;
@@ -193,7 +194,7 @@ static double C_lagrange(double *fv, double *x, double **knots, int *dims, const
   return num/denom;
 }
 
-static SEXP R_lagrange(SEXP inx, SEXP vals, SEXP grid, SEXP Sweights, SEXP Rthreads) {
+static SEXP R_lagrange(SEXP inx, SEXP vals, SEXP grid, SEXP Rthreads) {
   int *dims;
   int siz = 1;
   double *val = REAL(vals);
@@ -223,7 +224,7 @@ static SEXP R_lagrange(SEXP inx, SEXP vals, SEXP grid, SEXP Sweights, SEXP Rthre
   if(LENGTH(grid) != rank)
     error("There must be one value for each knot");
   double **knots = (double **) R_alloc(rank,sizeof(double*));
-  double **weights = (double **) R_alloc(rank, sizeof(double*));
+  //  double **weights = (double **) R_alloc(rank, sizeof(double*));
   for(int i = 0; i < rank; i++) {
     knots[i] = REAL(VECTOR_ELT(grid,i));
     //    weights[i] = REAL(VECTOR_ELT(Sweights,i));
@@ -236,7 +237,7 @@ static SEXP R_lagrange(SEXP inx, SEXP vals, SEXP grid, SEXP Sweights, SEXP Rthre
 #pragma omp parallel for num_threads(threads) schedule(static)
 #endif
   for(int i = 0; i < numvec; i++) {
-    out[i] = C_lagrange(val, xp+i*rank, knots, dims, rank, weights);
+    out[i] = C_lagrange(val, xp+i*rank, knots, dims, rank);
   }
   UNPROTECT(1);
   return resvec;
@@ -602,7 +603,7 @@ static SEXP R_havefftw() {
 R_CallMethodDef callMethods[] = {
   {"evalcheb", (DL_FUNC) &R_evalcheb, 3},
   {"chebcoef", (DL_FUNC) &R_chebcoef, 2},
-  {"lagrange", (DL_FUNC) &R_lagrange, 5},
+  {"lagrange", (DL_FUNC) &R_lagrange, 4},
   {"evalmlip", (DL_FUNC) &R_evalmlip, 4},
   //  {"predmlip", (DL_FUNC) &R_mlippred, 2},
   {"evalongrid", (DL_FUNC) &R_evalongrid, 2},

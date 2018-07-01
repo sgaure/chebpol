@@ -153,8 +153,8 @@ lagappx <- function(val,dims=NULL,intervals=NULL,grid=NULL, ...) {
   if(is.function(val)) val <- evalongrid(val, grid=grid, ...)
   # calculate weights. 
 #  weights <- lapply(grid, function(g) 1/sapply(seq_along(g), function(i) prod((g[i] - g[-i]))))
-  weights <- NULL
-  vectorfun(.Call(C_lagrange,x,val,grid,weights,threads), 
+#  weights <- NULL
+  vectorfun(.Call(C_lagrange,x,val,grid,threads), 
             args=alist(x=,threads=getOption('chebpol.threads')),
             arity=length(grid))
 }

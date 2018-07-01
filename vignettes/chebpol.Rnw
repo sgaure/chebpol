@@ -1,4 +1,4 @@
-\documentclass{amsart}
+\documentclass[a4paper]{amsart}
 \usepackage{graphicx}
 \newcommand{\strong}[1]{{\normalfont\fontseries{b}\selectfont #1}}
 \let\pkg=\strong
@@ -9,6 +9,10 @@
 \newcommand{\NN}{\mathbb{N}}
 \newcommand{\figsize}{11cm}
 %\VignetteIndexEntry{Details of package chebpol}
+
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-2in}
+\calclayout
 
 
 \title{Details of \pkg{chebpol}}
@@ -210,6 +214,37 @@ lines(s, chg(s), col='blue')
 points(gr,f(gr))
 @ 
 
+\section{Modified Lagrangian interpolation}
+An old interpolation method due to Lagrange is polynomial, but written so that one does 
+not need to see any polynomial. Given function values \(f_i = f(x_i)\) in some points 
+\((x_i)_{i=0}^N\), the interpolant can be written in barycentric form:
+\[L(x) = \frac{\sum_{i=0}^N f_i \frac{w_i}{(x-x_i)}}{\sum_{i=0}^N \frac{w_i}{(x-x_i)}},\]
+where the \(w_i\)'s are weights. It so happens that if the points \(x_i\) are 
+\(x_i = \cos(i\pi/N)\), the Chebyshev points of the second kind, 
+the weights are \(w_0 = w_N = 1\), and \(w_i = 2\) for \(0 < i < N\), though with
+alternating sign.  See e.g.\ \cite{BT04}.
+
+Due to a programming error, the author discovered that the same weights
+work fine for other sets of points \(\{x_i\}\) as well, in particular for uniformly spaced grids.
+There's obviously a reason for this, but I haven't found it yet.
+Here is an example with a translated Runge function.
+<<lagrange,fig=TRUE,png=TRUE>>=
+f <- function(x) 1/(1+25*(x-0.17)^2)
+# Uniform grid:
+unigrid <- list(seq(-2,2,length.out=20))
+uni <- lagappx(f,grid=unigrid)
+ch <- chebappxf(f,20,intervals=c(-2,2))
+s <- seq(-2,2,length.out=1000)
+plot(s,f(s),ylim=range(uni(s),f(s),ch(s)),typ='l')
+lines(s,uni(s),col='blue')
+points(unigrid[[1]],uni(unigrid[[1]]),col='blue',pch=20)
+lines(s,ch(s),col='green')
+legend('topleft',c('function','unilag','chebyshev'),fill=c('black','blue','green'))
+@ 
+
+So the \code{lagappx} creates a Lagrangian interpolation, but with Chebyshev weights. It
+even works for multi dimensional grids.
+
 \section{Multilinear interpolation}
 For demanding functions \pkg{chebpol} also contains a multilinear interpolation in \code{mlappx}. 
 A multilinear function is a function \(f(x_1,x_2,...,x_n)\) such that for each
@@ -238,33 +273,6 @@ wf <- sapply(s,function(x) f(curve(x)))
 wml <- sapply(s,function(x) ml(curve(x)))
 plot(s,wf,typ='l')  # function
 lines(s,wml,col='blue') # multilinear interpolation
-@ 
-
-\section{Modified Lagrangian interpolation}
-An old interpolation method due to Lagrange is polynomial, but written so that one does 
-not need to see any polynomial. Given function values \(f_i = f(x_i)\) in some points 
-\((x_i)_{i=1}^N\), the interpolant can be written in barycentric form:
-\[L(x) = \frac{\sum_{i=1}^N f_i \frac{w_i}{(x-x_i)}}{\sum_{i=1}^N \frac{w_i}{(x-x_i)}},\]
-where the \(w_i\)'s are weights. It so happens that if the points \(x_i\) are 
-\(x_i = \cos(i\pi/N)\), the Chebyshev points of the second kind, 
-the weights are \(x_1 = x_N = 1\), and \(x_i = 2\) for \(1 < i < N\).
-See e.g.\ \cite{BT04}.
-
-What's a bit surprising to the author is that due to an error I discovered that these weights
-work fine for other sets of points \(\{x_i\}\) as well, in particular for uniformly spaced grids.
-Here is an example with a translated Runge function.
-<<lagrange,fig=TRUE,png=TRUE>>=
-f <- function(x) 1/(1+25*(x-0.17)^2)
-# Uniform grid:
-unigrid <- list(seq(-2,2,length.out=20))
-uni <- lagappx(f,grid=unigrid)
-ch <- chebappxf(f,20,intervals=c(-2,2))
-s <- seq(-2,2,length.out=1000)
-plot(s,f(s),ylim=range(uni(s),f(s),ch(s)),typ='l')
-lines(s,uni(s),col='blue')
-points(unigrid[[1]],uni(unigrid[[1]]),col='blue',pch=20)
-lines(s,ch(s),col='green')
-legend('topleft',c('function','unilag','chebyshev'),fill=c('black','blue','green'))
 @ 
 
 \section{Scattered data}
