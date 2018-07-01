@@ -93,16 +93,16 @@ phs <- polyh(f,knots,-1,FALSE); nphs <- polyh(f,knots,-1,TRUE)
 phs(a); nphs(a)
 
 
-#Lagrangian grids
+#Floater-Hormann
 
 f <- function(x) sum(log(1+x^2))
 grid <- list(seq(-1,1,len=50), seq(-1,1,len=30)^3L, chebknots(20)[[1]])
-lg <- lagappx(f,grid=grid)
+fh <- fhappx(f,grid=grid)
 x <- matrix(runif(3*1e2),3)
-lg.v <- lg(x,2)
+fh.v <- fh(x,2)
 f.v <- apply(x,2,f)
-round(fivenum(lg.v-f.v),7)
+round(fivenum(fh.v-f.v),7)
 # check some points:
-round(f(sapply(grid,function(x) x[4])) - lg(sapply(grid,function(x) x[4]+1e-9)),7)
+round(f(sapply(grid,function(x) x[4])) - fh(sapply(grid,function(x) x[4]+1e-9)),7)
 
 

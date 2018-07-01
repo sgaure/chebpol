@@ -144,17 +144,33 @@ chebappxgf <- function(fun, grid, ..., mapdim=NULL) {
 }
 
 
-# General grids, modified Lagrange
-lagappx <- function(val,dims=NULL,intervals=NULL,grid=NULL, ...) {
+# General grids, Floater-Hormann
+fhappx <- function(val,grid=NULL, d=1, ...) {
   x <- threads <- NULL; rm(x,threads) # avoid warning about undefined vars
-  if(is.null(grid) & is.null(dims)) 
-    stop('Must specify grid or dims')
-  if(!is.null(dims)) grid <- chebknots(dims,intervals)
+  if(is.null(grid)) 
+    stop('Must specify grid')
+  if(!is.list(grid)) grid <- list(grid)
   if(is.function(val)) val <- evalongrid(val, grid=grid, ...)
-  # calculate weights. 
+  dd <- as.integer(d)
+  dd <- rep(dd, length(grid) %/% length(d))
+  # calculate weights, formula 18 in Floater & Hormann
+  weights <- lapply(seq_along(grid), function(gg) {
+    g <- grid[[gg]]
+    d <- dd[gg]
+    n = length(g)-1
+    if(d > n) stop(sprintf('d (%d) must be less or equal to dimension (%d)',d,n))
+    sapply(seq_along(g)-1L, function(k) {
+      gk <- g[k+1]
+      sum(sapply(intersect(seq(k-d, k), 0:(n-d)), function(i) {
+        sign = if(i %% 2 == 0) 1 else -1
+        pidx <- setdiff(seq(i,i+d),k)
+        sign/prod(gk - g[pidx+1])
+      }))
+    })
+  })
 #  weights <- lapply(grid, function(g) 1/sapply(seq_along(g), function(i) prod((g[i] - g[-i]))))
 #  weights <- NULL
-  vectorfun(.Call(C_lagrange,x,val,grid,threads), 
+  vectorfun(.Call(C_FH,x,val,grid,weights,threads), 
             args=alist(x=,threads=getOption('chebpol.threads')),
             arity=length(grid))
 }
@@ -240,7 +256,7 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
               k <- as.integer(round(k))
 
   if(is.na(normalize)) normalize <- (min(knots) < 0) || (max(knots) > 1)
-  else if(is.vector(normalize) && length(normalize) == 2L) dim(normalize) <- 1:2
+  else if(length(normalize) == 2L) dim(normalize) <- 1:2
   if(is.matrix(normalize)) {
     if(M %% nrow(normalize) != 0 || ncol(normalize) != 2) 
       stop('normalize must but be a n x 2 matrix with ', M, ' divisible by n(', nrow(normalize), ')')
@@ -307,7 +323,7 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
   # w <- as.numeric(Ai %*% val - AiW %*% v)
 
   local(function(x) {
-    if(is.vector(x) && length(x) == M) {
+    if(!is.matrix(x) && length(x) == M) {
       nx <- normfun(x)
       sum(w*phi(abs(-2*crossprod(nx,knots) + sqnm + sum(nx^2)))) + sum(v*c(1,nx))
     } else {

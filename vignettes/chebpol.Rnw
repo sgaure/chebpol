@@ -214,7 +214,7 @@ lines(s, chg(s), col='blue')
 points(gr,f(gr))
 @ 
 
-\section{Modified Lagrangian interpolation}
+\section{Floater-Hormann interpolation}
 An old interpolation method due to Lagrange is polynomial, but written so that one does 
 not need to see any polynomial. Given function values \(f_i = f(x_i)\) in some points 
 \((x_i)_{i=0}^N\), the interpolant can be written in barycentric form:
@@ -222,28 +222,24 @@ not need to see any polynomial. Given function values \(f_i = f(x_i)\) in some p
 where the \(w_i\)'s are weights. It so happens that if the points \(x_i\) are 
 \(x_i = \cos(i\pi/N)\), the Chebyshev points of the second kind, 
 the weights have alternating signs, with absolute values \(|w_0| = |w_N| = 1\), 
-and \(|w_i| = 2\) for \(0 < i < N\).  See e.g.\ \cite{BT04}.
-
-Due to a fortunate programming error, the author discovered that the same weights
-work fine for other sets of points \(\{x_i\}\) as well, in particular for uniformly spaced grids.
-There is obviously a reason for this, but I have not found it yet.
-Here is an example with a translated Runge function.
+and \(|w_i| = 2\) for \(0 < i < N\).  See e.g.\ \cite{BT04}. In \cite{FH07} another
+set of weights which corresponds to certain blending polynomials in rational interpolants
+are found. This is used in \code{fhappx}. Here is an example with a translated Runge function.
 <<lagrange,fig=TRUE,png=TRUE>>=
 f <- function(x) 1/(1+25*(x-0.17)^2)
 # Uniform grid:
 unigrid <- list(seq(-2,2,length.out=20))
-uni <- lagappx(f,grid=unigrid)
+uni <- fhappx(f,grid=unigrid)
 ch <- chebappxf(f,20,intervals=c(-2,2))
 s <- seq(-2,2,length.out=1000)
 plot(s,f(s),ylim=range(uni(s),f(s),ch(s)),typ='l')
 lines(s,uni(s),col='blue')
 points(unigrid[[1]],uni(unigrid[[1]]),col='blue',pch=20)
 lines(s,ch(s),col='green')
-legend('topleft',c('function','unilag','chebyshev'),fill=c('black','blue','green'))
+legend('topleft',c('function','FH','chebyshev'),fill=c('black','blue','green'))
 @ 
 
-So the \code{lagappx} creates a Lagrangian interpolation on the specified points, 
-but with Chebyshev weights. It even works for multi dimensional grids.
+So the \code{fhappx} creates a Floater-Hormann interpolation on the specified points.
 
 \section{Multilinear interpolation}
 For demanding functions \pkg{chebpol} also contains a multilinear interpolation in \code{mlappx}. 
@@ -330,31 +326,6 @@ does not use any. It is an entirely straightforward implementation which fits by
 a linear system, and evaluates the \(P(x)\) directly.
 
 \bibliographystyle{amsplain}
-\iftrue
-\providecommand{\bysame}{\leavevmode\hbox to3em{\hrulefill}\thinspace}
-\providecommand{\MR}{\relax\ifhmode\unskip\space\fi MR }
-% \MRhref is called by the amsart/book/proc definition of \MR.
-\providecommand{\MRhref}[2]{%
-  \href{http://www.ams.org/mathscinet-getitem?mr=#1}{#2}
-}
-\providecommand{\href}[2]{#2}
-\begin{thebibliography}{1}
-
-\bibitem{HL12}
-Thomas Hangelbroek and Jeremy Levesley, \emph{On the density of polyharmonic
-  splines}, Journal of Approximation Theory \textbf{167} (2013), 94 -- 108.
-
-\bibitem{Rabut92}
-Christophe Rabut, \emph{Elementary m-harmonic cardinal b-splines}, Numerical
-  Algorithms \textbf{2} (1992), no.~1, 39--61.
-
-\bibitem{BT04}
-  Jean-Paul Berrut and Lloyd N. Trefethen, \emph{Barycentric Lagrange Interpolation},
-  SIAM Review, \textbf{46} (2004), no.~3, 501--517.
-  
-\end{thebibliography}
-\else
 \bibliography{biblio}
-\fi
 
 \end{document}

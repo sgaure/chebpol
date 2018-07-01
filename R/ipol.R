@@ -1,5 +1,5 @@
-ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=2,
-                 method=c('chebyshev','multilinear','lagrange','uniform','general','polyharmonic'),
+ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
+                 method=c('chebyshev','multilinear','fh','uniform','general','polyharmonic'),
                  ...) {
   method <- match.arg(method)
   switch(method,
@@ -10,8 +10,9 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=2,
          multilinear={
            return(mlappx(val,grid,...))
          },
-         lagrange={
-           return(lagappx(val,dims,intervals,grid))
+         fh={
+           if(is.null(k)) k <- min(4,sapply(grid,length))
+           return(fhappx(val,grid,d=k))
          },
          uniform={
            if(is.function(val) && is.null(dims)) stop('Must specify dims for uniform intervals')

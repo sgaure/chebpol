@@ -8,8 +8,8 @@
 \description{
   The package contains methods for creating multivariate Chebyshev
   interpolations for real-valued functions on hypercubes.  Some methods for
-  non-Chebyshev grids are also provided, multilinear and multinomial for
-  Cartesian product grids, and a polyharmonic spline for scattered multi
+  non-Chebyshev grids are also provided, multilinear and Floater-Hormann
+  for Cartesian product grids, and a polyharmonic spline for scattered multi
   dimensional data.
 }
 
@@ -38,7 +38,9 @@
   is straightforward to map any interval into [-1,1], thus making
   Chebyshev approximation on an interval of choice.  Or, a hypercube of choice.
 
-  The primary method of the package is \code{\link{chebappx}} which takes as
+  The primary method of the package is \code{\link{ipol}} which just
+  dispatches to one of the following methods.
+  For Chebyshev interpolation, there is \code{\link{chebappx}} which takes as
   input the function values on the grid, possibly together with a
   hypercube specification in the form of a list of intervals.  It
   produces a function which interpolates on the hypercube.
@@ -50,9 +52,9 @@
   with some examples.  And a more general for arbitrary
   Cartesian-product grids in \code{\link{chebappxg}} with a wrapper in
   \code{\link{chebappxgf}}. These are based on transforms of Chebyshev-polynomials.
-  A multilinear interpolation is available in \code{\link{mlappx}}. A
-  Lagrangian polynomial interpolation is available in
-  \code{\link{lagappx}}. For scattered multi dimensional data there is
+  A multilinear interpolation is available in \code{\link{mlappx}}. The
+  Floater-Hormann rational interpolation is available in
+  \code{\link{fhappx}}. For scattered multi dimensional data there is
   a polyharmonic spline interpolation in \code{\link{polyh}}.
   
   There are also functions for producing Chebyshev
@@ -60,7 +62,7 @@
   function on a grid (\code{\link{evalongrid}}), and a function for
   finding the Chebyshev coefficients (\code{\link{chebcoef}}).
 
-  All the functions generated accept as an argument a matrix of column
+  All the generated interpolant functions accept as an argument a matrix of column
   vectors. Except for the polyharmonic spline, the generated functions
   also accept an argument \code{threads=getOption('chebpol.threads')} to
   utilize more than one CPU if a matrix of column vectors is evaluated.
@@ -77,17 +79,17 @@ f <- function(x) sqrt(1+x[1])*exp(x[2])*sin(5*x[3])^2
 value <- evalongrid(f , dims)
 ##fit a Chebyshev approximation to it. Note that the value-array contains the
 ##grid-structure. 
-ch <- chebappx(value)
+ch <- ipol(value,dims=dims,method='cheb')
 ## To see the full grid, use the chebknots function and expand.grid
 \dontrun{
 head(cbind(expand.grid(chebknots(dims)), value=as.numeric(value),
       appx=as.numeric(evalongrid(ch,dims))))
 }
-## evaluate between the grid points
+## Make a Floater-Hormann approximation on a uniform grid as well
+fh <- ipol(f,grid=lapply(dims,function(n) seq(-1,1,length.out=n)),method='fh',k=5)
+## evaluate in some random points in R3
 m <- matrix(runif(15,-1,1),3)
-ch(m)
-apply(m,2,f)
-ch(c(-0.3,0.2,0.16))
+data.frame(true=apply(m,2,f), cheb=ch(m), fh=fh(m))
 }
 \keyword{DCT}
 \keyword{Discrete Cosine Transform}
