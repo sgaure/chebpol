@@ -1781,7 +1781,7 @@ fi
 
 # Check whether --enable-check was given.
 if test "${enable_check+set}" = set; then :
-  enableval=$enable_check; EXTRA='-Wall -pedantic -Wextra -Wconversion'; echo "PEDANTIC CHECK"
+  enableval=$enable_check; EXTRA='-Wall -pedantic -Wextra'; echo "PEDANTIC CHECK"
 fi
 
 # some R

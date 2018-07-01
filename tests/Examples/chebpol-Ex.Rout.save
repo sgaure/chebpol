@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2018-06-26 r74934) -- "Unsuffered Consequences"
+R Under development (unstable) (2018-06-26 r74931) -- "Unsuffered Consequences"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -355,6 +355,42 @@ $z
 > 
 > 
 > cleanEx()
+> nameEx("lagappx")
+> ### * lagappx
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: lagappx
+> ### Title: Lagrange interpolation on a grid
+> ### Aliases: lagappx
+> 
+> ### ** Examples
+> 
+> ## evenly spaced grid-points
+> su <- seq(0,1,length.out=10)
+> ## irregularly spaced grid-points
+> s <- su^3
+> ## create approximation on the irregularly spaced grid
+> lg1 <- lagappx(exp,grid=list(s))
+> ## test it
+> lg1(su) - exp(su)
+ [1]  0.000000000  0.001770603 -0.003331131  0.003162030  0.002324825
+ [6] -0.006393641 -0.003316673  0.007684629  0.012725012  0.000000000
+> 
+> ## two dimensional approximation
+> f <- function(x) exp(sum(x^2))
+> grid <- list(s,su)
+> 
+> lg2 <- lagappx(evalongrid(f,grid=grid),grid=grid)
+> # an equivalent would be lg2 <- lagappx(f,grid)
+> 
+> a <- runif(2); lg2(a); f(a)
+[1] 1.216778
+[1] 1.232409
+> 
+> 
+> 
+> cleanEx()
 > nameEx("mlappx")
 > ### * mlappx
 > 
@@ -463,7 +499,7 @@ $z
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  0.693 0.056 0.749 0 0 
+Time elapsed:  1.71 0.986 1.287 0 0 
 > grDevices::dev.off()
 null device 
           1 

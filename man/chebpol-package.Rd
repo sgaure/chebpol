@@ -8,7 +8,9 @@
 \description{
   The package contains methods for creating multivariate Chebyshev
   interpolations for real-valued functions on hypercubes.  Some methods for
-  non-Chebyshev grids are also provided, in particular a polyharmonic spline.
+  non-Chebyshev grids are also provided, multilinear and multinomial for
+  Cartesian product grids, and a polyharmonic spline for scattered multi
+  dimensional data.
 }
 
 \details{
@@ -48,7 +50,9 @@
   with some examples.  And a more general for arbitrary
   Cartesian-product grids in \code{\link{chebappxg}} with a wrapper in
   \code{\link{chebappxgf}}. These are based on transforms of Chebyshev-polynomials.
-  A multilinear interpolation is available in \code{\link{mlappx}}. And
+  A multilinear interpolation is available in \code{\link{mlappx}}. A
+  Lagrangian polynomial interpolation is available in
+  \code{\link{lagappx}}. For scattered multi dimensional data there is
   a polyharmonic spline interpolation in \code{\link{polyh}}.
   
   There are also functions for producing Chebyshev

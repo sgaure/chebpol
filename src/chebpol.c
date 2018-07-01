@@ -149,6 +149,100 @@ static SEXP R_chebcoef(SEXP x, SEXP sdct) {
   return resvec;
 }
 
+static double C_lagrange(double *fv, double *x, double **knots, int *dims, const int rank, double **weights) {
+  // Use Lagrange method to evaluate.
+  // if f_k is the function value in x_k, then the interpolation in
+  // x is (sum_i=0 (-1)^i f_i/(x-x_i)) / sum_i=0 (-1)^i /(x-x_i)
+  // but first and last term in the sums should be halved
+  if(rank == 0) return fv[0];
+  int siz = 1;
+  const int newrank = rank-1;
+  const int N = dims[newrank];
+  const double xx = x[newrank];
+  double *kn = knots[newrank];
+  //  double *w = weights[newrank];
+  for(int i = 0; i < newrank; i++) siz *= dims[i];
+  double num=0, denom=0;
+
+#if 1
+  // save a recursion step
+  // Special case:
+  for(int i = 0; i < N; i++) {
+    if(xx == kn[i]) return C_lagrange(&fv[i*siz], x, knots, dims, newrank, weights);
+  }
+  if(newrank == 0) {
+    for(int i = 0; i < N; i++) {
+      const double val = fv[i];
+      double pole = 1.0 / (xx-kn[i]);  // Should have used the weights instead of 1.0 and the sign
+      if( (i&1) == 1) pole = -pole;
+      if(i == 0 || i == N-1) pole = 0.5*pole;
+      num += pole * val;
+      denom += pole;
+    }
+    return num/denom;
+  }
+#endif 
+  for(int i = 0,j=0; i < N; i++,j+=siz) {
+    const double val = C_lagrange(&fv[j], x, knots, dims, newrank, weights);
+    double pole = 1.0 / (xx-kn[i]); // Should have used the weights instead of 1.0 and the sign
+    if( (i&1) == 1) pole = -pole;
+    if(i == 0 || i == N-1) pole = 0.5*pole;
+    num += pole * val;
+    denom += pole;
+  }
+  return num/denom;
+}
+
+static SEXP R_lagrange(SEXP inx, SEXP vals, SEXP grid, SEXP Sweights, SEXP Rthreads) {
+  int *dims;
+  int siz = 1;
+  double *val = REAL(vals);
+  const int threads = INTEGER(AS_INTEGER(Rthreads))[0];
+  SEXP dim;
+  int rank;
+
+  // Create some pointers and stuff. 
+  dim = getAttrib(vals,R_DimSymbol);
+  dims = INTEGER(dim);
+  rank = LENGTH(dim);
+  if(rank <= 0) error("rank must be positive");
+  if(isMatrix(inx)) {
+    if(rank != nrows(inx))
+      error("coeffcient rank(%d) must match number of rows(%d)",LENGTH(dim),nrows(inx));
+  } else {
+    if(rank != LENGTH(inx))
+      error("coefficient rank(%d) does not match argument length(%d)",
+	    LENGTH(dim),LENGTH(inx));
+  }
+  /* This shouldn't happen, but we check it anyway since we'll bomb if it's wrong */
+  for(int i = 0; i < rank; i++)  siz *= dims[i];
+  if(LENGTH(vals) != siz)
+    error("coefficient length(%d) does not match data length(%d)",
+	  LENGTH(vals),siz);
+
+  if(LENGTH(grid) != rank)
+    error("There must be one value for each knot");
+  double **knots = (double **) R_alloc(rank,sizeof(double*));
+  double **weights = (double **) R_alloc(rank, sizeof(double*));
+  for(int i = 0; i < rank; i++) {
+    knots[i] = REAL(VECTOR_ELT(grid,i));
+    //    weights[i] = REAL(VECTOR_ELT(Sweights,i));
+  }
+  double *xp = REAL(inx);
+  const int numvec = isMatrix(inx) ? ncols(inx) : 1;
+  SEXP resvec = PROTECT(NEW_NUMERIC(numvec));
+  double *out = REAL(resvec);
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads) schedule(static)
+#endif
+  for(int i = 0; i < numvec; i++) {
+    out[i] = C_lagrange(val, xp+i*rank, knots, dims, rank, weights);
+  }
+  UNPROTECT(1);
+  return resvec;
+
+}
+
 static double C_evalcheb(double *cf, double *x, int *dims, const int rank) {
   if(rank == 0) return cf[0];
   // Otherwise, use the Clenshaw algorithm
@@ -508,6 +602,7 @@ static SEXP R_havefftw() {
 R_CallMethodDef callMethods[] = {
   {"evalcheb", (DL_FUNC) &R_evalcheb, 3},
   {"chebcoef", (DL_FUNC) &R_chebcoef, 2},
+  {"lagrange", (DL_FUNC) &R_lagrange, 5},
   {"evalmlip", (DL_FUNC) &R_evalmlip, 4},
   //  {"predmlip", (DL_FUNC) &R_mlippred, 2},
   {"evalongrid", (DL_FUNC) &R_evalongrid, 2},

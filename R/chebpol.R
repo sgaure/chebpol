@@ -143,6 +143,22 @@ chebappxgf <- function(fun, grid, ..., mapdim=NULL) {
   chebappxg(evalongrid(fun, ..., grid=grid),grid,mapdim)
 }
 
+
+# General grids, modified Lagrange
+lagappx <- function(val,dims=NULL,intervals=NULL,grid=NULL, ...) {
+  x <- threads <- NULL; rm(x,threads) # avoid warning about undefined vars
+  if(is.null(grid) & is.null(dims)) 
+    stop('Must specify grid or dims')
+  if(!is.null(dims)) grid <- chebknots(dims,intervals)
+  if(is.function(val)) val <- evalongrid(val, grid=grid, ...)
+  # calculate weights. 
+#  weights <- lapply(grid, function(g) 1/sapply(seq_along(g), function(i) prod((g[i] - g[-i]))))
+  weights <- NULL
+  vectorfun(.Call(C_lagrange,x,val,grid,weights,threads), 
+            args=alist(x=,threads=getOption('chebpol.threads')),
+            arity=length(grid))
+}
+
 # we can actually find the grid-maps for uniform grids.
 # the Chebyshev knots are cos(pi*(j+0.5)/n) for j=0..n-1 These should
 # map into the n grid points. These have distance 2/(n-1), starting in -1, ending in 1
