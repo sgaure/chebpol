@@ -3,7 +3,7 @@
 \title{Lagrange interpolation on a grid}
 \concept{Lagrange interpolation}
 \description{
-  Lagrange interpolation on an arbitrary Cartesian product.
+  A modified Lagrange interpolation on an arbitrary Cartesian product.
 }
 
 \usage{
@@ -38,9 +38,13 @@ function.  The interpolant function uses the barycenteric Lagrangian interpolati
 
   If only \code{dims} is specified, Chebyshev sets are generated as
   \code{grid=chebknots(dims,intervals)}. This yields a Chebyshev
-  approximation, but it is faster to evaluate than the one from \code{\link{chebappx}}.
+  approximation.
   Other grids can be tried out, but remember that the Lagrangian
-  interpolant is polynomial, so uniform grids will suffer from the Runge phenomenon.
+  interpolant is a polynomial, so uniform grids may suffer from the Runge phenomenon.
+  The modification from standard Lagrange is that the weights are
+  constant, no matter which grid, we use the weights \code{c(0.5,1,...,1,0.5)} from a Chebyshev
+  grid of the form \code{cos((0:n)*pi/n)}. The author do not know why
+  this works so well even for uniform grids, but it seems to do.
 }
 
 \examples{

@@ -153,12 +153,12 @@ lagappx <- function(val,dims=NULL,intervals=NULL,grid=NULL, ...) {
   if(is.function(val)) val <- evalongrid(val, grid=grid, ...)
   # calculate weights. 
 #  weights <- lapply(grid, function(g) 1/sapply(seq_along(g), function(i) prod((g[i] - g[-i]))))
-  weights <- lapply(grid, function(g) {
-    meanlog <- mean(sapply(seq_along(g), function(i) log(abs(g[i] - g[-i]))))
-    sign <- sapply(seq_along(g), function(i) prod(sign(g[i]-g[-i])))
-    sign*exp(-sapply(seq_along(g), function(i) {sum(log(abs(g[i] - g[-i])) - meanlog)}))
-  })
-
+#  weights <- lapply(grid, function(g) {
+#    meanlog <- mean(sapply(seq_along(g), function(i) log(abs(g[i] - g[-i]))))
+#    sign <- sapply(seq_along(g), function(i) prod(sign(g[i]-g[-i])))
+#    sign*exp(-sapply(seq_along(g), function(i) {sum(log(abs(g[i] - g[-i])) - meanlog)}))
+#  })
+  weights <- NULL
   vectorfun(.Call(C_lagrange,x,val,grid,weights,threads), 
             args=alist(x=,threads=getOption('chebpol.threads')),
             arity=length(grid))

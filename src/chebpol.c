@@ -160,7 +160,7 @@ static double C_lagrange(double *fv, double *x, double **knots, int *dims, const
   const int N = dims[newrank];
   const double xx = x[newrank];
   double *kn = knots[newrank];
-  double *w = weights[newrank];
+  //  double *w = weights[newrank];
   for(int i = 0; i < newrank; i++) siz *= dims[i];
   double num=0, denom=0;
 
@@ -226,7 +226,7 @@ static SEXP R_lagrange(SEXP inx, SEXP vals, SEXP grid, SEXP Sweights, SEXP Rthre
   double **weights = (double **) R_alloc(rank, sizeof(double*));
   for(int i = 0; i < rank; i++) {
     knots[i] = REAL(VECTOR_ELT(grid,i));
-    weights[i] = REAL(VECTOR_ELT(Sweights,i));
+    //    weights[i] = REAL(VECTOR_ELT(Sweights,i));
   }
   double *xp = REAL(inx);
   const int numvec = isMatrix(inx) ? ncols(inx) : 1;
