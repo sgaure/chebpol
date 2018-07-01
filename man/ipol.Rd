@@ -29,29 +29,31 @@ ipol(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
 
 
 \value{
-A \code{function(x)} defined on hypercube, approximating the given
+A \code{function(x, ...)} defined on hypercube, an interpolant for the given
 function.  The function yields values for arguments outside the
 hypercube as well, though it will typically be a poor approximation.
 }
 
 \details{
+ \code{ipol} is just a wrapper around the other functions in \pkg{chebpol}.
   Which arguments to specify depends on the method.
 
-  The argument \code{dims} is used by the methods \code{"chebyshev"},
-  \code{"fh"} and \code{"uniform"}, these are the methods where the
-  interpolation points can be inferred by their number. See
-  \code{\link{chebappx}}, \code{\link{fhappx}} and \code{\link{ucappx}}.
+  The argument \code{dims} is used by the methods \code{"chebyshev"} and
+  and \code{"uniform"}. These are the methods where the
+  interpolation points can be inferred by how many there are. See
+  \code{\link{chebappx}} and \code{\link{ucappx}}.
   The argument \code{intervals} generally goes with \code{dims} when
   something else than standard intervals \code{[-1, 1]} are used.
 
   The argument \code{grid} is used with methods \code{"multilinear"},
-  \code{"fh"}, and \code{"general"}. The methods which can use
+  \code{"fh"}, and \code{"general"}. These are the methods which can use
   arbitrary Cartesian grids.  See \code{\link{mlappx}},
   \code{\link{fhappx}}, and \code{\link{chebappxg}}.
 
   The arguments \code{knots} and \code{k} are used with method
-  \code{"polyharmonic"}, see \code{\link{polyh}}. \code{k} is used
-  as the \code{d} argument to \code{\link{fhappx}} and defaults to 4.
+  \code{"polyharmonic"}, see \code{\link{polyh}}. \code{k} with method
+  \code{"fh"} is used as the \code{d} argument to \code{\link{fhappx}},
+  the degree of the blending polynomials, and defaults to 4.
 }
 
 \examples{

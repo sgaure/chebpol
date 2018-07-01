@@ -47,6 +47,8 @@ interpolate the Runge function \(f : x \mapsto (1+25x^2)^{-1}\), there will be o
 \(P_f^n\) near the end-points. As \(n\) grows, the amplitude of these oscillations grow
 without bounds.
 
+Most of the functionality in the package is reachable from the function \code{ipol}.
+
 \section{Chebyshev interpolation}
 The classical solution to the Runge phenomenon is to use a particular set of
 knots, the Chebyshev knots \(x_i^n = \cos(\pi(i-0.5)/n)\) for \(i =
@@ -70,20 +72,15 @@ this tensor-product transform in the multivariate case.  The knots are
 the Cartesian product of one-dimensional knots. This is a
 classical way to interpolate multivariate real functions.  
 
-This procedure is available in package \pkg{chebpol} in two
-variants. One for the case that \(f(x_i^n)\) is known for each \(i=1..n\),
-this is the function \code{chebappx}. For the case that the function
-\(f\) is available, not only its values in the knots, we have the
-function \code{chebappxf}. This is a short wrapper for \code{chebappx}
-which simply evaluates \(f\) in the knots.
-
-Thus, given a function \(f\) we may compute its Chebyshev approximation and plot it:
+This procedure is available in package \pkg{chebpol}. Either we have the function to 
+interpolate, or we have the values in the Chebyshev-knots.
+Given a function \(f\) we may compute its Chebyshev approximation and plot it:
 <<runge,echo=FALSE>>=
 library(chebpol)
 @ 
 <<runge, fig=TRUE, png=TRUE>>=
 f <- function(x) cos(3*pi*x)/(1+25*(x-0.25)^2)
-ch <- chebappxf(f,15)
+ch <- ipol(f,dims=15,method='chebyshev')
 s <- seq(-1,1,length.out=401)
 plot(s, f(s),type='l')
 lines(s, ch(s), col='red')
@@ -95,11 +92,12 @@ Even though there still are oscillations near the end points,
 their amplitude will diminish as \(n\) grows.  The knots are the
 locations where the curves intersect.
 
-In the multivariate case, the \code{dims} argument to \code{chebappxf} is
-a vector of integers, the number of knots in each dimension. The \code{chebappx}
-variant instead uses the \code{dim} attribute of its input to determine this.
+In the multivariate case, the \code{dims} argument is
+a vector of integers, the number of knots in each dimension. If we have the
+values, not the function, we may pass those to \code{ipol} as an arrayd
+with the \code{dim} attribute correctly set to match the \code{dims} argument.
 
-If you look at the function \code{ch} returned from \code{chebappxf}, you'll notice that it has 
+If you look at the function \code{ch} returned by \code{ipol}, you'll notice that it has 
 two arguments. The first one, \code{x}, is the point at which you want to evaluate the
 function. This \code{x} can also be a matrix where each column is a point, the interpolation
 function can handle more than one point. In the special case with a single argument function,
@@ -114,7 +112,7 @@ above we could have written \code{lines(s, ch(s,8))} to compute the
 from specifying more threads than there are CPUs in your computer, nor
 more than there are input vectors. Most of the interpolation functions
 produced by \pkg{chebpol} has a \code{threads}-argument. The notable
-exception is \code{polyh} which instead relies on a parallel
+exception is the method \code{"polyharmonic"} which instead relies on a parallel
 blas-library for parallelization. The \code{chebpol.threads} option is initialized
 from the environment variable \code{CHEBPOL\_THREADS} when the package is loaded.
 
@@ -139,7 +137,6 @@ It is readily verified that for \(i=1..n\) we have \(Q^n(y_i^n) = f(y_i^n)\), th
 \(Q^n\) agrees with the function \(f\) on the uniform grid.  This is no longer a 
 polynomial interpolation, so the Runge phenomenon is not necessarily present.
 
-This procedure is available in the function \code{ucappx}, with a function variant in \code{ucappxf}.
 Continuing the former example, we have
 <<runge,echo=FALSE>>=
 pdf('ucrunge.pdf')
@@ -148,7 +145,7 @@ lines(s,ch(s), col='red')
 points(kn,f(kn))
 @ 
 <<runge>>=
-uc <- ucappxf(f,15)
+uc <- ipol(f, dims=15, method='uniform')
 lines(s,uc(s),col='blue')
 @ 
 <<runge,echo=FALSE>>=
@@ -158,8 +155,8 @@ invisible(dev.off())
   \includegraphics[width=\figsize]{ucrunge.pdf}
 \end{center}
 
-For the multivariate case, \code{ucappx} creates a separate map
-function \code{g} for each dimension, which may have different number of knots.
+For the multivariate case, a separate map 
+function \code{g} is created for each dimension, which may have different number of knots.
 One could imagine a case where
 some dimensions are evaluated on Chebyshev grids, whereas other
 dimensions are evaluated on uniform grids. Although \pkg{chebpol} has
@@ -185,8 +182,8 @@ and see how it fares in a random point:
 <<multi>>=
 library(chebpol)
 f <- function(x) log(x[[1]])*sqrt(x[[2]])/log(sum(x))
-ch <- chebappxf(f, c(5,8), list(c(1,2), c(15,20)))
-uc <- ucappxf(f, c(5,8), list(c(1,2), c(15,20)))
+ch <- ipol(f, dims=c(5,8), intervals=list(c(1,2), c(15,20)), method='chebyshev')
+uc <- ipol(f, dims=c(5,8), intervals=list(c(1,2), c(15,20)), method='uniform')
 tp <- c(runif(1,1,2), runif(1,15,20))
 cat('arg:',tp,'true:', f(tp), 'ch:', ch(tp), 'uc:',uc(tp),'\n')
 @ 
@@ -200,15 +197,14 @@ to create a monotone function \(g\) from the grid-points
 \(\{y_i\}_{i=1..n}\) to the Chebyshev knots \(\{x_i^n\}_{i=1..n}\). Otherwise, the same
 method as for uniform grids are used.
 
-The function \code{chebappxg} performs this procedure. With an accompanying function
-variant \code{chebappxgf}.
+The method \code{"general"} performs this procedure.
 In the multivariate case, it is assumed that the grid in each dimension is arbitrary,
 but the multi-dimensional grid is still a Cartesian product of these. 
 We may test this on a non-uniform grid.
 <<sqrt,fig=TRUE,png=TRUE>>=
 f <- function(x) cos(3*pi*x)/(1+25*(x-0.25)^2)
 gr <- log(seq(exp(-1),exp(1),length=15))
-chg <- chebappxgf(f,gr)
+chg <- ipol(f, grid=gr, method='general')
 plot(s, f(s), col='black', type='l')
 lines(s, chg(s), col='blue')
 points(gr,f(gr))
@@ -224,14 +220,14 @@ where the \(w_i\)'s are weights. It so happens that if the points \(x_i\) are
 the weights have alternating signs, with absolute values \(|w_0| = |w_N| = 1\), 
 and \(|w_i| = 2\) for \(0 < i < N\).  See e.g.\ \cite{BT04}. In \cite{FH07} another
 set of weights which corresponds to certain blending polynomials in rational interpolants
-are found. This is used in \code{fhappx}. Here is an example with a translated Runge function.
+are found. This is used in method \code{"fh"}. Here is an example with a Runge function.
 <<lagrange,fig=TRUE,png=TRUE>>=
-f <- function(x) 1/(1+25*(x-0.17)^2)
+f <- function(x) 1/(1+25*x^2)
 # Uniform grid:
-unigrid <- list(seq(-2,2,length.out=20))
-uni <- fhappx(f,grid=unigrid,d=2)
-ch <- chebappxf(f,20,intervals=c(-2,2))
-s <- seq(-2,2,length.out=1000)
+unigrid <- list(seq(-3,2,length.out=20))
+uni <- ipol(f, grid=unigrid, k=2, method='fh')
+ch <- ipol(f, dims=20, intervals=c(-3,2), method='chebyshev')
+s <- seq(-3,2,length.out=1000)
 plot(s,f(s),ylim=range(uni(s),f(s),ch(s)),typ='l')
 lines(s,uni(s),col='blue')
 points(unigrid[[1]],uni(unigrid[[1]]),col='blue',pch=20)
@@ -239,7 +235,6 @@ lines(s,ch(s),col='green')
 legend('topleft',c('function','FH','chebyshev'),fill=c('black','blue','green'))
 @ 
 
-So the \code{fhappx} creates a Floater-Hormann interpolation on the specified points.
 
 \section{Multilinear interpolation}
 For demanding functions \pkg{chebpol} also contains a multilinear interpolation in \code{mlappx}. 
@@ -260,7 +255,7 @@ f <- function(x) sign(sum(x^3)-0.1)*
                   sqrt(abs(25*prod(x)-4))/
                   (1+25*sum(x)^2)
 grid <- replicate(4,list(seq(-1,1,length=15)))
-ml <- mlappx(f,grid)
+ml <- ipol(f, grid=grid, method='multilinear')
 s <- seq(-1,1,length=400)
 curve <- function(x) c(cos(1.2*pi*x),
                        sin(1.5*pi*x^3), 
@@ -287,7 +282,7 @@ r <- runif(20)
 r <- r/sum(r)
 f <- function(x) 1/mean(log1p(r*x))
 knots <- matrix(runif(60000), 20)
-phs <- polyh(f, knots, 3)
+phs <- ipol(f, knots=knots, k=3, method='polyharmonic')
 rr <- runif(20)
 curve <- function(x) abs(cos(5*pi*rr*x))
 s <- seq(0,1,length.out=1000)
@@ -295,7 +290,7 @@ plot(s,sapply(s,function(x) f(curve(x))),typ='l')
 lines(s,sapply(s,function(x) phs(curve(x))),col='blue',lty=2)
 @ 
 
-\code{polyh(f,knots,k)} fits a function of the form \(P(x) =
+The \code{"polyharmonic"} method fits a function of the form \(P(x) =
 \sum_{i=1}^n w_i \phi(\|x-c_i\|) + L(x)+c\) such that \(P(c_i) =
 f(c_i)\) for each \(i\) where the \(c_i \in \RN^d\) are the knots,
 \(\|\cdot\|\) is the Euclidean norm on \(\RN^d\), \(w_i \in \RN\) are
@@ -314,8 +309,8 @@ a natural number \(m\).
 For \(k=2\), we get the thin plate spline.
 Note that the fitting may fail, in particular for \(k < 0\) and irregular data. In this
 case a least squares fit is used, and a warning is issued. The \(k\)
-parameter then may need to be tuned for the problem at hand. Note that \code{polyh} by
-default transforms the knots and coordinates into a unit hypercube if any of the knots
+parameter then may need to be tuned for the problem at hand. Note that by
+default the knots and coordinates are transformed into a unit hypercube if any of the knots
 are outside, see the help entry for \code{polyh}.  Note that for positive \code{k} the theory 
 in \cite[Proposition 6]{HL12} says that there are enough splines even if we do not scale, but
 the numerics may be more favourable when we scale.  There is more about polyharmonic splines in 
