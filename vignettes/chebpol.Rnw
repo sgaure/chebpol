@@ -221,12 +221,12 @@ not need to see any polynomial. Given function values \(f_i = f(x_i)\) in some p
 \[L(x) = \frac{\sum_{i=0}^N f_i \frac{w_i}{(x-x_i)}}{\sum_{i=0}^N \frac{w_i}{(x-x_i)}},\]
 where the \(w_i\)'s are weights. It so happens that if the points \(x_i\) are 
 \(x_i = \cos(i\pi/N)\), the Chebyshev points of the second kind, 
-the weights are \(w_0 = w_N = 1\), and \(w_i = 2\) for \(0 < i < N\), though with
-alternating sign.  See e.g.\ \cite{BT04}.
+the weights have alternating signs, with absolute values \(|w_0| = |w_N| = 1\), 
+and \(|w_i| = 2\) for \(0 < i < N\).  See e.g.\ \cite{BT04}.
 
-Due to a programming error, the author discovered that the same weights
+Due to a fortunate programming error, the author discovered that the same weights
 work fine for other sets of points \(\{x_i\}\) as well, in particular for uniformly spaced grids.
-There's obviously a reason for this, but I haven't found it yet.
+There is obviously a reason for this, but I have not found it yet.
 Here is an example with a translated Runge function.
 <<lagrange,fig=TRUE,png=TRUE>>=
 f <- function(x) 1/(1+25*(x-0.17)^2)
@@ -242,8 +242,8 @@ lines(s,ch(s),col='green')
 legend('topleft',c('function','unilag','chebyshev'),fill=c('black','blue','green'))
 @ 
 
-So the \code{lagappx} creates a Lagrangian interpolation, but with Chebyshev weights. It
-even works for multi dimensional grids.
+So the \code{lagappx} creates a Lagrangian interpolation on the specified points, 
+but with Chebyshev weights. It even works for multi dimensional grids.
 
 \section{Multilinear interpolation}
 For demanding functions \pkg{chebpol} also contains a multilinear interpolation in \code{mlappx}. 
