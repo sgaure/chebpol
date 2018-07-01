@@ -229,7 +229,7 @@ are found. This is used in \code{fhappx}. Here is an example with a translated R
 f <- function(x) 1/(1+25*(x-0.17)^2)
 # Uniform grid:
 unigrid <- list(seq(-2,2,length.out=20))
-uni <- fhappx(f,grid=unigrid)
+uni <- fhappx(f,grid=unigrid,d=2)
 ch <- chebappxf(f,20,intervals=c(-2,2))
 s <- seq(-2,2,length.out=1000)
 plot(s,f(s),ylim=range(uni(s),f(s),ch(s)),typ='l')
