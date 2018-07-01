@@ -217,11 +217,12 @@ In polyh(f, knots, 5, FALSE) :
 > f.v <- apply(x,2,f)
 > round(fivenum(lg.v-f.v),7)
 [1] -0.0013609 -0.0003628  0.0003319  0.0010187  0.0022055
-> # check the some points:
-> f(sapply(grid,function(x) x[4])) - lg(sapply(grid,function(x) x[4]))
+> # check some points:
+> round(f(sapply(grid,function(x) x[4])) - lg(sapply(grid,function(x) x[4]+1e-9)),7)
 [1] 0
+> 
 > 
 > 
 > proc.time()
    user  system elapsed 
-  7.533   4.629   5.210 
+ 11.334   5.830   6.160 

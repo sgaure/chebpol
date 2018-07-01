@@ -103,5 +103,6 @@ lg.v <- lg(x,2)
 f.v <- apply(x,2,f)
 round(fivenum(lg.v-f.v),7)
 # check some points:
-f(sapply(grid,function(x) x[4])) - lg(sapply(grid,function(x) x[4]+1e-9))
+round(f(sapply(grid,function(x) x[4])) - lg(sapply(grid,function(x) x[4]+1e-9)),7)
+
 

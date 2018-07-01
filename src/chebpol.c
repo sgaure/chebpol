@@ -602,7 +602,7 @@ static SEXP R_havefftw() {
 R_CallMethodDef callMethods[] = {
   {"evalcheb", (DL_FUNC) &R_evalcheb, 3},
   {"chebcoef", (DL_FUNC) &R_chebcoef, 2},
-  {"lagrange", (DL_FUNC) &R_lagrange, 4},
+  {"lagrange", (DL_FUNC) &R_lagrange, 5},
   {"evalmlip", (DL_FUNC) &R_evalmlip, 4},
   //  {"predmlip", (DL_FUNC) &R_mlippred, 2},
   {"evalongrid", (DL_FUNC) &R_evalongrid, 2},
