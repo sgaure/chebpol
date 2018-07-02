@@ -11,10 +11,10 @@
 }
 
 \arguments{
-\item{val}{Array or function. Function values on a grid, or the function
+\item{val}{array or function. Function values on a grid, or the function
   itself. If it is the values, the \code{dim}-attribute
   must be appropriately set.}
-\item{grid}{A list.  Each element is a vector of ordered grid-points for a
+\item{grid}{list.  Each element is a vector of ordered grid-points for a
   dimension.  These need not be Chebyshev-knots, nor evenly spaced.}
 \item{d}{integer. The degree of the blending polynomial.}
 \item{...}{Further arguments to the function, if \code{is.function(val)}.}
@@ -23,13 +23,13 @@
 
 \value{
 A \code{function(x)} defined on the hypercube, approximating the given
-function.  The interpolant function uses the barycenteric
+function.  The interpolant function uses the barycentric
 Floater-Hormann interpolation.
 }
 
 \details{
   A call \code{fun <- fhappx(val,grid)} creates a Floater-Hormann
-  rational interpolant function on the grid. The degree of the blending
+  rational interpolant function \code{fun} on the grid. The degree of the blending
   polynomial,\code{d}, can be a vector, different for each grid-dimension.
 
   If \code{val} is a function it will be evaluated on the grid.

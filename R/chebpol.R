@@ -322,7 +322,8 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
   # v <- as.numeric(solve(crossprod(W,AiW),t(AiW) %*% val))
   # w <- as.numeric(Ai %*% val - AiW %*% v)
 
-  local(function(x) {
+  local(function(x, threads) {
+    if(!missing(threads)) warning('polyh does not support parallel threads')
     if(!is.matrix(x) && length(x) == M) {
       nx <- normfun(x)
       sum(w*phi(abs(-2*crossprod(nx,knots) + sqnm + sum(nx^2)))) + sum(v*c(1,nx))

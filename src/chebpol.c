@@ -228,7 +228,11 @@ static SEXP R_FH(SEXP inx, SEXP vals, SEXP grid, SEXP Sweights, SEXP Rthreads) {
   }
   double *xp = REAL(inx);
   const int numvec = isMatrix(inx) ? ncols(inx) : 1;
+#ifdef RETMAT
+  SEXP resvec = PROTECT(allocMatrix(REALSXP, numvec, 1));
+#else
   SEXP resvec = PROTECT(NEW_NUMERIC(numvec));
+#endif
   double *out = REAL(resvec);
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads) schedule(static)
@@ -295,7 +299,11 @@ static SEXP R_evalcheb(SEXP coef, SEXP inx, SEXP Rthreads) {
 
   double *xp = REAL(inx);
   const int numvec = isMatrix(inx) ? ncols(inx) : 1;
+#ifdef RETMAT
+  SEXP resvec = PROTECT(allocMatrix(REALSXP, numvec, 1));
+#else
   SEXP resvec = PROTECT(NEW_NUMERIC(numvec));
+#endif
   double *out = REAL(resvec);
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads) schedule(static)
@@ -545,7 +553,11 @@ static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads) {
 				       gridsize,LENGTH(values));
   const int numvec = isMatrix(x) ? ncols(x) : 1;
   double *xp = REAL(x);
+#ifdef RETMAT
+  SEXP resvec = PROTECT(allocMatrix(REALSXP, numvec, 1));
+#else
   SEXP resvec = PROTECT(NEW_NUMERIC(numvec));
+#endif
   double *out = REAL(resvec);
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads) schedule(static)
