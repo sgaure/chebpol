@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2018-06-26 r74931) -- "Unsuffered Consequences"
+R Under development (unstable) (2018-06-26 r74934) -- "Unsuffered Consequences"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -421,23 +421,26 @@ $z
  [1]  0.000000e+00  1.442079e-09 -2.352985e-08  7.217901e-08  1.287039e-07
  [6] -7.880323e-07 -8.461000e-07  3.720994e-06  1.076321e-05  0.000000e+00
 > 
-> ## multi linear approx
-> f <- function(x) exp(sum(x^2))
-> grid <- list(s,su)
+> ## multi dimensional approximation
+> f <- function(x) exp(-sum(x^2))
+> # a 3-dimensional 10x10x10 grid, first and third coordinate are non-uniform
+> grid <- list(s, su, sort(1-s))
 > 
+> # make multilinear, Floater-Hormann, Chebyshev and polyharmonic spline.
 > ml2 <- ipol(f, grid=grid, method='multilin')
 > fh2 <- ipol(f, grid=grid, method='fh')
-> ch2 <- ipol(f, dims=c(10,10), intervals=list(0:1,0:1), method='cheb')
-> knots <- matrix(runif(2*100),2)
+> ch2 <- ipol(f, dims=c(10,10,10), intervals=list(0:1,0:1,0:1), method='cheb')
+> knots <- matrix(runif(3*100),3)
 > ph2 <- ipol(f, knots=knots, k=2, method='poly')
-> a <- runif(2)
-> f(a); ml2(a); fh2(a); ch2(a); ph2(a)
-[1] 1.126783
-[1] 1.130699
-[1] 1.126776
-[1] 1.126783
-[1] 1.126585
-> 
+> # make 5 points in R3 to test them on
+> m <- matrix(runif(3*5),3)
+> cbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ch2(m))
+          true        ml        fh      cheb      poly
+[1,] 0.4938432 0.4900602 0.4938451 0.4938432 0.4938432
+[2,] 0.2628701 0.2620720 0.2628697 0.2628701 0.2628701
+[3,] 0.4978476 0.4906477 0.4979769 0.4978476 0.4978476
+[4,] 0.8044066 0.7832077 0.8045352 0.8044066 0.8044066
+[5,] 0.2732000 0.2736311 0.2731663 0.2732000 0.2732000
 > 
 > 
 > 
@@ -550,7 +553,7 @@ $z
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  2.807 1.619 1.819 0 0 
+Time elapsed:  2.735 0.166 1.034 0 0 
 > grDevices::dev.off()
 null device 
           1 

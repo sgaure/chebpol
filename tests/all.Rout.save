@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2018-06-26 r74931) -- "Unsuffered Consequences"
+R Under development (unstable) (2018-06-26 r74934) -- "Unsuffered Consequences"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -212,16 +212,16 @@ In polyh(f, knots, 5, FALSE) :
 > 
 > f <- function(x) sum(log(1+x^2))
 > grid <- list(seq(-1,1,len=50), seq(-1,1,len=30)^3L, chebknots(20)[[1]])
-> fh <- ipol(f,grid=grid,method='fh')
+> fh <- ipol(f,grid=grid,method='fh',k=c(3,4,4))
 > x <- matrix(runif(3*1e2),3)
 > fh.v <- fh(x,2)
 > f.v <- apply(x,2,f)
 > round(fivenum(fh.v-f.v),7)
-[1] -5.60e-06 -1.00e-07  0.00e+00  1.70e-06  2.91e-05
+[1] -5.70e-06 -1.00e-07  1.00e-07  1.70e-06  2.94e-05
 > # check some points:
 > round(f(sapply(grid,function(x) x[4])) - fh(sapply(grid,function(x) x[4]+1e-9)),7)
 [1] 0
 > 
 > proc.time()
    user  system elapsed 
- 11.590   5.852   5.900 
+ 10.778   0.477   2.888 

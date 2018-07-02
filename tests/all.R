@@ -98,7 +98,7 @@ phs(a); nphs(a)
 
 f <- function(x) sum(log(1+x^2))
 grid <- list(seq(-1,1,len=50), seq(-1,1,len=30)^3L, chebknots(20)[[1]])
-fh <- ipol(f,grid=grid,method='fh')
+fh <- ipol(f,grid=grid,method='fh',k=c(3,4,4))
 x <- matrix(runif(3*1e2),3)
 fh.v <- fh(x,2)
 f.v <- apply(x,2,f)
