@@ -31,6 +31,12 @@ Floater-Hormann interpolation.
   A call \code{fun <- fhappx(val,grid)} creates a Floater-Hormann
   rational interpolant function \code{fun} on the grid. The degree of the blending
   polynomial,\code{d}, can be a vector, different for each grid-dimension.
+  In theory, \code{d} can be any integer between 0 and the
+  grid-dimension, a higher \code{d} yields a smoother fit. However,
+  increasing \code{d} leads to exponential growth in rounding errors, so
+  there is a tradeoff somewhere which depends on the analyticity of the
+  function, and not in an obvious way. Current recommendations is to
+  start low, at 3 or 4, and increase if necessary.
 
   If \code{val} is a function it will be evaluated on the grid.
 }

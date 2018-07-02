@@ -91,5 +91,5 @@ knots <- matrix(runif(3*100),3)
 ph2 <- ipol(f, knots=knots, k=2, method='poly')
 # make 5 points in R3 to test them on
 m <- matrix(runif(3*5),3)
-cbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ch2(m))
+cbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ph2(m))
 }

@@ -40,6 +40,7 @@
 
   The primary method of the package is \code{\link{ipol}} which just
   dispatches to one of the following methods.
+
   For Chebyshev interpolation, there is \code{\link{chebappx}} which takes as
   input the function values on the grid, possibly together with a
   hypercube specification in the form of a list of intervals.  It
@@ -47,11 +48,13 @@
   There is also a wrapper called \code{\link{chebappxf}} which may be used if
   one has the function to be approximated rather than only its values in
   the grid-points.
+
   There is even an interpolation for uniform grids in
   \code{\link{ucappx}}, with a wrapper in \code{\link{ucappxf}}
   with some examples.  And a more general for arbitrary
   Cartesian-product grids in \code{\link{chebappxg}} with a wrapper in
   \code{\link{chebappxgf}}. These are based on transforms of Chebyshev-polynomials.
+
   A multilinear interpolation is available in \code{\link{mlappx}}. The
   Floater-Hormann rational interpolation is available in
   \code{\link{fhappx}}. For scattered multi dimensional data there is

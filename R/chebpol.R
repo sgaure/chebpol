@@ -158,7 +158,7 @@ fhappx <- function(val,grid=NULL, d=1, ...) {
     g <- grid[[gg]]
     d <- dd[gg]
     n = length(g)-1
-    if(d > n) stop(sprintf('d (%d) must be less or equal to dimension (%d)',d,n))
+    if(d > n+1) stop(sprintf('d (%d) must be less or equal to dimension (%d)',d,n+1))
     sapply(seq_along(g)-1L, function(k) {
       gk <- g[k+1]
       sum(sapply(intersect(seq(k-d, k), 0:(n-d)), function(i) {
