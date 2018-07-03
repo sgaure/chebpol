@@ -6,6 +6,7 @@
 #include <R_ext/BLAS.h>
 #include <R_ext/Visibility.h>
 #include "config.h"
+#include "chebpol.h"
 #ifdef HAVE_FFTW
 #include <fftw3.h>
 #endif
@@ -617,6 +618,10 @@ R_CallMethodDef callMethods[] = {
   {"evalongrid", (DL_FUNC) &R_evalongrid, 2},
   {"havefftw", (DL_FUNC) &R_havefftw, 0},
   {"sqdiffs", (DL_FUNC) &R_sqdiffs, 2},
+#ifdef HAVE_ALGLIB
+  {"makerbf", (DL_FUNC) &R_makerbf, 4},
+  {"evalrbf", (DL_FUNC) &R_evalrbf, 3},
+#endif
   {NULL, NULL, 0}
 };
 

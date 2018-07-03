@@ -1,5 +1,5 @@
 ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
-                 method=c('chebyshev','multilinear','fh','uniform','general','polyharmonic'),
+                 method=c('chebyshev','multilinear','fh','uniform','general','polyharmonic','rbf'),
                  ...) {
   method <- match.arg(method)
   switch(method,
@@ -29,7 +29,14 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
          },
          polyharmonic={
            if(is.null(knots)) stop('Must specify knots for polyharmonic splines.')
+           if(is.null(k)) k <- 3
            return(polyh(val,knots,k,...))
+         },
+         rbf={
+           if(is.null(knots)) stop('Must specify knots for radial basis functions.')
+           if(is.null(k)) k <- c(2,5,0)
+           rbase <- k[1]; layers <- k[2]; lambda <- k[3]
+           return(rbf.alglib(val,knots,rbase,layers,lambda))
          },
          stop('Unknown interpolation method: ', method)
          )
