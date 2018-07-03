@@ -1,5 +1,14 @@
 PKG_CPPFLAGS=@CPPFLAGS@ @FFTW_CFLAGS@ @EXTRA@ $(SHLIB_OPENMP_CXXFLAGS)
 PKG_CFLAGS=$(C_VISIBILITY) @EXTRA@ $(SHLIB_OPENMP_CFLAGS)
-PKG_LIBS=@LIBS@ @FFTW_LIBS@ $(BLAS_LIBS) $(FLIBS) $(SHLIB_OPENMP_CFLAGS)
+PKG_LIBS=@LIBS@ @FFTW_LIBS@ $(BLAS_LIBS) $(FLIBS) $(SHLIB_OPENMP_CFLAGS) 
 
 all: $(SHLIB)
+
+#ALGLIB=alglib/src
+#$(SHLIB): chebpol.o rbfalglib.o $(ALGLIB)/interpolation.o
+
+#alglib/libalglib.a:
+#	(cd alglib/src; $(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c interpolation.cpp; $(AR) -rcs ../libalglib.a *.o)
+#
+#clean:
+#	@-rm -f alglib/libalglib.a alglib/src/*.o *.o $(SHLIB)
