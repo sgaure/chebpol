@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2018-06-26 r74934) -- "Unsuffered Consequences"
+R Under development (unstable) (2018-07-01 r74950) -- "Unsuffered Consequences"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -260,6 +260,7 @@ $z
 > ###   hypercubes
 > ### Aliases: chebpol-package chebpol
 > ### Keywords: DCT Discrete Cosine Transform Chebyshev approximation
+> ###   Floater-Hormann
 > 
 > ### ** Examples
 > 
@@ -269,7 +270,7 @@ $z
 > value <- evalongrid(f , dims)
 > ##fit a Chebyshev approximation to it. Note that the value-array contains the
 > ##grid-structure. 
-> ch <- ipol(value,dims=dims,method='cheb')
+> ch <- ipol(value,method='cheb')
 > ## To see the full grid, use the chebknots function and expand.grid
 > ## Not run: 
 > ##D head(cbind(expand.grid(chebknots(dims)), value=as.numeric(value),
@@ -279,13 +280,11 @@ $z
 > fh <- ipol(f,grid=lapply(dims,function(n) seq(-1,1,length.out=n)),method='fh',k=5)
 > ## evaluate in some random points in R3
 > m <- matrix(runif(15,-1,1),3)
-> data.frame(true=apply(m,2,f), cheb=ch(m), fh=fh(m))
-         true        cheb          fh
-1 0.250114652 0.250111290 0.250115208
-2 0.413216825 0.413217773 0.413211221
-3 1.751484232 1.751485082 1.751459909
-4 0.001678009 0.001678273 0.001677869
-5 0.170950464 0.170949761 0.170954387
+> rbind(true=apply(m,2,f), cheb=ch(m), fh=fh(m))
+          [,1]      [,2]     [,3]        [,4]      [,5]
+true 0.2501147 0.4132168 1.751484 0.001678009 0.1709505
+cheb 0.2501113 0.4132178 1.751485 0.001678273 0.1709498
+fh   0.2501152 0.4132112 1.751460 0.001677869 0.1709544
 > 
 > 
 > 
@@ -430,17 +429,17 @@ $z
 > ml2 <- ipol(f, grid=grid, method='multilin')
 > fh2 <- ipol(f, grid=grid, method='fh')
 > ch2 <- ipol(f, dims=c(10,10,10), intervals=list(0:1,0:1,0:1), method='cheb')
-> knots <- matrix(runif(3*100),3)
+> knots <- matrix(runif(3*1000),3)
 > ph2 <- ipol(f, knots=knots, k=2, method='poly')
 > # make 5 points in R3 to test them on
 > m <- matrix(runif(3*5),3)
-> cbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ph2(m))
-          true        ml        fh      cheb      poly
-[1,] 0.4938432 0.4900602 0.4938451 0.4938432 0.4903977
-[2,] 0.2628701 0.2620720 0.2628697 0.2628701 0.2619163
-[3,] 0.4978476 0.4906477 0.4979769 0.4978476 0.5147685
-[4,] 0.8044066 0.7832077 0.8045352 0.8044066 0.8024650
-[5,] 0.2732000 0.2736311 0.2731663 0.2732000 0.2742146
+> rbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ph2(m))
+          [,1]      [,2]      [,3]      [,4]      [,5]
+true 0.4044805 0.1814394 0.5204223 0.3257483 0.1179095
+ml   0.3986097 0.1807598 0.5196170 0.3207522 0.1189552
+fh   0.4045132 0.1814381 0.5204222 0.3257881 0.1178941
+cheb 0.4044805 0.1814394 0.5204223 0.3257483 0.1179095
+poly 0.4043862 0.1815306 0.5204519 0.3254284 0.1179557
 > 
 > 
 > 
@@ -553,7 +552,7 @@ $z
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  2.771 0.094 1.04 0 0 
+Time elapsed:  3.308 0.128 2.067 0 0 
 > grDevices::dev.off()
 null device 
           1 

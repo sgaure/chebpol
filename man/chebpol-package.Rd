@@ -82,7 +82,7 @@ f <- function(x) sqrt(1+x[1])*exp(x[2])*sin(5*x[3])^2
 value <- evalongrid(f , dims)
 ##fit a Chebyshev approximation to it. Note that the value-array contains the
 ##grid-structure. 
-ch <- ipol(value,dims=dims,method='cheb')
+ch <- ipol(value,method='cheb')
 ## To see the full grid, use the chebknots function and expand.grid
 \dontrun{
 head(cbind(expand.grid(chebknots(dims)), value=as.numeric(value),
@@ -92,8 +92,9 @@ head(cbind(expand.grid(chebknots(dims)), value=as.numeric(value),
 fh <- ipol(f,grid=lapply(dims,function(n) seq(-1,1,length.out=n)),method='fh',k=5)
 ## evaluate in some random points in R3
 m <- matrix(runif(15,-1,1),3)
-data.frame(true=apply(m,2,f), cheb=ch(m), fh=fh(m))
+rbind(true=apply(m,2,f), cheb=ch(m), fh=fh(m))
 }
 \keyword{DCT}
 \keyword{Discrete Cosine Transform}
 \keyword{Chebyshev approximation}
+\keyword{Floater-Hormann}

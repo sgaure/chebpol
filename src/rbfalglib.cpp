@@ -52,15 +52,14 @@ extern "C" {
       rbfreport rep;
       rbfbuildmodel(*s, rep);
       SEXP result = R_MakeExternalPtr(s, NULL, Sknotvalues);
-      
       R_RegisterCFinalizerEx(result, mfinal, FALSE);
-      // return some structure which agrees with R's gc
+
       return result;
     } catch(...) {error("exception from alglib");}
-    }
-    
-    SEXP R_evalrbf(SEXP model, SEXP vectors, SEXP Sthreads) {
-      rbfmodel *s = (rbfmodel*) R_ExternalPtrAddr(model);
+  }
+  
+  SEXP R_evalrbf(SEXP model, SEXP vectors, SEXP Sthreads) {
+    rbfmodel *s = (rbfmodel*) R_ExternalPtrAddr(model);
     const int M = nrows(vectors);
     const int N = ncols(vectors);
     SEXP res = PROTECT(NEW_NUMERIC(N));
@@ -68,34 +67,42 @@ extern "C" {
     double *vec = REAL(vectors);
     int threads = INTEGER(AS_INTEGER(Sthreads))[0];
     // No OpenMP yet, awkward interface in alglib
+    bool useomp = false;
 #ifdef _OPENMP
-    bool *init = new bool[threads];
-    rbfcalcbuffer *bufs = new rbfcalcbuffer[threads];
-    for(int t = 0; t < threads; t++) init[t] = false;
-#pragma omp parallel for num_threads(threads) schedule(static)
-    for(int i = 0; i < N; i++) {
-      int thr = omp_get_thread_num();
-      real_1d_array x,y;
-      if(!init[thr]) {
-	init[thr] = true;
-	rbfcreatecalcbuffer(*s, bufs[thr]);
-      }
-      x.attach_to_ptr(M, vec+i*M);
-      y.attach_to_ptr(M, out+i);
-      rbftscalcbuf(*s, bufs[thr], x, y);
-    }
-    delete [] init;
-    delete [] bufs;
-#else
-    try {
-      for(int i = 0; i < N; i++) {
-	real_1d_array x, y;
-	x.attach_to_ptr(M, vec+i*M);
-	y.attach_to_ptr(M, out+i);
-	rbfcalcbuf(*s, x, y);
-      }
-    } catch(...) {error("exception from alglib");}
+    useomp = N > 1 && threads > 1;
 #endif
+    if(useomp) {
+      bool *init = new bool[threads];
+      rbfcalcbuffer *bufs = new rbfcalcbuffer[threads];
+      for(int t = 0; t < threads; t++) init[t] = false;
+      try {
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads) schedule(static)
+#endif
+	for(int i = 0; i < N; i++) {
+	  int thr = omp_get_thread_num();
+	  real_1d_array x,y;
+	  if(!init[thr]) {
+	    init[thr] = true;
+	    rbfcreatecalcbuffer(*s, bufs[thr]);
+	  }
+	  x.attach_to_ptr(M, vec+i*M);
+	  y.attach_to_ptr(M, out+i);
+	  rbftscalcbuf(*s, bufs[thr], x, y);
+	}
+      } catch(...) {error("exception from alglib/omp");}
+      delete [] init;
+      delete [] bufs;
+    } else {
+      try {
+	for(int i = 0; i < N; i++) {
+	  real_1d_array x, y;
+	  x.attach_to_ptr(M, vec+i*M);
+	  y.attach_to_ptr(M, out+i);
+	  rbfcalcbuf(*s, x, y);
+	}
+      } catch(...) {error("exception from alglib");}
+    }
     UNPROTECT(1);
     return res;
   }

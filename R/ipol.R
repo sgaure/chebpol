@@ -14,7 +14,7 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
          },
          fh={
            if(is.null(grid)) stop('grid must be specified for Floater-Hormann interpolation')
-           if(is.null(k)) k <- min(4,sapply(grid,length))
+           if(is.null(k)) k <- pmin(4,sapply(grid,length)-1)
            return(fhappx(val,grid,d=k))
          },
          uniform={

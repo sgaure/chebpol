@@ -158,7 +158,7 @@ fhappx <- function(val,grid=NULL, d=1, ...) {
     g <- grid[[gg]]
     d <- dd[gg]
     n = length(g)-1
-    if(d > n+1) stop(sprintf('d (%d) must be less or equal to dimension (%d)',d,n+1))
+    if(d > n) stop(sprintf('d (%d) must be less than dimension (%d)',d,n+1))
     sapply(seq_along(g)-1L, function(k) {
       gk <- g[k+1]
       sum(sapply(intersect(seq(k-d, k), 0:(n-d)), function(i) {
@@ -285,7 +285,7 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
     phi <- local(compiler::cmpfun(function(r2) r2^ki * log(r2^r2)),list(ki=ki))
   }
 
-#  phi <- local(function(x) .Call(C_phifunc,x, k),list(k=k))
+  phi <- local(function(x) .Call(C_phifunc, x, k),list(k=k))
   # would it be faster to apply phi only on lower tri?  Without crossprod?
   # and either fill in the upper tri, or tailor a solver? I think
   # evaluation of phi on the matrix is fast compared to creating the matrix,
@@ -296,7 +296,7 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
 #  A <- phi(.Call(C_sqdiffs,knots,knots))  
   # faster:
   A <- phi(abs(-2*crossprod(knots) + sqnm + rep(sqnm,each=N)))
-  diag(A) <- phi(0) 
+  diag(A) <- phi(0)
 
   B <- rbind(1,knots)
   mat <- cbind(rbind(A,B),rbind(t(B),matrix(0,M+1,M+1)))
@@ -322,6 +322,7 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
   # AiW <- crossprod(Ai,W)
   # v <- as.numeric(solve(crossprod(W,AiW),t(AiW) %*% val))
   # w <- as.numeric(Ai %*% val - AiW %*% v)
+
 
   local(function(x, threads) {
     if(!missing(threads)) warning('polyh does not support parallel threads')

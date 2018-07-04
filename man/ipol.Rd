@@ -93,9 +93,9 @@ grid <- list(s, su, sort(1-s))
 ml2 <- ipol(f, grid=grid, method='multilin')
 fh2 <- ipol(f, grid=grid, method='fh')
 ch2 <- ipol(f, dims=c(10,10,10), intervals=list(0:1,0:1,0:1), method='cheb')
-knots <- matrix(runif(3*100),3)
+knots <- matrix(runif(3*1000),3)
 ph2 <- ipol(f, knots=knots, k=2, method='poly')
 # make 5 points in R3 to test them on
 m <- matrix(runif(3*5),3)
-cbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ph2(m))
+rbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ph2(m))
 }

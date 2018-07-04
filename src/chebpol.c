@@ -196,7 +196,7 @@ static SEXP R_FH(SEXP inx, SEXP vals, SEXP grid, SEXP Sweights, SEXP Rthreads) {
   int *dims;
   int siz = 1;
   double *val = REAL(vals);
-  const int threads = INTEGER(AS_INTEGER(Rthreads))[0];
+  int threads = INTEGER(AS_INTEGER(Rthreads))[0];
   SEXP dim;
   int rank;
 
@@ -235,11 +235,19 @@ static SEXP R_FH(SEXP inx, SEXP vals, SEXP grid, SEXP Sweights, SEXP Rthreads) {
   SEXP resvec = PROTECT(NEW_NUMERIC(numvec));
 #endif
   double *out = REAL(resvec);
+  int useomp = 0;
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(threads) schedule(static)
+  useomp = numvec > 1 && threads > 1;
 #endif
-  for(int i = 0; i < numvec; i++) {
-    out[i] = C_FH(val, xp+i*rank, knots, dims, rank, weights);
+  if(useomp) {
+#pragma omp parallel for num_threads(threads) schedule(static)
+    for(int i = 0; i < numvec; i++) {
+      out[i] = C_FH(val, xp+i*rank, knots, dims, rank, weights);
+    }
+  } else {
+    for(int i = 0; i < numvec; i++) {
+      out[i] = C_FH(val, xp+i*rank, knots, dims, rank, weights);
+    }
   }
   UNPROTECT(1);
   return resvec;
@@ -275,7 +283,7 @@ static SEXP R_evalcheb(SEXP coef, SEXP inx, SEXP Rthreads) {
   int *dims;
   int siz = 1;
   double *cf = REAL(coef);
-  const int threads = INTEGER(AS_INTEGER(Rthreads))[0];
+  int threads = INTEGER(AS_INTEGER(Rthreads))[0];
   SEXP dim;
   int rank;
 
@@ -306,11 +314,19 @@ static SEXP R_evalcheb(SEXP coef, SEXP inx, SEXP Rthreads) {
   SEXP resvec = PROTECT(NEW_NUMERIC(numvec));
 #endif
   double *out = REAL(resvec);
+  int useomp = 0;
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(threads) schedule(static)
+  useomp = numvec > 2 && threads > 1;
 #endif
-  for(int i = 0; i < numvec; i++) {
-    out[i] = C_evalcheb(cf, xp+i*rank, dims, rank);
+  if(useomp) {
+#pragma omp parallel for num_threads(threads) schedule(static)
+    for(int i = 0; i < numvec; i++) {
+      out[i] = C_evalcheb(cf, xp+i*rank, dims, rank);
+    }
+  } else {
+    for(int i = 0; i < numvec; i++) {
+      out[i] = C_evalcheb(cf, xp+i*rank, dims, rank);
+    }
   }
   UNPROTECT(1);
   return resvec;
@@ -609,25 +625,34 @@ static SEXP R_havefftw() {
   return res;
 }
 
-// inplace
+// inplace, careful how you call it!
 static SEXP R_phifunc(SEXP Sx, SEXP Sk) {
-  double k = INTEGER(Sk)[0];
+  double k = REAL(AS_NUMERIC(Sk))[0];
   double *x = REAL(Sx);
-
+  if(XLENGTH(Sx) == 1 && x[0] == 0.0) return ScalarReal((k<0)?1:0);
   if(k < 0) {
     for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) x[i] = exp(k*x[i]);
   } else {
-    int ki = (int) k;
-    double k2 = 0.5*k;
+    int ki = INTEGER(AS_INTEGER(Sk))[0];
     if(ki % 2 == 1) {
-      for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) x[i] = pow(x[i],k2);
+      for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) {
+	// it's the sqrt(x) to ki'th power
+	double xx = sqrt(x[i]), xi=1;
+	for(int j = 0; j < ki; j++) xi *= xx;
+	x[i] = xi;
+      }
     } else {
-      for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) x[i] = (x[i] <= 0.0) ? 0.0 : 0.5*pow(x[i],k2) * log(x[i]);
+      for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) {
+	// it's sqrt(x) to ki'th power, multiplied by 0.5 log(x)
+	if(x[i] <= 0.0) {x[i]=0.0;continue;}
+	double xx = sqrt(x[i]), xi=1;
+	for(int j = 0; j < ki; j++) xi *= xx;
+	x[i] = xi * 0.5 * log(x[i]);
+      }
     }
   }
   return Sx;
 }
-
 
 R_CallMethodDef callMethods[] = {
   {"evalcheb", (DL_FUNC) &R_evalcheb, 3},
