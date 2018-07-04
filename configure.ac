@@ -30,26 +30,26 @@ if test -n "${R_HOME}"; then
   CPPFLAGS=`${R_HOME}/bin/R CMD config CPPFLAGS`
 fi
 
-if test "${use_check}" = "yes"; then
+AS_IF([test "${use_check}" = "yes"], [
   EXTRA='-Wall -pedantic -Wextra'
-fi
+])
 
-if test "x${use_alglib}" = xyes; then
- PKG_CHECK_MODULES([ALGLIB], alglib, [AC_DEFINE(HAVE_ALGLIB)])
-fi
+AS_IF([test "x${use_alglib}" = xyes], [
+ PKG_CHECK_MODULES([ALGLIB], [alglib >= 3.11], [AC_DEFINE(HAVE_ALGLIB)], [use_alglib=no])
+])
 AC_SUBST(ALGLIB_CFLAGS)
 AC_SUBST(ALGLIB_LIBS)
 
-if test "x$use_fftw" = "xyes"; then
+AS_IF([test "x$use_fftw" = "xyes"], [
   PKG_CHECK_MODULES([FFTW], fftw3, [have_fftw=yes], [AC_MSG_WARN([FFTW not found. Compiling with matrix method])])
-fi
+])
 
 
 AC_LANG([C])
 AC_PROG_CC
 
 
-if test "x$have_fftw" = "xyes" ; then
+AS_IF([test "x$have_fftw" = "xyes" ], [
  # figure out if it works
   AC_MSG_CHECKING(for working fftw_plan_r2r in R)
   echo ['#include <stdlib.h>
@@ -66,10 +66,10 @@ if test "x$have_fftw" = "xyes" ; then
   echo "dyn.load('conftest.so'); .Call('xxx_check')" > conftest.R
   ${R_HOME}/bin/R --slave < conftest.R
   stat=$?
-  if test "x$stat" == "x13" ; then
+  AS_IF([test "x$stat" == "x13"], [
     AC_MSG_RESULT(yes)
     AC_DEFINE(HAVE_FFTW)
-  else
+  ],[
     AC_MSG_RESULT(no)
     AC_MSG_WARN([Your FFTW can't do 2d r2r-transforms, could it be MKL?])
     AC_MSG_CHECKING(static linking of FFTW)
@@ -78,17 +78,17 @@ if test "x$have_fftw" = "xyes" ; then
     ${R_HOME}/bin/R CMD SHLIB -o conftest.so conftest.c $FFTW_LIBS >& /dev/null    
     ${R_HOME}/bin/R --slave >& /dev/null < conftest.R
     stat=$?
-    if test "x$stat" == "x13"; then
+    AS_IF([test "x$stat" == "x13"], [
       AC_MSG_RESULT(yes)
       AC_DEFINE(HAVE_FFTW)
-    else
+    ],[
       AC_MSG_RESULT([no, compiling with slow matrix method])
       FFTW_LIBS=
       FFTW_CFLAGS=
-    fi
-  fi
+    ])
+  ])
   rm -f conftest.o conftest.c conftest.so conftest.R
-fi
+])
 
 ## --- Output ----------------------------------------------------------------
 AC_SUBST(OPENMP_CFLAGS)

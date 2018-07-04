@@ -609,6 +609,26 @@ static SEXP R_havefftw() {
   return res;
 }
 
+// inplace
+static SEXP R_phifunc(SEXP Sx, SEXP Sk) {
+  double k = INTEGER(Sk)[0];
+  double *x = REAL(Sx);
+
+  if(k < 0) {
+    for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) x[i] = exp(k*x[i]);
+  } else {
+    int ki = (int) k;
+    double k2 = 0.5*k;
+    if(ki % 2 == 1) {
+      for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) x[i] = pow(x[i],k2);
+    } else {
+      for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) x[i] = (x[i] <= 0.0) ? 0.0 : 0.5*pow(x[i],k2) * log(x[i]);
+    }
+  }
+  return Sx;
+}
+
+
 R_CallMethodDef callMethods[] = {
   {"evalcheb", (DL_FUNC) &R_evalcheb, 3},
   {"chebcoef", (DL_FUNC) &R_chebcoef, 2},
@@ -618,6 +638,7 @@ R_CallMethodDef callMethods[] = {
   {"evalongrid", (DL_FUNC) &R_evalongrid, 2},
   {"havefftw", (DL_FUNC) &R_havefftw, 0},
   {"sqdiffs", (DL_FUNC) &R_sqdiffs, 2},
+  {"phifunc", (DL_FUNC) &R_phifunc, 2},
   {"makerbf", (DL_FUNC) &R_makerbf, 4},
   {"evalrbf", (DL_FUNC) &R_evalrbf, 3},
   {"havealglib", (DL_FUNC) &R_havealglib, 0},
