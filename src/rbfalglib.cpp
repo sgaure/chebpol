@@ -1,16 +1,16 @@
 #include "config.h"
-#ifdef HAVE_ALGLIB
-#include <math.h>
-#include <Rmath.h>
 #include <R.h>
+#include <Rmath.h>
 #include <Rdefines.h>
-#include <R_ext/Rdynload.h>
-#include <R_ext/BLAS.h>
-#include <R_ext/Visibility.h>
-#include "alglib/src/stdafx.h"
-#include "alglib/src/interpolation.h"
-#include <exception>
 
+#ifdef HAVE_ALGLIB
+#include "stdafx.h"
+#include "interpolation.h"
+#include <exception>
+#ifdef _OPENMP
+#include <omp.h>
+int omp_get_thread_num();
+#endif
 using namespace alglib;
 using namespace std;
 
@@ -68,6 +68,23 @@ extern "C" {
     double *vec = REAL(vectors);
     int threads = INTEGER(AS_INTEGER(Sthreads))[0];
     // No OpenMP yet, awkward interface in alglib
+#ifdef _OPENMP
+    bool init[threads];
+    rbfcalcbuffer bufs[threads];
+    for(int t = 0; t < threads; t++) init[t] = false;
+#pragma omp parallel for num_threads(threads) schedule(static)
+    for(int i = 0; i < N; i++) {
+      int thr = omp_get_thread_num();
+      real_1d_array x,y;
+      if(!init[thr]) {
+	init[thr] = true;
+	rbfcreatecalcbuffer(*s, bufs[thr]);
+      }
+      x.attach_to_ptr(M, vec+i*M);
+      y.attach_to_ptr(M, out+i);
+      rbftscalcbuf(*s, bufs[thr], x, y);
+    }
+#else
     try {
       for(int i = 0; i < N; i++) {
 	real_1d_array x, y;
@@ -76,8 +93,20 @@ extern "C" {
 	rbfcalcbuf(*s, x, y);
       }
     } catch(...) {error("exception from alglib");}
+#endif
     UNPROTECT(1);
     return res;
+  }
+}
+#else
+extern "C" {
+  SEXP R_makerbf(SEXP a, SEXP b,  SEXP c, SEXP d) {
+    if(a == NULL || b == NULL || c == NULL || d == NULL) {};
+    error("alglib not supported");
+  }
+  SEXP R_evalrbf(SEXP a, SEXP b,  SEXP c) {
+    if(a == NULL || b == NULL || c == NULL) {};
+    error("alglib not supported");
   }
 }
 #endif

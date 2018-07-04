@@ -336,9 +336,12 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
   }, list(w=w,v=v,knots=knots,phi=phi,sqnm=sqnm,M=M,normfun=normfun))
 }
 
-rbf.alglib <- function(val, knots, rbase=2,  layers=5, lambda=0) {
+rbf.alglib <- function(val, knots, rbase=2,  layers=5, lambda=0, ...) {
+  x <- threads <- NULL; rm(x,threads)
+  if(is.null(dim(knots))) dim(knots) <- c(1,length(knots))
+  if(is.function(val)) val <- apply(knots,2,val,...)
   model <- .Call(C_makerbf, rbind(knots,val), layers, rbase, lambda)
-  vectorfun(.Call(C_evalrbf, model, x, threads), args=alist(x=,threads=1L), arity=nrow(val))
+  vectorfun(.Call(C_evalrbf, model, x, threads), args=alist(x=,threads=1L), arity=nrow(knots))
 }
 
 vectorfun <- function(e,arity,args=alist(x=)) {

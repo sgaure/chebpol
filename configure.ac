@@ -13,23 +13,36 @@ AC_ARG_ENABLE([fftw],
        [AS_HELP_STRING([--disable-fftw],[do not use fftw])],
        [use_fftw=no],[use_fftw=yes])
 
+AC_ARG_ENABLE([alglib],
+  [AS_HELP_STRING([--disable-alglib],[use alglib rbf])],
+  [use_alglib=${enableval}],[use_alglib=yes])
+
 AC_ARG_ENABLE([check],
 	[AS_HELP_STRING([--enable-check],[enable pedantic syntax check])],
-	[EXTRA='-Wall -pedantic -Wextra'; echo "PEDANTIC CHECK"])
-# some R 
+	[EXTRA='-Wall -pedantic -Wextra'])
+
+# some R standards
 if test -n "${R_HOME}"; then
   CC=`${R_HOME}/bin/R CMD config CC`
+  CPP=`${R_HOME}/bin/R CMD config CPP`
   CFLAGS=`${R_HOME}/bin/R CMD config CFLAGS`
   CPPFLAGS=`${R_HOME}/bin/R CMD config CPPFLAGS`
 fi
 
+if test "x$use_fftw" = "xyes"; then
+  PKG_CHECK_MODULES([FFTW], fftw3, [have_fftw=yes], [AC_MSG_WARN([FFTW not found. Compiling with matrix method])])
+fi
+
+if test "${use_alglib}" = yes; then
+ # figure out if it works
+ PKG_CHECK_MODULES([ALGLIB], alglib, [AC_DEFINE(ALGLIB)])
+fi
+AC_SUBST(ALGLIB_CFLAGS)
+AC_SUBST(ALGLIB_LIBS)
+
 AC_LANG([C])
 AC_PROG_CC
 
-## --- FFTW 3 ----------------------------------------------------------------
-AS_IF([test "x$use_fftw" = "xyes"], [
-  PKG_CHECK_MODULES([FFTW], fftw3, [have_fftw=yes], [echo '*** FFTW not found. Compiling with matrix method'])
-])
 
 if test "x$have_fftw" = "xyes" ; then
   AC_MSG_CHECKING(for working fftw_plan_r2r in R)

@@ -1,2 +1,2 @@
 #undef HAVE_FFTW
-#define HAVE_ALGLIB
+#undef HAVE_ALGLIB
