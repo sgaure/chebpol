@@ -3,7 +3,7 @@
 ##
 
 AC_PREREQ(2.62)
-AC_CONFIG_AUX_DIR([src/build/autoconf])
+AC_CONFIG_AUX_DIR([tools/autoconf])
 
 AC_INIT([chebpol])
 AC_CONFIG_SRCDIR([src/chebpol.c])

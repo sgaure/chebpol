@@ -2,9 +2,6 @@
 #include <R.h>
 #include <Rmath.h>
 #include <Rdefines.h>
-#ifdef _WIN32
-#undef HAVE_ALGLIB
-#endif
 #ifdef HAVE_ALGLIB
 #include "stdafx.h"
 #include "interpolation.h"
@@ -53,7 +50,7 @@ extern "C" {
       rbfsetalgohierarchical(*s, rbase, nlayers, lambdaN);
       rbfreport rep;
       rbfbuildmodel(*s, rep);
-      SEXP result = R_MakeExternalPtr(s, NULL, Sknotvalues);
+      SEXP result = R_MakeExternalPtr(s, NULL, NULL);
       R_RegisterCFinalizerEx(result, mfinal, FALSE);
 
       return result;

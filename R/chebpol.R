@@ -9,6 +9,10 @@
   options(chebpol.threads=thr)
 }
 
+phifunc <- function(x,k) {
+# keep NAMED status on x
+  eval.parent(as.call(list(quote(.Call),C_phifunc,x,k)),2)
+}
 # Chebyshev transformation.  I.e. coefficients for given function values in the knots.
 
 # The Chebyshev knots of order n on an interval
@@ -285,7 +289,11 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
     phi <- local(compiler::cmpfun(function(r2) r2^ki * log(r2^r2)),list(ki=ki))
   }
 
-  phi <- local(function(x) .Call(C_phifunc, x, k),list(k=k))
+  # trickery to get it in place
+  phi <- local(cmpfun(function(x) {
+    eval.parent(as.call(list(quote(.Call), C_phifunc, substitute(x), k)))
+  }), list(k=k))
+
   # would it be faster to apply phi only on lower tri?  Without crossprod?
   # and either fill in the upper tri, or tailor a solver? I think
   # evaluation of phi on the matrix is fast compared to creating the matrix,

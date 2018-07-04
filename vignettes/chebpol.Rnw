@@ -94,8 +94,8 @@ locations where the curves intersect.
 
 In the multivariate case, the \code{dims} argument is
 a vector of integers, the number of knots in each dimension. If we have the
-values, not the function, we may pass those to \code{ipol} as an arrayd
-with the \code{dim} attribute correctly set to match the \code{dims} argument.
+values, not the function, we may pass those to \code{ipol} as an array
+with the \code{dim} attribute correctly set.
 
 If you look at the function \code{ch} returned by \code{ipol}, you'll notice that it has 
 two arguments. The first one, \code{x}, is the point at which you want to evaluate the
@@ -108,13 +108,14 @@ The second argument to \code{ch} is called \code{threads}, it defaults
 to \code{getOption('chebpol.threads')}, and is the number of parallel
 threads which should be used to compute the interpolations. Thus,
 above we could have written \code{lines(s, ch(s,8))} to compute the
-401 points in \code{s} in 8 threads. Clearly, there is nothing to gain
-from specifying more threads than there are CPUs in your computer, nor
-more than there are input vectors. Most of the interpolation functions
-produced by \pkg{chebpol} has a \code{threads}-argument. The notable
-exception is the method \code{"polyharmonic"} which instead relies on a parallel
-blas-library for parallelization. The \code{chebpol.threads} option is initialized
-from the environment variable \code{CHEBPOL\_THREADS} when the package is loaded.
+401 points in \code{s} in 8 threads. There is nothing to gain from
+specifying more threads than there are CPUs in your computer, nor more
+than there are input vectors. Most of the interpolants produced by
+\pkg{chebpol} has a \code{threads}-argument. The notable exception is
+the method \code{"polyharmonic"} which instead relies on a parallel
+blas-library for parallelization, such as Intel's MKL. The
+\code{chebpol.threads} option is initialized from the environment
+variable \code{CHEBPOL\_THREADS} when the package is loaded.
 
 \section{Uniformly spaced grids}
 In some applications it is not feasible to evaluate the function \(f\) in the Chebyshev
@@ -237,12 +238,12 @@ legend('topleft',c('function','FH','chebyshev'),fill=c('black','blue','green'))
 
 
 \section{Multilinear interpolation}
-For demanding functions \pkg{chebpol} also contains a multilinear interpolation in \code{mlappx}. 
+For demanding functions \pkg{chebpol} also contains a multilinear interpolation.
 A multilinear function is a function \(f(x_1,x_2,...,x_n)\) such that for each
 \(i=1..n\) the function \(g_i(x) = f(x_1,...,x_{i-1},x,x_{i+1},...,x_n)\) is of the
 form \(ax+b\) for every choice of the \(x_i\)s.
 A typical example is \(f(x,y,z) = xyz + xy + 2yz - x + 2\).
-\code{mlappx} may take either a function or function values as its first argument and
+The method \code{"multilinear"} may take either a function or function values as its first argument and
 create a piecewise multilinear interpolation.
 It is a straightforward implementation which interpolates a point by a convex
 combination of the function values in the corners of the surrounding hypercube.
@@ -269,7 +270,7 @@ lines(s,wml,col='blue') # multilinear interpolation
 \section{Scattered data}
 In some cases multidimensional data points are not organized in a
 grid, rather they are scattered.  For this case, there is an
-experimental implementation of polyharmonic splines in \code{polyh}.
+experimental implementation of polyharmonic splines in the method \code{"polyharmonic"}.
 It accepts a function, or function values, and a
 matrix of centres (knots), one centre in each column. Here is a
 20-dimensional example with 3000 randomly placed knots:

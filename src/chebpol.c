@@ -625,33 +625,45 @@ static SEXP R_havefftw() {
   return res;
 }
 
-// inplace, careful how you call it!
+// inplace to save memory
 static SEXP R_phifunc(SEXP Sx, SEXP Sk) {
   double k = REAL(AS_NUMERIC(Sk))[0];
   double *x = REAL(Sx);
+  double *y;
+  SEXP res;
   if(XLENGTH(Sx) == 1 && x[0] == 0.0) return ScalarReal((k<0)?1:0);
+
+  if(MAYBE_REFERENCED(Sx)) {
+    res = PROTECT(NEW_NUMERIC(XLENGTH(Sx)));
+    y = REAL(res);
+  } else {
+    res = Sx;
+    y = x;
+  }
+
   if(k < 0) {
-    for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) x[i] = exp(k*x[i]);
+    for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) y[i] = exp(k*x[i]);
   } else {
     int ki = INTEGER(AS_INTEGER(Sk))[0];
     if(ki % 2 == 1) {
       for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) {
 	// it's the sqrt(x) to ki'th power
 	double xx = sqrt(x[i]), xi=1;
-	for(int j = 0; j < ki; j++) xi *= xx;
-	x[i] = xi;
+	for(R_xlen_t j = 0; j < ki; j++) xi *= xx;
+	y[i] = xi;
       }
     } else {
       for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) {
 	// it's sqrt(x) to ki'th power, multiplied by 0.5 log(x)
-	if(x[i] <= 0.0) {x[i]=0.0;continue;}
+	if(x[i] <= 0.0) {y[i]=0.0;continue;}
 	double xx = sqrt(x[i]), xi=1;
-	for(int j = 0; j < ki; j++) xi *= xx;
-	x[i] = xi * 0.5 * log(x[i]);
+	for(R_xlen_t j = 0; j < ki; j++) xi *= xx;
+	y[i] = xi * 0.5 * log(x[i]);
       }
     }
   }
-  return Sx;
+  if(y != x) UNPROTECT(1);
+  return res;
 }
 
 R_CallMethodDef callMethods[] = {

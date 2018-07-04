@@ -409,7 +409,7 @@ fh   0.2501152 0.4132112 1.751460 0.001677869 0.1709544
 > ## irregularly spaced grid-points
 > s <- su^3
 > ## create approximation on the irregularly spaced grid
-> ml1 <- ipol(exp,grid=list(s), method='multilin')
+> ml1 <- ipol(exp, grid=list(s), method='multilin')
 > fh1 <- ipol(exp, grid=list(s), method='fh')
 > ## test it, since exp is convex, the linear approximation lies above
 > ## the exp between the grid points
@@ -421,7 +421,7 @@ fh   0.2501152 0.4132112 1.751460 0.001677869 0.1709544
  [6] -7.880323e-07 -8.461000e-07  3.720994e-06  1.076321e-05  0.000000e+00
 > 
 > ## multi dimensional approximation
-> f <- function(x) exp(-sum(x^2))
+> f <- function(x) 10/(1+25*mean(x^2))
 > # a 3-dimensional 10x10x10 grid, first and third coordinate are non-uniform
 > grid <- list(s, su, sort(1-s))
 > 
@@ -434,12 +434,12 @@ fh   0.2501152 0.4132112 1.751460 0.001677869 0.1709544
 > # make 5 points in R3 to test them on
 > m <- matrix(runif(3*5),3)
 > rbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ph2(m))
-          [,1]      [,2]      [,3]      [,4]      [,5]
-true 0.4044805 0.1814394 0.5204223 0.3257483 0.1179095
-ml   0.3986097 0.1807598 0.5196170 0.3207522 0.1189552
-fh   0.4045132 0.1814381 0.5204222 0.3257881 0.1178941
-cheb 0.4044805 0.1814394 0.5204223 0.3257483 0.1179095
-poly 0.4043862 0.1815306 0.5204519 0.3254284 0.1179557
+         [,1]      [,2]     [,3]      [,4]      [,5]
+true 1.170558 0.6568743 1.552163 0.9664714 0.5314819
+ml   1.179175 0.6557517 1.551257 0.9680901 0.5326367
+fh   1.189234 0.6568705 1.552155 1.0086296 0.5315642
+cheb 1.170537 0.6568743 1.552185 0.9664563 0.5314819
+poly 1.170018 0.6573040 1.552691 0.9648213 0.5316708
 > 
 > 
 > 
@@ -552,7 +552,7 @@ poly 0.4043862 0.1815306 0.5204519 0.3254284 0.1179557
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  3.183 0.128 2.015 0 0 
+Time elapsed:  3.217 0.152 2.027 0 0 
 > grDevices::dev.off()
 null device 
           1 
