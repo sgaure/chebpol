@@ -620,6 +620,7 @@ R_CallMethodDef callMethods[] = {
   {"sqdiffs", (DL_FUNC) &R_sqdiffs, 2},
   {"makerbf", (DL_FUNC) &R_makerbf, 4},
   {"evalrbf", (DL_FUNC) &R_evalrbf, 3},
+  {"havealglib", (DL_FUNC) &R_havealglib, 0},
   {NULL, NULL, 0}
 };
 

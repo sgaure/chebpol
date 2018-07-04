@@ -343,6 +343,7 @@ rbf.alglib <- function(val, knots, rbase=2,  layers=5, lambda=0, ...) {
   model <- .Call(C_makerbf, rbind(knots,val), layers, rbase, lambda)
   vectorfun(.Call(C_evalrbf, model, x, threads), args=alist(x=,threads=1L), arity=nrow(knots))
 }
+havealglib <- function() .Call(C_havealglib)
 
 vectorfun <- function(e,arity,args=alist(x=)) {
   fun <- function() {}

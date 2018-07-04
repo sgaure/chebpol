@@ -2097,7 +2097,7 @@ else
 	ALGLIB_LIBS=$pkg_cv_ALGLIB_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	$as_echo "#define ALGLIB 1" >>confdefs.h
+	$as_echo "#define HAVE_ALGLIB 1" >>confdefs.h
 
 fi
 fi
@@ -2926,6 +2926,8 @@ $as_echo "yes" >&6; }
   else
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Your FFTW can't do 2d r2r-transforms, could it be MKL?" >&5
+$as_echo "$as_me: WARNING: Your FFTW can't do 2d r2r-transforms, could it be MKL?" >&2;}
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking static linking of FFTW" >&5
 $as_echo_n "checking static linking of FFTW... " >&6; }
     FFTW_LIBS="-Wl,-Bsymbolic-functions,-Bstatic,$FFTW_LIBS,-Bdynamic"

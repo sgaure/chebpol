@@ -35,7 +35,7 @@ fi
 
 if test "${use_alglib}" = yes; then
  # figure out if it works
- PKG_CHECK_MODULES([ALGLIB], alglib, [AC_DEFINE(ALGLIB)])
+ PKG_CHECK_MODULES([ALGLIB], alglib, [AC_DEFINE(HAVE_ALGLIB)])
 fi
 AC_SUBST(ALGLIB_CFLAGS)
 AC_SUBST(ALGLIB_LIBS)
@@ -65,6 +65,7 @@ if test "x$have_fftw" = "xyes" ; then
     AC_DEFINE(HAVE_FFTW)
   else
     AC_MSG_RESULT(no)
+    AC_MSG_WARN([Your FFTW can't do 2d r2r-transforms, could it be MKL?])
     AC_MSG_CHECKING(static linking of FFTW)
     FFTW_LIBS="-Wl,-Bsymbolic-functions,-Bstatic,$FFTW_LIBS,-Bdynamic"
     touch conftest.c

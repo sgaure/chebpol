@@ -97,6 +97,9 @@ extern "C" {
     UNPROTECT(1);
     return res;
   }
+  SEXP R_havealglib() {
+    return ScalarLogical(1);
+  }
 }
 #else
 extern "C" {
@@ -108,5 +111,9 @@ extern "C" {
     if(a == NULL || b == NULL || c == NULL) {};
     error("alglib not supported");
   }
+  SEXP R_havealglib() {
+    return ScalarLogical(0);
+  }
+
 }
 #endif
