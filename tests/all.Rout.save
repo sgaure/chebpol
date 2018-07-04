@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2018-06-26 r74934) -- "Unsuffered Consequences"
+R Under development (unstable) (2018-07-01 r74950) -- "Unsuffered Consequences"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -216,12 +216,12 @@ In polyh(f, knots, 5, FALSE) :
 > x <- matrix(runif(3*1e2),3)
 > fh.v <- fh(x,2)
 > f.v <- apply(x,2,f)
-> round(fivenum(fh.v-f.v),7)
-[1] -5.70e-06 -1.00e-07  1.00e-07  1.70e-06  2.94e-05
+> round(fivenum(fh.v-f.v),6)
+[1] -6.0e-06  0.0e+00  0.0e+00  2.0e-06  2.9e-05
 > # check some points:
 > round(f(sapply(grid,function(x) x[4])) - fh(sapply(grid,function(x) x[4]+1e-9)),7)
 [1] 0
 > 
 > proc.time()
    user  system elapsed 
- 10.778   0.477   2.888 
+  7.473   0.382   4.787 

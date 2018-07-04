@@ -2,7 +2,9 @@
 #include <R.h>
 #include <Rmath.h>
 #include <Rdefines.h>
-
+#ifdef _WIN32
+#undef HAVE_ALGLIB
+#endif
 #ifdef HAVE_ALGLIB
 #include "stdafx.h"
 #include "interpolation.h"

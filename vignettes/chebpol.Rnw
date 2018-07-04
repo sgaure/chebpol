@@ -298,9 +298,9 @@ weights, \(L\) is linear \(\RN^d\mapsto \RN\), and \(c\in \RN\) is a
 constant. \(\phi\) is the function \(\RN^+ \mapsto \RN\)
 \[
 \phi(x) = \begin{cases}
-  &x^k   \qquad\text{when \(k\in\NN\) is odd}\\
-  &x^k \log(x) \qquad\text{when \(k\in\NN\) is even}\\
-  &\exp(kx^2) \qquad\text{when \(k < 0\)}
+  x^k   &\text{when \(k\in\NN\) is odd,}\\
+  x^k \log(x) &\text{when \(k\in\NN\) is even,}\\
+  \exp(kx^2) &\text{when \(k < 0\).}
   \end{cases}
 \]
 Note that this differs from some other expositions, which use \(2m-d\) as exponent for

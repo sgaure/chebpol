@@ -102,6 +102,6 @@ fh <- ipol(f,grid=grid,method='fh',k=c(3,4,4))
 x <- matrix(runif(3*1e2),3)
 fh.v <- fh(x,2)
 f.v <- apply(x,2,f)
-round(fivenum(fh.v-f.v),7)
+round(fivenum(fh.v-f.v),6)
 # check some points:
 round(f(sapply(grid,function(x) x[4])) - fh(sapply(grid,function(x) x[4]+1e-9)),7)
