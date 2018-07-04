@@ -1,6 +1,7 @@
 ## 
 ## This file is part of chebpol
 ##
+
 AC_PREREQ(2.62)
 AC_CONFIG_AUX_DIR([src/build/autoconf])
 
@@ -11,15 +12,15 @@ AC_CONFIG_FILES([src/Makevars])
 
 AC_ARG_ENABLE([fftw],
        [AS_HELP_STRING([--disable-fftw],[do not use fftw])],
-       [use_fftw=no],[use_fftw=yes])
+       [use_fftw="${enableval}"],[use_fftw=yes])
 
 AC_ARG_ENABLE([alglib],
-  [AS_HELP_STRING([--disable-alglib],[use alglib rbf])],
-  [use_alglib=${enableval}],[use_alglib=yes])
+  [AS_HELP_STRING([--disable-alglib],[do not use alglib rbf])],
+  [use_alglib="${enableval}"],[use_alglib=yes])
 
 AC_ARG_ENABLE([check],
 	[AS_HELP_STRING([--enable-check],[enable pedantic syntax check])],
-	[EXTRA='-Wall -pedantic -Wextra'])
+	[use_check="${enableval}"],[use_check=no])
 
 # some R standards
 if test -n "${R_HOME}"; then
@@ -29,22 +30,27 @@ if test -n "${R_HOME}"; then
   CPPFLAGS=`${R_HOME}/bin/R CMD config CPPFLAGS`
 fi
 
-if test "x$use_fftw" = "xyes"; then
-  PKG_CHECK_MODULES([FFTW], fftw3, [have_fftw=yes], [AC_MSG_WARN([FFTW not found. Compiling with matrix method])])
+if test "${use_check}" = "yes"; then
+  EXTRA='-Wall -pedantic -Wextra'
 fi
 
-if test "${use_alglib}" = yes; then
- # figure out if it works
+if test "x${use_alglib}" = xyes; then
  PKG_CHECK_MODULES([ALGLIB], alglib, [AC_DEFINE(HAVE_ALGLIB)])
 fi
 AC_SUBST(ALGLIB_CFLAGS)
 AC_SUBST(ALGLIB_LIBS)
+
+if test "x$use_fftw" = "xyes"; then
+  PKG_CHECK_MODULES([FFTW], fftw3, [have_fftw=yes], [AC_MSG_WARN([FFTW not found. Compiling with matrix method])])
+fi
+
 
 AC_LANG([C])
 AC_PROG_CC
 
 
 if test "x$have_fftw" = "xyes" ; then
+ # figure out if it works
   AC_MSG_CHECKING(for working fftw_plan_r2r in R)
   echo ['#include <stdlib.h>
     #include <fftw3.h>

@@ -596,10 +596,10 @@ CPPFLAGS
 LDFLAGS
 CFLAGS
 CC
-ALGLIB_LIBS
-ALGLIB_CFLAGS
 FFTW_LIBS
 FFTW_CFLAGS
+ALGLIB_LIBS
+ALGLIB_CFLAGS
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
@@ -655,10 +655,10 @@ target_alias
 PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
-FFTW_CFLAGS
-FFTW_LIBS
 ALGLIB_CFLAGS
 ALGLIB_LIBS
+FFTW_CFLAGS
+FFTW_LIBS
 CC
 CFLAGS
 LDFLAGS
@@ -1283,7 +1283,7 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-fftw          do not use fftw
-  --disable-alglib        use alglib rbf
+  --disable-alglib        do not use alglib rbf
   --enable-check          enable pedantic syntax check
 
 Some influential environment variables:
@@ -1292,11 +1292,11 @@ Some influential environment variables:
               directories to add to pkg-config's search path
   PKG_CONFIG_LIBDIR
               path overriding pkg-config's built-in search path
-  FFTW_CFLAGS C compiler flags for FFTW, overriding pkg-config
-  FFTW_LIBS   linker flags for FFTW, overriding pkg-config
   ALGLIB_CFLAGS
               C compiler flags for ALGLIB, overriding pkg-config
   ALGLIB_LIBS linker flags for ALGLIB, overriding pkg-config
+  FFTW_CFLAGS C compiler flags for FFTW, overriding pkg-config
+  FFTW_LIBS   linker flags for FFTW, overriding pkg-config
   CC          C compiler command
   CFLAGS      C compiler flags
   LDFLAGS     linker flags, e.g. -L<lib dir> if you have libraries in a
@@ -1782,7 +1782,7 @@ ac_config_files="$ac_config_files src/Makevars"
 
 # Check whether --enable-fftw was given.
 if test "${enable_fftw+set}" = set; then :
-  enableval=$enable_fftw; use_fftw=no
+  enableval=$enable_fftw; use_fftw="${enableval}"
 else
   use_fftw=yes
 fi
@@ -1790,7 +1790,7 @@ fi
 
 # Check whether --enable-alglib was given.
 if test "${enable_alglib+set}" = set; then :
-  enableval=$enable_alglib; use_alglib=${enableval}
+  enableval=$enable_alglib; use_alglib="${enableval}"
 else
   use_alglib=yes
 fi
@@ -1798,7 +1798,9 @@ fi
 
 # Check whether --enable-check was given.
 if test "${enable_check+set}" = set; then :
-  enableval=$enable_check; EXTRA='-Wall -pedantic -Wextra'
+  enableval=$enable_check; use_check="${enableval}"
+else
+  use_check=no
 fi
 
 
@@ -1810,7 +1812,11 @@ if test -n "${R_HOME}"; then
   CPPFLAGS=`${R_HOME}/bin/R CMD config CPPFLAGS`
 fi
 
-if test "x$use_fftw" = "xyes"; then
+if test "${use_check}" = "yes"; then
+  EXTRA='-Wall -pedantic -Wextra'
+fi
+
+if test "x${use_alglib}" = xyes; then
 
 
 
@@ -1933,83 +1939,6 @@ $as_echo "no" >&6; }
 fi
 
 pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for FFTW" >&5
-$as_echo_n "checking for FFTW... " >&6; }
-
-if test -n "$FFTW_CFLAGS"; then
-    pkg_cv_FFTW_CFLAGS="$FFTW_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"fftw3\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "fftw3") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_FFTW_CFLAGS=`$PKG_CONFIG --cflags "fftw3" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$FFTW_LIBS"; then
-    pkg_cv_FFTW_LIBS="$FFTW_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"fftw3\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "fftw3") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_FFTW_LIBS=`$PKG_CONFIG --libs "fftw3" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        FFTW_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "fftw3" 2>&1`
-        else
-	        FFTW_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "fftw3" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$FFTW_PKG_ERRORS" >&5
-
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: FFTW not found. Compiling with matrix method" >&5
-$as_echo "$as_me: WARNING: FFTW not found. Compiling with matrix method" >&2;}
-elif test $pkg_failed = untried; then
-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: FFTW not found. Compiling with matrix method" >&5
-$as_echo "$as_me: WARNING: FFTW not found. Compiling with matrix method" >&2;}
-else
-	FFTW_CFLAGS=$pkg_cv_FFTW_CFLAGS
-	FFTW_LIBS=$pkg_cv_FFTW_LIBS
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-	have_fftw=yes
-fi
-fi
-
-if test "${use_alglib}" = yes; then
- # figure out if it works
-
-pkg_failed=no
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ALGLIB" >&5
 $as_echo_n "checking for ALGLIB... " >&6; }
 
@@ -2102,6 +2031,83 @@ $as_echo "yes" >&6; }
 fi
 fi
 
+
+
+if test "x$use_fftw" = "xyes"; then
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for FFTW" >&5
+$as_echo_n "checking for FFTW... " >&6; }
+
+if test -n "$FFTW_CFLAGS"; then
+    pkg_cv_FFTW_CFLAGS="$FFTW_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"fftw3\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "fftw3") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_FFTW_CFLAGS=`$PKG_CONFIG --cflags "fftw3" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$FFTW_LIBS"; then
+    pkg_cv_FFTW_LIBS="$FFTW_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"fftw3\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "fftw3") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_FFTW_LIBS=`$PKG_CONFIG --libs "fftw3" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        FFTW_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "fftw3" 2>&1`
+        else
+	        FFTW_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "fftw3" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$FFTW_PKG_ERRORS" >&5
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: FFTW not found. Compiling with matrix method" >&5
+$as_echo "$as_me: WARNING: FFTW not found. Compiling with matrix method" >&2;}
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: FFTW not found. Compiling with matrix method" >&5
+$as_echo "$as_me: WARNING: FFTW not found. Compiling with matrix method" >&2;}
+else
+	FFTW_CFLAGS=$pkg_cv_FFTW_CFLAGS
+	FFTW_LIBS=$pkg_cv_FFTW_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	have_fftw=yes
+fi
+fi
 
 
 ac_ext=c
@@ -2902,6 +2908,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 if test "x$have_fftw" = "xyes" ; then
+ # figure out if it works
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for working fftw_plan_r2r in R" >&5
 $as_echo_n "checking for working fftw_plan_r2r in R... " >&6; }
   echo '#include <stdlib.h>

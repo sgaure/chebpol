@@ -69,8 +69,8 @@ extern "C" {
     int threads = INTEGER(AS_INTEGER(Sthreads))[0];
     // No OpenMP yet, awkward interface in alglib
 #ifdef _OPENMP
-    bool init[threads];
-    rbfcalcbuffer bufs[threads];
+    bool *init = new bool[threads];
+    rbfcalcbuffer *bufs = new rbfcalcbuffer[threads];
     for(int t = 0; t < threads; t++) init[t] = false;
 #pragma omp parallel for num_threads(threads) schedule(static)
     for(int i = 0; i < N; i++) {
@@ -84,6 +84,8 @@ extern "C" {
       y.attach_to_ptr(M, out+i);
       rbftscalcbuf(*s, bufs[thr], x, y);
     }
+    delete [] init;
+    delete [] bufs;
 #else
     try {
       for(int i = 0; i < N; i++) {

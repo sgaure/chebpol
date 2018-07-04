@@ -7,7 +7,7 @@
 
 \usage{
 ipol(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
-     method=c('chebyshev','multilinear','fh','uniform','general','polyharmonic'),
+     method=c('chebyshev','multilinear','fh','uniform','general','polyharmonic','crbf'),
      ...) 
 }
 
@@ -63,6 +63,12 @@ ipol(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
   The Floater-Hormann method (\code{"fh"}) needs the \code{k} argument,
   which is passed to the \code{d} argument of \code{\link{fhappx}}, the
   degree of the blending polynomials. It defaults to 4.
+
+  The \code{"crbf"} is the multilayer compact radial basis function
+  interpolation from ALGLIB. It is only available if ALGLIB was
+  available at compile time. In this case \code{k} must be vector of
+  length 3, the rbase, the number of layers and the non-linear smoothing
+  parameter lambda.
 }
 
 \examples{
