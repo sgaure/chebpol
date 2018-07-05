@@ -110,10 +110,8 @@ threads which should be used to compute the interpolations. Thus,
 above we could have written \code{lines(s, ch(s,8))} to compute the
 401 points in \code{s} in 8 threads. There is nothing to gain from
 specifying more threads than there are CPUs in your computer, nor more
-than there are input vectors. Most of the interpolants produced by
-\pkg{chebpol} has a \code{threads}-argument. The notable exception is
-the method \code{"polyharmonic"} which instead relies on a parallel
-blas-library for parallelization, such as Intel's MKL. The
+than there are input vectors. The interpolants produced by
+\pkg{chebpol} has a \code{threads}-argument. The
 \code{chebpol.threads} option is initialized from the environment
 variable \code{CHEBPOL\_THREADS} when the package is loaded.
 
