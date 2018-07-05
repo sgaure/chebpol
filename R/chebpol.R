@@ -289,7 +289,7 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
   B <- rbind(1,knots)
   mat <- cbind(rbind(A,B),rbind(t(B),matrix(0,M+1,M+1)))
   rhs <- c(val,rep(0,M+1))
-  wv <- try(solve(mat, rhs, silent=TRUE)
+  wv <- try(solve(mat, rhs), silent=TRUE)
   if(inherits(wv,'try-error')) {
     if(!nowarn)
       warning('Failed to fit exactly, fallback to least squares fit.',
