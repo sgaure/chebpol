@@ -172,9 +172,7 @@ static double C_FH(double *fv, double *x, double **knots, int *dims, const int r
   if(newrank == 0) {
     for(int i = 0; i < N; i++) {
       const double val = fv[i];
-      double pole = w[i] / (xx-kn[i]);  // Should have used the weights instead of 1.0 and the sign
-      //      if( (i&1) == 1) pole = -pole;
-      //      if(i == 0 || i == N-1) pole = 0.5*pole;
+      double pole = w[i] / (xx-kn[i]);  
       num += pole * val;
       denom += pole;
     }
@@ -183,9 +181,7 @@ static double C_FH(double *fv, double *x, double **knots, int *dims, const int r
 #endif 
   for(int i = 0,j=0; i < N; i++,j+=siz) {
     const double val = C_FH(&fv[j], x, knots, dims, newrank, weights);
-    double pole = w[i] / (xx-kn[i]); // Should have used the weights instead of 1.0 and the sign
-    //    if( (i&1) == 1) pole = -pole;
-    //    if(i == 0 || i == N-1) pole = 0.5*pole;
+    double pole = w[i] / (xx-kn[i]);
     num += pole * val;
     denom += pole;
   }
@@ -235,19 +231,9 @@ static SEXP R_FH(SEXP inx, SEXP vals, SEXP grid, SEXP Sweights, SEXP Rthreads) {
   SEXP resvec = PROTECT(NEW_NUMERIC(numvec));
 #endif
   double *out = REAL(resvec);
-  int useomp = 0;
-#ifdef _OPENMP
-  useomp = numvec > 1 && threads > 1;
-#endif
-  if(useomp) {
-#pragma omp parallel for num_threads(threads) schedule(static)
-    for(int i = 0; i < numvec; i++) {
-      out[i] = C_FH(val, xp+i*rank, knots, dims, rank, weights);
-    }
-  } else {
-    for(int i = 0; i < numvec; i++) {
-      out[i] = C_FH(val, xp+i*rank, knots, dims, rank, weights);
-    }
+#pragma omp parallel for num_threads(threads) schedule(static) if (numvec > 1 && threads > 1)
+  for(int i = 0; i < numvec; i++) {
+    out[i] = C_FH(val, xp+i*rank, knots, dims, rank, weights);
   }
   UNPROTECT(1);
   return resvec;
@@ -314,19 +300,9 @@ static SEXP R_evalcheb(SEXP coef, SEXP inx, SEXP Rthreads) {
   SEXP resvec = PROTECT(NEW_NUMERIC(numvec));
 #endif
   double *out = REAL(resvec);
-  int useomp = 0;
-#ifdef _OPENMP
-  useomp = numvec > 2 && threads > 1;
-#endif
-  if(useomp) {
-#pragma omp parallel for num_threads(threads) schedule(static)
-    for(int i = 0; i < numvec; i++) {
-      out[i] = C_evalcheb(cf, xp+i*rank, dims, rank);
-    }
-  } else {
-    for(int i = 0; i < numvec; i++) {
-      out[i] = C_evalcheb(cf, xp+i*rank, dims, rank);
-    }
+#pragma omp parallel for num_threads(threads) schedule(static) if (numvec > 1 && threads > 1)
+  for(int i = 0; i < numvec; i++) {
+    out[i] = C_evalcheb(cf, xp+i*rank, dims, rank);
   }
   UNPROTECT(1);
   return resvec;
@@ -337,22 +313,29 @@ double C_evalpolyh(const double *x, const double *knots, const double *weights,
   // Find squared distance to each knot
   int ki = (int) k;
   double wsum = 0.0;
-  for(int i = 0; i < nknots; i++) {
-    const double *kn = &knots[i*rank];
-    double sqdist = 0.0;
-    for(int j = 0; j < rank; j++) sqdist += (x[j]-kn[j])*(x[j]-kn[j]);
-    // compute phi, based on k
-    double y;
-    if(k < 0) {
-      y = exp(k*sqdist);
-    } else if(ki % 2 == 1) {
-      if(sqdist <= 0) continue;
-      y = R_pow_di(sqrt(sqdist), ki);
-    } else {
-      if(sqdist <= 0) continue;
-      y = log(sqrt(sqdist)) * R_pow_di(sqrt(sqdist), ki);
+  if(k < 0) {
+    for(int i = 0; i < nknots; i++) {
+      const double *kn = &knots[i*rank];
+      double sqdist = 0.0;
+      for(int j = 0; j < rank; j++) sqdist += (x[j]-kn[j])*(x[j]-kn[j]);
+      wsum += weights[i]*exp(k*sqdist);
     }
-    wsum += weights[i]*y;
+  } else if(ki % 2 == 1) {
+    for(int i = 0; i < nknots; i++) {
+      const double *kn = &knots[i*rank];
+      double sqdist = 0.0;
+      for(int j = 0; j < rank; j++) sqdist += (x[j]-kn[j])*(x[j]-kn[j]);
+      if(sqdist == 0) continue;
+      wsum += weights[i] * R_pow_di(sqrt(sqdist), ki);
+    }
+  } else {
+    for(int i = 0; i < nknots; i++) {
+      const double *kn = &knots[i*rank];
+      double sqdist = 0.0;
+      for(int j = 0; j < rank; j++) sqdist += (x[j]-kn[j])*(x[j]-kn[j]);
+      if(sqdist == 0) continue;
+      wsum += weights[i] * log(sqrt(sqdist)) * R_pow_di(sqrt(sqdist), ki);
+    }
   }
   // then the linear part, constant is the first element
   wsum += lweights[0];
@@ -386,21 +369,10 @@ SEXP R_evalpolyh(SEXP inx, SEXP Sknots, SEXP weights, SEXP lweights, SEXP Sk, SE
   SEXP res = PROTECT(NEW_NUMERIC(numvec));
   double *out = REAL(res);
 
-  int useomp = 0;
-#ifdef _OPENMP
-  useomp = numvec > 2 && threads > 1;
-#endif
-  if(useomp) {
-#pragma omp parallel for num_threads(threads) schedule(static)
-    for(int i = 0; i < numvec; i++) {
-      out[i] = C_evalpolyh(x + i*rank, knots, w, lw, rank, ncols(Sknots), k);
-    }
-  } else {
-    for(int i = 0; i < numvec; i++) {
-      out[i] = C_evalpolyh(x + i*rank, knots, w, lw, rank, ncols(Sknots), k);
-    }
+#pragma omp parallel for num_threads(threads) schedule(static) if (numvec > 1 && threads > 1)
+  for(int i = 0; i < numvec; i++) {
+    out[i] = C_evalpolyh(x + i*rank, knots, w, lw, rank, ncols(Sknots), k);
   }
-
   UNPROTECT(1);
   return res;
 }
@@ -649,9 +621,7 @@ static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads) {
   SEXP resvec = PROTECT(NEW_NUMERIC(numvec));
 #endif
   double *out = REAL(resvec);
-#ifdef _OPENMP
-#pragma omp parallel for num_threads(threads) schedule(static)
-#endif
+#pragma omp parallel for num_threads(threads) schedule(static) if (numvec > 1 && threads > 1)
   for(int i = 0; i < numvec; i++) {
     out[i] = C_evalmlip(rank,xp+i*rank,grid,dims,REAL(values));
   }
@@ -668,9 +638,7 @@ static SEXP R_sqdiffs(SEXP x1, SEXP x2, SEXP Sthreads) {
   SEXP res = PROTECT(NEW_NUMERIC(N));
   double *dres = REAL(res);
   double *np = dres;
-#ifdef _OPENMP
-#pragma parallel for num_threads(threads) schedule(static)
-#endif
+#pragma omp parallel for num_threads(threads) schedule(static) if (c1 > 1)
   for(int i = 0; i < c1; i++) {
     double *x1p = REAL(x1) + i*r1;
     for(int j = 0; j < c2; j++) {
@@ -699,9 +667,10 @@ static SEXP R_havefftw() {
 }
 
 // inplace to save memory, do repated multiplication instead of pow(). It's faster.
-static SEXP R_phifunc(SEXP Sx, SEXP Sk) {
+static SEXP R_phifunc(SEXP Sx, SEXP Sk, SEXP Sthreads) {
   double k = REAL(AS_NUMERIC(Sk))[0];
   double *x = REAL(Sx);
+  int threads = INTEGER(AS_INTEGER(Sthreads))[0];
   double *y;
   SEXP res;
   if(XLENGTH(Sx) == 1 && x[0] == 0.0) return ScalarReal((k<0)?1:0);
@@ -715,16 +684,19 @@ static SEXP R_phifunc(SEXP Sx, SEXP Sk) {
   }
 
   if(k < 0) {
+#pragma parallel for num_threads(threads) schedule(static)
     for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) y[i] = exp(k*x[i]);
   } else {
     int ki = INTEGER(AS_INTEGER(Sk))[0];
     if(ki % 2 == 1) {
+#pragma parallel for num_threads(threads) schedule(static)
       for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) {
 	// it's the sqrt(x) to ki'th power
 	if(x[i] <= 0.0) {y[i]=0.0;continue;}
 	y[i] = R_pow_di(sqrt(x[i]), ki);
       }
     } else {
+#pragma parallel for num_threads(threads) schedule(static)
       for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) {
 	// it's sqrt(x) to ki'th power, multiplied by 0.5 log(x)
 	if(x[i] <= 0.0) {y[i]=0.0;continue;}
@@ -745,7 +717,7 @@ R_CallMethodDef callMethods[] = {
   {"evalongrid", (DL_FUNC) &R_evalongrid, 2},
   {"havefftw", (DL_FUNC) &R_havefftw, 0},
   {"sqdiffs", (DL_FUNC) &R_sqdiffs, 3},
-  {"phifunc", (DL_FUNC) &R_phifunc, 2},
+  {"phifunc", (DL_FUNC) &R_phifunc, 3},
   {"makerbf", (DL_FUNC) &R_makerbf, 4},
   {"evalrbf", (DL_FUNC) &R_evalrbf, 3},
   {"evalpolyh", (DL_FUNC) &R_evalpolyh, 6},

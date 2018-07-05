@@ -75,9 +75,7 @@ extern "C" {
       rbfcalcbuffer *bufs = new rbfcalcbuffer[threads];
       for(int t = 0; t < threads; t++) init[t] = false;
       try {
-#ifdef _OPENMP
 #pragma omp parallel for num_threads(threads) schedule(static)
-#endif
 	for(int i = 0; i < N; i++) {
 	  int thr = omp_get_thread_num();
 	  real_1d_array x,y;
