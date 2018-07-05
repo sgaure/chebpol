@@ -332,6 +332,79 @@ static SEXP R_evalcheb(SEXP coef, SEXP inx, SEXP Rthreads) {
   return resvec;
 }
 
+double C_evalpolyh(const double *x, const double *knots, const double *weights, 
+		   const double *lweights, const int rank, const int nknots, const double k) {
+  // Find squared distance to each knot
+  int ki = (int) k;
+  double wsum = 0.0;
+  for(int i = 0; i < nknots; i++) {
+    const double *kn = &knots[i*rank];
+    double sqdist = 0.0;
+    for(int j = 0; j < rank; j++) sqdist += (x[j]-kn[j])*(x[j]-kn[j]);
+    // compute phi, based on k
+    double y;
+    if(k < 0) {
+      y = exp(k*sqdist);
+    } else if(ki % 2 == 1) {
+      if(sqdist <= 0) continue;
+      y = R_pow_di(sqrt(sqdist), ki);
+    } else {
+      if(sqdist <= 0) continue;
+      y = log(sqrt(sqdist)) * R_pow_di(sqrt(sqdist), ki);
+    }
+    wsum += weights[i]*y;
+  }
+  // then the linear part, constant is the first element
+  wsum += lweights[0];
+  for(int i = 0; i < rank; i++) wsum += lweights[i+1] * x[i];
+  return wsum;
+}
+SEXP R_evalpolyh(SEXP inx, SEXP Sknots, SEXP weights, SEXP lweights, SEXP Sk, SEXP Sthreads) {
+  double *x = REAL(inx);
+  double *knots = REAL(Sknots);
+  double *w = REAL(weights);
+  double *lw = REAL(lweights);
+  double k = REAL(AS_NUMERIC(Sk))[0];
+  int threads = INTEGER(AS_INTEGER(Sthreads))[0];
+  int numvec;
+  const int rank = nrows(Sknots);
+  if(LENGTH(lweights) != rank+1) 
+    error("linear weights (%d) should be one longer than rank(%d)",
+	  LENGTH(lweights),rank);
+  if(LENGTH(weights) != ncols(Sknots))
+    error("number of weights (%d) should equal number of knots (%d)",
+	  LENGTH(weights), ncols(Sknots));
+  if(isMatrix(inx)) {
+    if(nrows(inx) != nrows(Sknots))
+      error("Dimension of input (%d) must match dimension of interpolant (%d)",nrows(inx),nrows(Sknots));
+    numvec = ncols(inx);
+  } else {
+    if(length(inx) != nrows(Sknots))
+      error("Dimension of input (%d) must match dimension of interpolant (%d)",length(inx),nrows(Sknots));
+    numvec = 1;
+  }
+  SEXP res = PROTECT(NEW_NUMERIC(numvec));
+  double *out = REAL(res);
+
+  int useomp = 0;
+#ifdef _OPENMP
+  useomp = numvec > 2 && threads > 1;
+#endif
+  if(useomp) {
+#pragma omp parallel for num_threads(threads) schedule(static)
+    for(int i = 0; i < numvec; i++) {
+      out[i] = C_evalpolyh(x + i*rank, knots, w, lw, rank, ncols(Sknots), k);
+    }
+  } else {
+    for(int i = 0; i < numvec; i++) {
+      out[i] = C_evalpolyh(x + i*rank, knots, w, lw, rank, ncols(Sknots), k);
+    }
+  }
+
+  UNPROTECT(1);
+  return res;
+}
+
 // an R-free evalongrid. Recursive
 static void C_evalongrid(void (*fun)(double *x, double *y, int valuedim, void *ud),
 		double *arg, double **grid,
@@ -586,14 +659,18 @@ static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads) {
   return resvec;
 }
 
-static SEXP R_sqdiffs(SEXP x1, SEXP x2) {
+static SEXP R_sqdiffs(SEXP x1, SEXP x2, SEXP Sthreads) {
   // each column in x1 should be subtracted from each column in x2,
   // the squared column sums should be returned.
-  int r1 = nrows(x1), c1 = ncols(x1), r2 = nrows(x2), c2 = ncols(x2);
+  const int r1 = nrows(x1), c1 = ncols(x1), r2 = nrows(x2), c2 = ncols(x2);
   int N = c1*c2;
+  int threads = INTEGER(AS_INTEGER(Sthreads))[0];
   SEXP res = PROTECT(NEW_NUMERIC(N));
   double *dres = REAL(res);
   double *np = dres;
+#ifdef _OPENMP
+#pragma parallel for num_threads(threads) schedule(static)
+#endif
   for(int i = 0; i < c1; i++) {
     double *x1p = REAL(x1) + i*r1;
     for(int j = 0; j < c2; j++) {
@@ -602,7 +679,7 @@ static SEXP R_sqdiffs(SEXP x1, SEXP x2) {
       for(int k = 0; k < r1; k++) {
 	csum += (x1p[k] - x2p[k])*(x1p[k] - x2p[k]);
       }
-      *np++ = csum;
+      np[j + i*c2] = csum;
     }
   }
   SEXP snewdim = PROTECT(NEW_INTEGER(2));
@@ -614,18 +691,14 @@ static SEXP R_sqdiffs(SEXP x1, SEXP x2) {
 }
 
 static SEXP R_havefftw() {
-  SEXP res;
-  PROTECT(res = NEW_LOGICAL(1));
 #ifdef HAVE_FFTW
-  LOGICAL(res)[0] = TRUE;
+  return ScalarLogical(TRUE);
 #else
-  LOGICAL(res)[0] = FALSE;
+  return ScalarLogical(FALSE);
 #endif
-  UNPROTECT(1);
-  return res;
 }
 
-// inplace to save memory
+// inplace to save memory, do repated multiplication instead of pow(). It's faster.
 static SEXP R_phifunc(SEXP Sx, SEXP Sk) {
   double k = REAL(AS_NUMERIC(Sk))[0];
   double *x = REAL(Sx);
@@ -648,17 +721,14 @@ static SEXP R_phifunc(SEXP Sx, SEXP Sk) {
     if(ki % 2 == 1) {
       for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) {
 	// it's the sqrt(x) to ki'th power
-	double xx = sqrt(x[i]), xi=1;
-	for(R_xlen_t j = 0; j < ki; j++) xi *= xx;
-	y[i] = xi;
+	if(x[i] <= 0.0) {y[i]=0.0;continue;}
+	y[i] = R_pow_di(sqrt(x[i]), ki);
       }
     } else {
       for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) {
 	// it's sqrt(x) to ki'th power, multiplied by 0.5 log(x)
 	if(x[i] <= 0.0) {y[i]=0.0;continue;}
-	double xx = sqrt(x[i]), xi=1;
-	for(R_xlen_t j = 0; j < ki; j++) xi *= xx;
-	y[i] = xi * 0.5 * log(x[i]);
+	y[i] = 0.5*log(x[i]) * R_pow_di(sqrt(x[i]),ki);
       }
     }
   }
@@ -674,10 +744,11 @@ R_CallMethodDef callMethods[] = {
   {"predmlip", (DL_FUNC) &R_mlippred, 2},
   {"evalongrid", (DL_FUNC) &R_evalongrid, 2},
   {"havefftw", (DL_FUNC) &R_havefftw, 0},
-  {"sqdiffs", (DL_FUNC) &R_sqdiffs, 2},
+  {"sqdiffs", (DL_FUNC) &R_sqdiffs, 3},
   {"phifunc", (DL_FUNC) &R_phifunc, 2},
   {"makerbf", (DL_FUNC) &R_makerbf, 4},
   {"evalrbf", (DL_FUNC) &R_evalrbf, 3},
+  {"evalpolyh", (DL_FUNC) &R_evalpolyh, 6},
   {"havealglib", (DL_FUNC) &R_havealglib, 0},
   {NULL, NULL, 0}
 };

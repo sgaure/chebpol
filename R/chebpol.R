@@ -279,37 +279,17 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
     normalize <- FALSE
   }
 
-  ki <- k/2
-  if(k < 0) {
-    phi <- local(compiler::cmpfun(function(r2) exp(k*r2)),list(k=k))
-  } else if(k %% 2L == 1L) {
-    phi <- local(compiler::cmpfun(function(r2) r2^ki), list(ki=ki))
-  } else {
-    ki <- as.integer(ki)-1L # trick to handle r2=0. Works because 0^0 = 1 in R
-    phi <- local(compiler::cmpfun(function(r2) r2^ki * log(r2^r2)),list(ki=ki))
-  }
-
   # trickery to get it in place
   phi <- local(cmpfun(function(x) {
     eval.parent(as.call(list(quote(.Call), C_phifunc, substitute(x), k)))
   }), list(k=k))
 
-  # would it be faster to apply phi only on lower tri?  Without crossprod?
-  # and either fill in the upper tri, or tailor a solver? I think
-  # evaluation of phi on the matrix is fast compared to creating the matrix,
-  # though I haven't measured it. Could've done it in C, probably somewhat faster.
-  # use abs when we call phi. The argument can't be negative, but numerically it can
-  sqnm <- colSums(knots^2)
   #A <- phi(apply(knots,2, function(ck) colSums((ck-knots)^2)))
-#  A <- phi(.Call(C_sqdiffs,knots,knots))  
-  # faster:
-  A <- phi(abs(-2*crossprod(knots) + sqnm + rep(sqnm,each=N)))
-  diag(A) <- phi(0)
-
+  A <- phi(.Call(C_sqdiffs,knots,knots,getOption('chebpol.threads')))  
   B <- rbind(1,knots)
   mat <- cbind(rbind(A,B),rbind(t(B),matrix(0,M+1,M+1)))
   rhs <- c(val,rep(0,M+1))
-  wv <- try(solve(mat, rhs, tol=10*.Machine$double.eps), silent=TRUE)
+  wv <- try(solve(mat, rhs, silent=TRUE)
   if(inherits(wv,'try-error')) {
     if(!nowarn)
       warning('Failed to fit exactly, fallback to least squares fit.',
@@ -320,30 +300,10 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
   w <- wv[1:N]
   v <- wv[(N+1):length(wv)]
 
-  # There's an alternative here: https://mathematica.stackexchange.com/questions/65763/understanding-polyharmonic-splines
-  # with W = B'
-  # solve W' A^{-1} W v = W' A^{-1} val  for v
-  # compute w as A^{-1} val - A^{-1} W v
-  # It's slower than the above, at least with MKL.
-  # W <- t(rbind(1,knots))
-  # Ai <- solve(A)
-  # AiW <- crossprod(Ai,W)
-  # v <- as.numeric(solve(crossprod(W,AiW),t(AiW) %*% val))
-  # w <- as.numeric(Ai %*% val - AiW %*% v)
-
-
-  local(function(x, threads) {
-    if(!missing(threads)) warning('polyh does not support parallel threads')
-    if(!is.matrix(x) && length(x) == M) {
-      nx <- normfun(x)
-      sum(w*phi(abs(-2*crossprod(nx,knots) + sqnm + sum(nx^2)))) + sum(v*c(1,nx))
-    } else {
-      if(is.null(dim(x))) dim(x) <- c(M,length(x)/M)
-      if(nrow(x) != M) stop('spline was built for dimension ',M,' not ',nrow(x))
-      nx <- normfun(x)
-      colSums(w*phi(abs(-2*crossprod(knots,nx) + sqnm + rep(colSums(nx^2),each=N)))) + colSums(v*rbind(1,nx))
-    }
-  }, list(w=w,v=v,knots=knots,phi=phi,sqnm=sqnm,M=M,normfun=normfun))
+  x <- threads <- NULL; rm(x,threads)
+  vectorfun(.Call(C_evalpolyh, normfun(x), knots, w, v, k, threads),
+            args=alist(x=, threads=getOption('chebpol.threads')),
+            arity=M)
 }
 
 rbf.alglib <- function(val, knots, rbase=2,  layers=5, lambda=0, ...) {

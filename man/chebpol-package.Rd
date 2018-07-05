@@ -66,13 +66,11 @@
   finding the Chebyshev coefficients (\code{\link{chebcoef}}).
 
   All the generated interpolant functions accept as an argument a matrix of column
-  vectors. Except for the polyharmonic spline, the generated functions
+  vectors. The generated functions
   also accept an argument \code{threads=getOption('chebpol.threads')} to
   utilize more than one CPU if a matrix of column vectors is evaluated.
   The option \code{chebpol.threads} is initialized from the environment
   variable \code{CHEBPOL_THREADS} upon loading of the package.
-  The polyharmonic spline will instead benefit from a multi-threaded
-  BLAS, such as Intel's MKL.
 }
 
 \examples{
