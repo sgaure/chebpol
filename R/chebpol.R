@@ -88,7 +88,7 @@ chebappx <- function(val,intervals=NULL) {
 
     fun <- local(vectorfun(.Call(C_evalcheb,cf,imap(x), threads), K,
                      args=alist(x=,threads=getOption('chebpol.threads'))),
-                 list(cf=cf))
+                 list(cf=cf,imap=imap))
                      
     rm(val)
   }
@@ -272,9 +272,9 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
   }
 
   # trickery to get it in place
-  phi <- local(cmpfun(function(x) {
+  phi <- cmpfun(function(x) {
     eval.parent(as.call(list(quote(.Call), C_phifunc, substitute(x), k, getOption('chebpol.threads'))))
-  }), list(k=k))
+  })
 
   #A <- phi(apply(knots,2, function(ck) colSums((ck-knots)^2)))
   # one day I will look into a faster solver, 
@@ -306,11 +306,13 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
     }
     w <- wv[1:N]
     v <- wv[(N+1):length(wv)]
+    rm(mat,rhs)
   }
+  rm(A,B)
   x <- threads <- NULL; rm(x,threads)
   local(vectorfun(.Call(C_evalpolyh, normfun(x), knots, w, v, k, threads),
             args=alist(x=, threads=getOption('chebpol.threads')),
-            arity=M), list(knots=knots,w=w,v=v,k=k))
+            arity=M), list(knots=knots,w=w,v=v,k=k,normfun=normfun))
 }
 
 rbf.alglib <- function(val, knots, rbase=2,  layers=5, lambda=0, ...) {
