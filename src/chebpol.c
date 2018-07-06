@@ -730,19 +730,19 @@ static SEXP R_phifunc(SEXP Sx, SEXP Sk, SEXP Sthreads) {
   }
 
   if(k < 0) {
-#pragma omp parallel for num_threads(threads) schedule(static)
+#pragma omp parallel for num_threads(threads) schedule(static) if(threads > 1)
     for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) y[i] = exp(k*x[i]);
   } else {
     int ki = INTEGER(AS_INTEGER(Sk))[0];
     if(ki % 2 == 1) {
-#pragma omp parallel for num_threads(threads) schedule(static)
+#pragma omp parallel for num_threads(threads) schedule(static) if(threads > 1)
       for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) {
 	// it's the sqrt(x) to ki'th power
 	if(x[i] <= 0.0) {y[i]=0.0;continue;}
 	y[i] = R_pow_di(sqrt(x[i]), ki);
       }
     } else {
-#pragma omp parallel for num_threads(threads) schedule(static)
+#pragma omp parallel for num_threads(threads) schedule(static) if(threads > 1)
       for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) {
 	// it's sqrt(x) to ki'th power, multiplied by 0.5 log(x)
 	if(x[i] <= 0.0) {y[i]=0.0;continue;}
