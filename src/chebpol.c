@@ -247,11 +247,9 @@ static SEXP R_fhweights(SEXP Sgrid, SEXP Sd, SEXP Sthreads) {
   const int rank = LENGTH(Sgrid);
   double *grid[rank];
   int *dims = (int*) R_alloc(rank,sizeof(int));
-  int wlen = 0;
   for(int i = 0; i < rank; i++) {
     grid[i] = REAL(VECTOR_ELT(Sgrid,i));
     dims[i] = LENGTH(VECTOR_ELT(Sgrid,i));
-    wlen += dims[i];
   }
   double *wlist[rank];
   SEXP ret = PROTECT(NEW_LIST(rank));
@@ -260,28 +258,27 @@ static SEXP R_fhweights(SEXP Sgrid, SEXP Sd, SEXP Sthreads) {
     wlist[i] = REAL(VECTOR_ELT(ret,i));
   }
 
-  int *dd = INTEGER(AS_INTEGER(Sd));
+  const int *dd = INTEGER(AS_INTEGER(Sd));
   int threads = INTEGER(AS_INTEGER(Sthreads))[0];
 
   for(int r = 0; r < rank; r++) {
-    double *gr = grid[r];
+    const double *gr = grid[r];
     double *w = wlist[r];
-    int d = dd[r];
+    const int d = dd[r];
     const int n = dims[r]-1;
 #pragma omp parallel for schedule(static) num_threads(threads) if(threads > 1)
     for(int k = 0; k <= n; k++) {
       const int start = (k < d) ? 0 : k-d, end = (k < n-d) ? k : n-d;
       double sum = 0.0;
       for(int i = start; i <= end; i++) {
-	double sign = (i % 2 == 1) ? -1.0 : 1.0;
 	double prod = 1.0;
 	for(int j = i; j <= i+d; j++) {
 	  if(j==k) continue;
 	  prod *= gr[k]-gr[j];
 	}
-	sum += sign/prod;
+	sum += 1.0/fabs(prod);
       }
-      w[k] = sum;
+      w[k] = sum * ( (abs(k-d) % 2 == 1) ? -1.0 : 1.0);
     }
   }
   UNPROTECT(1);
@@ -733,19 +730,19 @@ static SEXP R_phifunc(SEXP Sx, SEXP Sk, SEXP Sthreads) {
   }
 
   if(k < 0) {
-#pragma parallel for num_threads(threads) schedule(static)
+#pragma omp parallel for num_threads(threads) schedule(static)
     for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) y[i] = exp(k*x[i]);
   } else {
     int ki = INTEGER(AS_INTEGER(Sk))[0];
     if(ki % 2 == 1) {
-#pragma parallel for num_threads(threads) schedule(static)
+#pragma omp parallel for num_threads(threads) schedule(static)
       for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) {
 	// it's the sqrt(x) to ki'th power
 	if(x[i] <= 0.0) {y[i]=0.0;continue;}
 	y[i] = R_pow_di(sqrt(x[i]), ki);
       }
     } else {
-#pragma parallel for num_threads(threads) schedule(static)
+#pragma omp parallel for num_threads(threads) schedule(static)
       for(R_xlen_t i = 0; i < XLENGTH(Sx); i++) {
 	// it's sqrt(x) to ki'th power, multiplied by 0.5 log(x)
 	if(x[i] <= 0.0) {y[i]=0.0;continue;}
