@@ -157,26 +157,12 @@ fhappx <- function(val,grid=NULL, d=1, ...) {
   if(is.null(grid)) 
     stop('Must specify grid')
   if(!is.list(grid)) grid <- list(grid)
+  grid <- lapply(grid,as.numeric)
   if(is.function(val)) val <- evalongrid(val, grid=grid, ...)
   dd <- as.integer(d)
   dd <- rep(dd, length(grid) %/% length(d))
-  # calculate weights, formula 18 in Floater & Hormann
-  weights <- lapply(seq_along(grid), function(gg) {
-    g <- grid[[gg]]
-    d <- dd[gg]
-    n = length(g)-1
-    if(d > n) stop(sprintf('d (%d) must be less than dimension (%d)',d,n+1))
-    sapply(seq_along(g)-1L, function(k) {
-      gk <- g[k+1]
-      sum(sapply(intersect(seq(k-d, k), 0:(n-d)), function(i) {
-        sign = if(i %% 2 == 0) 1 else -1
-        pidx <- setdiff(seq(i,i+d),k)
-        sign/prod(gk - g[pidx+1])
-      }))
-    })
-  })
-#  weights <- lapply(grid, function(g) 1/sapply(seq_along(g), function(i) prod((g[i] - g[-i]))))
-#  weights <- NULL
+  # calculate weights, formula 18 in Floater & Hormann, in C, parallelized
+  weights <- .Call(C_FHweights, grid, dd, getOption('chebpol.threads'))
   local(vectorfun(.Call(C_FH,x,val,grid,weights,threads), 
                   args=alist(x=,threads=getOption('chebpol.threads')),
                   arity=length(grid)),

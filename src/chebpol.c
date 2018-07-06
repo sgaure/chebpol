@@ -239,6 +239,55 @@ static SEXP R_FH(SEXP inx, SEXP vals, SEXP grid, SEXP Sweights, SEXP Rthreads) {
   return resvec;
 }
 
+// Compute the weights for Floater-Hormann. Formula (18) of the FH-paper
+static SEXP R_fhweights(SEXP Sgrid, SEXP Sd, SEXP Sthreads) {
+  if(LENGTH(Sgrid) != LENGTH(Sd)) 
+    error("Length of grid (%d) should equal length of d (%d)",LENGTH(Sgrid),LENGTH(Sd));
+
+  const int rank = LENGTH(Sgrid);
+  double *grid[rank];
+  int *dims = (int*) R_alloc(rank,sizeof(int));
+  int wlen = 0;
+  for(int i = 0; i < rank; i++) {
+    grid[i] = REAL(VECTOR_ELT(Sgrid,i));
+    dims[i] = LENGTH(VECTOR_ELT(Sgrid,i));
+    wlen += dims[i];
+  }
+  double *wlist[rank];
+  SEXP ret = PROTECT(NEW_LIST(rank));
+  for(int i = 0; i < rank; i++) {
+    SET_VECTOR_ELT(ret,i,NEW_NUMERIC(dims[i]));
+    wlist[i] = REAL(VECTOR_ELT(ret,i));
+  }
+
+  int *dd = INTEGER(AS_INTEGER(Sd));
+  int threads = INTEGER(AS_INTEGER(Sthreads))[0];
+
+  for(int r = 0; r < rank; r++) {
+    double *gr = grid[r];
+    double *w = wlist[r];
+    int d = dd[r];
+    const int n = dims[r]-1;
+#pragma omp parallel for schedule(static) num_threads(threads) if(threads > 1)
+    for(int k = 0; k <= n; k++) {
+      const int start = (k < d) ? 0 : k-d, end = (k < n-d) ? k : n-d;
+      double sum = 0.0;
+      for(int i = start; i <= end; i++) {
+	double sign = (i % 2 == 1) ? -1.0 : 1.0;
+	double prod = 1.0;
+	for(int j = i; j <= i+d; j++) {
+	  if(j==k) continue;
+	  prod *= gr[k]-gr[j];
+	}
+	sum += sign/prod;
+      }
+      w[k] = sum;
+    }
+  }
+  UNPROTECT(1);
+  return ret;
+}
+
 static double C_evalcheb(double *cf, double *x, int *dims, const int rank) {
   if(rank == 0) return cf[0];
   // Otherwise, use the Clenshaw algorithm
@@ -712,6 +761,7 @@ R_CallMethodDef callMethods[] = {
   {"evalcheb", (DL_FUNC) &R_evalcheb, 3},
   {"chebcoef", (DL_FUNC) &R_chebcoef, 2},
   {"FH", (DL_FUNC) &R_FH, 5},
+  {"FHweights", (DL_FUNC) &R_fhweights, 3},
   {"evalmlip", (DL_FUNC) &R_evalmlip, 4},
   {"predmlip", (DL_FUNC) &R_mlippred, 2},
   {"evalongrid", (DL_FUNC) &R_evalongrid, 2},
