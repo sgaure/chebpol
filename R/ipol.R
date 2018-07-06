@@ -41,3 +41,18 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
          stop('Unknown interpolation method: ', method)
          )
 }
+
+separgs <- function(fun,...) {
+  fun <- match.fun(fun)
+  f <- function() {
+    mc <- match.call()
+    mc[[1L]] <- quote(list)
+    arg <- eval.parent(mc)
+    nn <- sapply(arg,length)
+    if(all(nn == 1)) return(fun(as.numeric(arg)))
+    return(fun(do.call(rbind,arg)))
+  }
+  args <- as.list(sys.call())[-(1:2)]
+  formals(f) <- args
+  compiler::cmpfun(f)
+}

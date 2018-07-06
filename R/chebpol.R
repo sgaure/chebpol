@@ -73,7 +73,8 @@ chebappx <- function(val,intervals=NULL) {
   if(is.null(intervals)) {
     # it's [-1,1] intervals, so drop transformation
     fun <- local(vectorfun(.Call(C_evalcheb,cf,x,threads), K,
-                           args=alist(x=,threads=getOption('chebpol.threads'))),
+                           args=alist(x=,threads=getOption('chebpol.threads')),
+                           domain=lapply(rep(-1,K),c,1)),
                  list(cf=cf))
     rm(val)
   } else {
@@ -87,7 +88,8 @@ chebappx <- function(val,intervals=NULL) {
     imap <- compiler::cmpfun(function(x) (x-mid)*ispan)
 
     fun <- local(vectorfun(.Call(C_evalcheb,cf,imap(x), threads), K,
-                     args=alist(x=,threads=getOption('chebpol.threads'))),
+                           args=alist(x=,threads=getOption('chebpol.threads')),
+                           domain=intervals),
                  list(cf=cf,imap=imap))
                      
     rm(val)
@@ -130,7 +132,7 @@ chebappxg <- function(val,grid=NULL,mapdim=NULL) {
   # create piecewise linear functions which maps grid-points to chebyshev grids
 
 
-  intervals <- lapply(grid,function(x) c(min(x),max(x)))
+  intervals <- lapply(grid,range)
   # create monotone splines with splinefun, method monoH.FC
   gridmaps <- mapply(splinefun, grid, chebknots(dim(val)), MoreArgs=list(method='monoH.FC'))
 #  gridmaps <- mapply(polyh, chebknots(dim(val)), grid, MoreArgs=list(k=1))
@@ -140,7 +142,8 @@ chebappxg <- function(val,grid=NULL,mapdim=NULL) {
   }
   ch <- chebappx(val)
   local(vectorfun(ch(gridmap(x),threads), length(grid), 
-                  args=alist(x=,threads=getOption('chebpol.threads'))),
+                  args=alist(x=,threads=getOption('chebpol.threads')),
+                  domain=intervals),
         list(gridmap=gridmap,ch=ch))
 }
 
@@ -165,7 +168,8 @@ fhappx <- function(val,grid=NULL, d=1, ...) {
   weights <- .Call(C_FHweights, grid, dd, getOption('chebpol.threads'))
   local(vectorfun(.Call(C_FH,x,val,grid,weights,threads), 
                   args=alist(x=,threads=getOption('chebpol.threads')),
-                  arity=length(grid)),
+                  arity=length(grid),
+                  domain=lapply(grid,range)),
         list(val=val,grid=grid,weights=weights))
 }
 
@@ -193,9 +197,9 @@ ucappx <- function(val, intervals=NULL) {
     if(is.matrix(x)) apply(x,2,gridmap) else gridmap(x)
   }
   local(vectorfun(ch(gm(x), threads), length(dims), 
-                  args=alist(x=,threads=getOption('chebpol.threads'))),
+                  args=alist(x=,threads=getOption('chebpol.threads')),
+                  domain=if(is.null(intervals)) lapply(rep(-1,length(dim(val))),c,1) else intervals),
         list(gm=gm,ch=ch))
-
 }
 
 ucappxf <- function(fun, dims, intervals=NULL,...) {
@@ -225,7 +229,8 @@ mlappx <- function(val, grid, ...) {
 #    val <- val + (val - .Call(C_predmlip,grid,as.numeric(val)))*adjust
 #  }
   local(vectorfun(.Call(C_evalmlip,grid,val,x,threads), length(grid), 
-                  args=alist(x=,threads=getOption('chebpol.threads'))),
+                  args=alist(x=,threads=getOption('chebpol.threads')),
+                  domain=lapply(grid,range)),
         list(grid=grid,val=val))
 }
 
@@ -312,7 +317,8 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
   x <- threads <- NULL; rm(x,threads)
   local(vectorfun(.Call(C_evalpolyh, normfun(x), knots, w, v, k, threads),
             args=alist(x=, threads=getOption('chebpol.threads')),
-            arity=M), list(knots=knots,w=w,v=v,k=k,normfun=normfun))
+            arity=M,domain=data.frame(apply(knots,1,range))),
+        list(knots=knots,w=w,v=v,k=k,normfun=normfun))
 }
 
 rbf.alglib <- function(val, knots, rbase=2,  layers=5, lambda=0, ...) {
@@ -320,12 +326,13 @@ rbf.alglib <- function(val, knots, rbase=2,  layers=5, lambda=0, ...) {
   if(is.null(dim(knots))) dim(knots) <- c(1,length(knots))
   if(is.function(val)) val <- apply(knots,2,val,...)
   model <- .Call(C_makerbf, rbind(knots,val), layers, rbase, lambda)
-  local(vectorfun(.Call(C_evalrbf, model, x, threads), args=alist(x=,threads=1L), arity=nrow(knots)),
+  local(vectorfun(.Call(C_evalrbf, model, x, threads), args=alist(x=,threads=1L), arity=nrow(knots),
+                  domain=data.frame(apply(knots,1,range))),
         list(model=model))
 }
 havealglib <- function() .Call(C_havealglib)
 
-vectorfun <- function(e,arity,args=alist(x=)) {
+vectorfun <- function(e,arity,args=alist(x=),domain=NULL) {
   fun <- function() {}
   formals(fun) <- args
   body(fun) <- substitute(e)
@@ -350,5 +357,5 @@ vectorfun <- function(e,arity,args=alist(x=)) {
       stop(sprintf('Function should take %d arguments, you supplied a vector of length %d',arity,length(x)))
   }, list(fun=compiler::cmpfun(fun)))
   formals(f) <- args
-  cmpfun(f)
+  structure(cmpfun(f),arity=arity,domain=domain)
 }
