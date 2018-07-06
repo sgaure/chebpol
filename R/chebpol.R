@@ -9,10 +9,6 @@
   options(chebpol.threads=thr)
 }
 
-phifunc <- function(x,k) {
-# keep NAMED status on x
-  eval.parent(as.call(list(quote(.Call),C_phifunc,x,k)),2)
-}
 # Chebyshev transformation.  I.e. coefficients for given function values in the knots.
 
 # The Chebyshev knots of order n on an interval
@@ -42,9 +38,14 @@ evalongrid <- function(fun,dims,intervals=NULL,...,grid=NULL) {
   if(is.null(grid)) grid <- chebknots(dims,intervals)
   mf <- match.fun(fun)
   .Call(C_evalongrid,function(x) mf(x,...), grid)
-#  structure(apply(expand.grid(chebknots(dims,intervals)),1,fun,...), dim=dims)
 }
 
+evalongridV <- function(fun, dims, intervals=NULL, ..., grid=NULL) {
+  if(is.numeric(grid)) grid <- list(grid)
+  if(is.null(grid)) grid <- chebknots(dims,intervals)
+  fun <- match.fun(fun)
+  structure(fun(t(expand.grid(grid)), ...), dim=if(length(grid) > 1) sapply(grid,length) else NULL)
+}
 
 # Chebyshev coefficients for x, which may be an array
 chebcoef <- function(val, dct=FALSE) {

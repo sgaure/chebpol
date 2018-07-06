@@ -1,6 +1,6 @@
 useDynLib(chebpol,.registration=TRUE, .fixes='C_')
 
-export(chebappx,chebappxf,chebappxg,chebappxgf,chebeval,fhappx, 
+export(chebappx,chebappxf,chebappxg,chebappxgf,chebeval,fhappx, evalongridV,
        chebknots, evalongrid,chebcoef,havefftw,mlappx,ucappx,ucappxf,polyh, ipol)
 importFrom(compiler,cmpfun)
 importFrom(stats, lm.fit, splinefun)

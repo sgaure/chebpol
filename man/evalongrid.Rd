@@ -1,5 +1,6 @@
 \name{evalongrid}
 \alias{evalongrid}
+\alias{evalongridV}
 \title{Evaluate a function on a grid}
 \concept{Chebyshev polynomial}
 \description{
@@ -8,6 +9,7 @@
 
 \usage{
 evalongrid(fun, dims, intervals=NULL, ..., grid=NULL)
+evalongridV(fun, dims, intervals=NULL, ..., grid=NULL)
 }
 
 \arguments{
@@ -49,6 +51,10 @@ returns a vector, this will be the first dimension of the returned array.
 
   This function does the same as \code{apply(expand.grid(grid),1,fun)}, but it's
   faster and more memory-efficient for large grids because it does not actually expand the grid.
+
+  The function \code{evalongridV} is for vectorized functions,
+  i.e. those that can take a matrix of column vectors as argument.
+  It's equivalent to \code{fun(t(expand.grid(grid)))}.
 }
 
 \examples{
@@ -58,9 +64,12 @@ evalongrid(f,dims=c(3,5))
 ## Then Chebyshev on [0,1] x [2,3]
 evalongrid(f,dims=c(3,5),intervals=list(c(0,1),c(2,3)))
 ## And on my own grid
-grid <- list(rnorm(3),rnorm(5))
+grid <- list(sort(rnorm(3)),sort(rnorm(5)))
 evalongrid(f,grid=grid)
+g <- ipol(f,grid=grid,method='fh')
+evalongridV(g, grid=grid, threads=2)
 ## vector valued function
 f <- function(x) c(prod(x),sum(x^2))
 evalongrid(f,grid=grid)
+
 }
