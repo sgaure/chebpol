@@ -11,88 +11,117 @@
 #include <fftw3.h>
 #endif
 
-static void chebcoef(double *x, int *dims, int *dimlen, double *F, int dct) {
-  int siz = 1;
-  const int rank = *dimlen;
+static void chebcoef(double *x, int *dims, const int rank, double *F, int dct, int threads) {
+  R_xlen_t siz = 1;
   for(int i = 0; i < rank; i++) siz *= dims[i];
 
 #ifdef HAVE_FFTW
+  int brokenfftw = 0;
   double isiz = 1.0/siz;
   int rdims[rank];
   /* Create a plan */
   fftw_r2r_kind kind[rank];
   for(int i = 0; i < rank; i++) kind[i] = FFTW_REDFT10;  // type II DCT
-
+  
   // reverse the dimensions. fftw uses row-major order. 
   for(int i = 0; i < rank; i++) rdims[i] = dims[rank-i-1];
-
+  
   // Plan and execute
   
   fftw_plan plan = fftw_plan_r2r(rank, rdims, x, F, kind, FFTW_ESTIMATE|FFTW_PRESERVE_INPUT);
-  if(plan == NULL) error("FFTW can't create execution plan for transform");
-  fftw_execute(plan);
-  // A new plan with the same parameters is fast to create it says, so we destroy this to
-  // clean up memory
-  fftw_destroy_plan(plan);
+  if(plan != NULL) {
+    fftw_execute(plan);
+    fftw_destroy_plan(plan);
+  } else {
+    // That's funny, perhaps we've been given MKL with its amputated FFTW?
+    // Let's try a series of strided 1d-transforms
+    for(R_xlen_t i = 0; i < siz; i++) F[i] = x[i];
+    int stride = 1;
+    for(int i = 0; i < rank; i++) {
+      fftw_iodim dim;
+      fftw_plan plan;
+      fftw_r2r_kind kind = FFTW_REDFT10;
+      const int tlen = dims[i];
+      const int ntrans = siz/tlen;
+      dim.n = tlen;
+      dim.is = stride;
+      dim.os = stride;
+      plan = fftw_plan_guru_r2r(1, &dim, 0, NULL, F, F, &kind, FFTW_ESTIMATE);
+      if(plan == NULL) {brokenfftw = 1;	break;}
+      // Do them
+#pragma omp parallel for num_threads(threads) schedule(static) if (threads > 1)
+      for(R_xlen_t j = 0; j < ntrans; j++) {
+	div_t dv = div(j, stride);
+	int offset = dv.rem + stride*tlen * dv.quot;
+	fftw_execute_r2r(plan, F+offset, F+offset);
+      }
+      fftw_destroy_plan(plan);
+      stride *= tlen;
+    }
+  }
   // adjust scale to fit our setup
   if(!dct) for(int i = 0; i < siz; i++) F[i] *= isiz;
-#else
-  double *src, *dest, *buf;
-  double **mat;
-  double beta=0;
 
-  // Some work space
-  // 
-  buf = (double*) R_alloc(siz,sizeof(double));
-  mat = (double**) R_alloc(rank,sizeof(double*));
-  // Create the needed transform matrices
-  // reuse same dimension matrices
-  for(int j = 0; j < rank; j++) {
-    // Is it there already?
-    int N = dims[j];
-    double *jmat = NULL;
-    for(int k = 0; k < j; k++) {
-      if(dims[k] == N) {
-	jmat = mat[k];
-	break;
+  if(brokenfftw) {
+#endif
+    double *src, *dest, *buf;
+    double **mat;
+    double beta=0;
+    
+    // Some work space
+    // 
+    buf = (double*) R_alloc(siz,sizeof(double));
+    mat = (double**) R_alloc(rank,sizeof(double*));
+    // Create the needed transform matrices
+    // reuse same dimension matrices
+    for(int j = 0; j < rank; j++) {
+      // Is it there already?
+      int N = dims[j];
+      double *jmat = NULL;
+      for(int k = 0; k < j; k++) {
+	if(dims[k] == N) {
+	  jmat = mat[k];
+	  break;
+	}
+      }
+      if(jmat != NULL) {
+	mat[j] = jmat;
+	continue;
+      }
+      jmat = mat[j] = (double*) R_alloc(N*N,sizeof(double));
+      for(int k = 0; k < N; k++) {
+	double *jkvec = &jmat[k*N];
+	for(int i = 0; i < N; i++) {
+	  jkvec[i] = cospi(k*(i+0.5)/N);
+	}
       }
     }
-    if(jmat != NULL) {
-      mat[j] = jmat;
-      continue;
+    // We will switch src and dest between F and buf
+    // We should end up with dest=F, so if 
+    // rank is odd we should start with src = F, dest=buf
+    if((rank & 1) == 1) {
+      src = F;
+      dest = buf;
+    } else {
+      src = buf;
+      dest = F;
     }
-    jmat = mat[j] = (double*) R_alloc(N*N,sizeof(double));
-    for(int k = 0; k < N; k++) {
-      double *jkvec = &jmat[k*N];
-      for(int i = 0; i < N; i++) {
-	jkvec[i] = cospi(k*(i+0.5)/N);
-      }
+    memcpy(dest,x,siz*sizeof(double));
+    for(int i = rank-1; i >= 0; i--) {
+      // transformation of dimension i, put in front
+      int N = dims[i];  // length of transform
+      int stride = siz/N;
+      double alpha = dct ? 2.0 : 2.0/N;  // Constant for transform
+      // swap src and dest
+      double *p = src;
+      src = dest;
+      dest = p;
+      
+      F77_CALL(dgemm)("TRANS","TRANS",&N,&stride,&N,&alpha,mat[i],&N,src,&stride,&beta,dest,&N);
+      // Fix the first element in each vector, nah do it at the end
+      //    for(int k = 0; k < siz; k+= N) dest[k] *= 0.5;
     }
-  }
-  // We will switch src and dest between F and buf
-  // We should end up with dest=F, so if 
-  // rank is odd we should start with src = F, dest=buf
-  if((rank & 1) == 1) {
-    src = F;
-    dest = buf;
-  } else {
-    src = buf;
-    dest = F;
-  }
-  memcpy(dest,x,siz*sizeof(double));
-  for(int i = rank-1; i >= 0; i--) {
-    // transformation of dimension i, put in front
-    int N = dims[i];  // length of transform
-    int stride = siz/N;
-    double alpha = dct ? 2.0 : 2.0/N;  // Constant for transform
-    // swap src and dest
-    double *p = src;
-    src = dest;
-    dest = p;
-
-    F77_CALL(dgemm)("TRANS","TRANS",&N,&stride,&N,&alpha,mat[i],&N,src,&stride,&beta,dest,&N);
-    // Fix the first element in each vector, nah do it at the end
-    //    for(int k = 0; k < siz; k+= N) dest[k] *= 0.5;
+#ifdef HAVE_FFTW
   }
 #endif
   if(!dct) {
@@ -114,7 +143,7 @@ static void chebcoef(double *x, int *dims, int *dimlen, double *F, int dct) {
 
 
 
-static SEXP R_chebcoef(SEXP x, SEXP sdct) {
+static SEXP R_chebcoef(SEXP x, SEXP sdct, SEXP Sthreads) {
 
   SEXP dim;
   int rank;
@@ -123,6 +152,7 @@ static SEXP R_chebcoef(SEXP x, SEXP sdct) {
   SEXP resvec;
   int sdims;
   int dct;
+  int threads = INTEGER(AS_INTEGER(Sthreads))[0];
   if(!isLogical(sdct) || LENGTH(sdct) < 1) error("dct must be a logical");
   dct = LOGICAL(sdct)[0];
   dim = getAttrib(x,R_DimSymbol);
@@ -142,7 +172,7 @@ static SEXP R_chebcoef(SEXP x, SEXP sdct) {
   if(siz == 0) error("array size must be positive");
 
   PROTECT(resvec = NEW_NUMERIC(siz));
-  chebcoef(REAL(x),dims,&rank,REAL(resvec),dct);
+  chebcoef(REAL(x),dims,rank,REAL(resvec),dct,threads);
   setAttrib(resvec,R_DimSymbol,dim);
   setAttrib(resvec,R_DimNamesSymbol,getAttrib(x,R_DimNamesSymbol));
   UNPROTECT(1);
@@ -756,7 +786,7 @@ static SEXP R_phifunc(SEXP Sx, SEXP Sk, SEXP Sthreads) {
 
 R_CallMethodDef callMethods[] = {
   {"evalcheb", (DL_FUNC) &R_evalcheb, 3},
-  {"chebcoef", (DL_FUNC) &R_chebcoef, 2},
+  {"chebcoef", (DL_FUNC) &R_chebcoef, 3},
   {"FH", (DL_FUNC) &R_FH, 5},
   {"FHweights", (DL_FUNC) &R_fhweights, 3},
   {"evalmlip", (DL_FUNC) &R_evalmlip, 4},

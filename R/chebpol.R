@@ -49,7 +49,7 @@ evalongridV <- function(fun, dims, intervals=NULL, ..., grid=NULL) {
 
 # Chebyshev coefficients for x, which may be an array
 chebcoef <- function(val, dct=FALSE) {
-  structure(.Call(C_chebcoef,as.array(val),dct),dimnames=dimnames(val))
+  structure(.Call(C_chebcoef,as.array(val),dct,getOption('chebpol.threads')),dimnames=dimnames(val))
 }
 
 chebeval <- function(x,coef,intervals=NULL,threads=getOption('chebpol.threads')) {

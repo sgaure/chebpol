@@ -41,7 +41,8 @@ AC_SUBST(ALGLIB_CFLAGS)
 AC_SUBST(ALGLIB_LIBS)
 
 AS_IF([test "x$use_fftw" = "xyes"], [
-  PKG_CHECK_MODULES([FFTW], fftw3, [have_fftw=yes], [AC_MSG_WARN([FFTW not found. Compiling with matrix method])])
+  PKG_CHECK_MODULES([FFTW], fftw3, [have_fftw=yes], 
+                    [AC_MSG_WARN([FFTW not found. Compiling with matrix method])])
 ])
 
 
@@ -72,7 +73,7 @@ AS_IF([test "x$have_fftw" = "xyes" ], [
   ],[
     AC_MSG_RESULT(no)
     AC_MSG_WARN([Your FFTW can't do 2d r2r-transforms, could it be MKL?])
-    AC_MSG_CHECKING(static linking of FFTW)
+    AC_MSG_CHECKING(whether static linking of FFTW solves it)
     FFTW_LIBS="-Wl,-Bsymbolic-functions,-Bstatic,$FFTW_LIBS,-Bdynamic"
     touch conftest.c
     ${R_HOME}/bin/R CMD SHLIB -o conftest.so conftest.c $FFTW_LIBS >& /dev/null    
