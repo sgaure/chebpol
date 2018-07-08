@@ -34,6 +34,10 @@ AS_IF([test "${use_check}" = "yes"], [
   EXTRA='-Wall -pedantic -Wextra'
 ])
 
+AC_LANG([C])
+AC_PROG_CC
+
+
 AS_IF([test "x${use_alglib}" = xyes], [
  PKG_CHECK_MODULES([ALGLIB], [alglib >= 3.11], [AC_DEFINE(HAVE_ALGLIB)], [use_alglib=no])
 ])
@@ -46,44 +50,46 @@ AS_IF([test "x$use_fftw" = "xyes"], [
 ])
 
 
-AC_LANG([C])
-AC_PROG_CC
-
-
 AS_IF([test "x$have_fftw" = "xyes" ], [
  # figure out if it works
   AC_MSG_CHECKING(for working fftw_plan_r2r in R)
-  echo ['#include <stdlib.h>
+  cat >conftest.c <<EOF
+[
+  #include <stdlib.h>
     #include <fftw3.h>
     int xxx_check() {
-    const int dims[2] = {2,3};
+    const int dims[2] = {3,2};
     double vec[6];
     double out[6];
     fftw_r2r_kind kind[2] = {FFTW_REDFT10, FFTW_REDFT10};
     fftw_plan plan = fftw_plan_r2r(2,dims,vec,out,kind,FFTW_ESTIMATE | FFTW_PRESERVE_INPUT);
-    if(plan == NULL) exit(1); else exit(13);
-  }'] > conftest.c
+    if(plan != NULL) exit(1);
+    plan = fftw_plan_r2r(1,dims,vec,out,kind,FFTW_ESTIMATE | FFTW_PRESERVE_INPUT);
+    if(plan != NULL) exit(2);
+    exit(3);
+  }
+]
+EOF 
   ${R_HOME}/bin/R CMD SHLIB -o conftest.so conftest.c $FFTW_LIBS >& /dev/null
   echo "dyn.load('conftest.so'); .Call('xxx_check')" > conftest.R
   ${R_HOME}/bin/R --slave < conftest.R
   stat=$?
-  AS_IF([test "x$stat" == "x13"], [
+  AS_IF([test "x$stat" = "x1" ], [
     AC_MSG_RESULT(yes)
     AC_DEFINE(HAVE_FFTW)
   ],[
     AC_MSG_RESULT(no)
-    AC_MSG_WARN([Your FFTW can't do 2d r2r-transforms, could it be MKL?])
-    AC_MSG_CHECKING(whether static linking of FFTW solves it)
-    FFTW_LIBS="-Wl,-Bsymbolic-functions,-Bstatic,$FFTW_LIBS,-Bdynamic"
-    touch conftest.c
-    ${R_HOME}/bin/R CMD SHLIB -o conftest.so conftest.c $FFTW_LIBS >& /dev/null    
-    ${R_HOME}/bin/R --slave >& /dev/null < conftest.R
-    stat=$?
-    AS_IF([test "x$stat" == "x13"], [
-      AC_MSG_RESULT(yes)
+    AS_IF([test "x$stat" = "x2" ], [
       AC_DEFINE(HAVE_FFTW)
-    ],[
-      AC_MSG_RESULT([no, compiling with slow matrix method])
+      AC_MSG_WARN([Your FFTW can't do 2d r2r-transforms, could it be MKL?])
+      AC_MSG_CHECKING(whether static linking of FFTW solves it)
+      FFTW_LIBS="-Wl,-Bsymbolic-functions,-Bstatic,$FFTW_LIBS,-Bdynamic"
+      touch conftest.c
+      ${R_HOME}/bin/R CMD SHLIB -o conftest.so conftest.c $FFTW_LIBS >& /dev/null    
+      ${R_HOME}/bin/R --slave >& /dev/null < conftest.R
+      stat=$?
+      AS_IF([test "x$stat" = "x1"], [AC_MSG_RESULT(yes)], [AC_MSG_RESULT(no)])
+    ], [
       FFTW_LIBS=
       FFTW_CFLAGS=
     ])
