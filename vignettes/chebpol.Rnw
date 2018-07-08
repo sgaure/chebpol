@@ -193,6 +193,7 @@ The method \code{"general"} performs this procedure.
 In the multivariate case, it is assumed that the grid in each dimension is arbitrary,
 but the multi-dimensional grid is still a Cartesian product of these. 
 We may test this on a non-uniform grid.
+
 <<fig.dim=c(4,4)>>=
 f <- function(x) cos(3*pi*x)/(1+25*(x-0.25)^2)
 gr <- log(seq(exp(-1),exp(1),length=15))
@@ -213,6 +214,7 @@ the weights have alternating signs, with absolute values \(|w_0| = |w_N| = 1\),
 and \(|w_i| = 2\) for \(0 < i < N\).  See e.g.\ \cite{BT04}. In \cite{FH07} another
 set of weights which corresponds to certain blending polynomials in rational interpolants
 are found. This is used in method \code{"fh"}. Here is an example with a Runge function.
+
 <<fig.dim=c(4,4)>>=
 f <- function(x) 1/(1+25*x^2)
 # Uniform grid:
@@ -242,6 +244,7 @@ We try it out on an intricate function on \([-1,1]^4\) and
 evaluate the result along an intricate parametric curve.  Of course, if one is
 interested in this particular curve, one could interpolate along it instead. This is just an example of
 multilinear interpolation.
+
 <<fig.dim=c(4,4)>>=
 f <- function(x) sign(sum(x^3)-0.1)*
                   sqrt(abs(25*prod(x)-4))/
