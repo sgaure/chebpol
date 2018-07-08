@@ -1,11 +1,12 @@
 Package: chebpol
 Version: 1.5-1
-Date: 2018-07-08
+Date: 2018-07-10
 Title: Multivariate Interpolation
-Authors@R: person("Simen", "Gaure", email="Simen.Gaure@frisch.uio.no", role=c("aut","cre"))
+Authors@R: person("Simen", "Gaure", email="Simen.Gaure@frisch.uio.no", role=c("aut","cre"),
+ comment="Ragnar Frisch Centre for Economic Research")
 Copyright: 2013, Simen Gaure
 Imports: compiler, stats
-Suggests: lattice, knitr
+Suggests: lattice, knitr, cubature
 SystemRequirements: fftw3 (>= 3.1.2)
 Description: Contains methods for creating multivariate Chebyshev
   interpolations of functions on a hypercube. If available through fftw3, the DCT-II/FFT

@@ -47,7 +47,7 @@
 #' 
 #' a <- runif(2); fh2(a); f(a)
 #' 
-#' @export fhappx
+#' @export
 fhappx <- function(val,grid=NULL, d=1, ...) {
   x <- threads <- NULL; rm(x,threads) # avoid warning about undefined vars
   if(is.null(grid)) 
@@ -59,7 +59,7 @@ fhappx <- function(val,grid=NULL, d=1, ...) {
   dd <- rep(dd, length(grid) %/% length(d))
   # calculate weights, formula 18 in Floater & Hormann, in C, parallelized
   weights <- .Call(C_FHweights, grid, dd, getOption('chebpol.threads'))
-  local(vectorfun(.Call(C_FH,x,val,grid,weights,threads), 
+  local(vectorfun(.Call(C_FH,x,val,grid,weights,threads,NULL), 
                   args=alist(x=,threads=getOption('chebpol.threads')),
                   arity=length(grid),
                   domain=lapply(grid,range)),

@@ -83,7 +83,7 @@
 #' m <- matrix(runif(3*5),3)
 #' rbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ph2(m))
 #' 
-#' @export ipol
+#' @export
 ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
                  method=c('chebyshev','multilinear','fh','uniform','general','polyharmonic','crbf'),
                  ...) {
@@ -92,6 +92,7 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
          chebyshev={
            if(is.function(val) && is.null(dims)) stop('dims must be specified')
            if(is.function(val)) return(chebappxf(val,dims,intervals,...))
+           if(is.null(dim(val)) && !is.null(dims)) dim(val) <- dims
            return(chebappx(val,intervals))
          },
          multilinear={
@@ -100,12 +101,14 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
          },
          fh={
            if(is.null(grid)) stop('grid must be specified for Floater-Hormann interpolation')
+           if(!is.list(grid)) grid <- list(grid)
            if(is.null(k)) k <- pmin(4,sapply(grid,length)-1)
            return(fhappx(val,grid,d=k))
          },
          uniform={
            if(is.function(val) && is.null(dims)) stop('Must specify dims for uniform intervals')
            if(is.function(val)) return(ucappxf(val,dims,intervals,...))
+           if(is.null(dim(val)) && !is.null(dims)) dim(val) <- dims
            return(ucappx(val,intervals))
          },
          general={

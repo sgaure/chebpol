@@ -42,7 +42,7 @@
 #' s <- runif(20)
 #' c(true=f(s), phs(s))
 #' 
-#' @export polyh
+#' @export
 polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
 # Linear polyharmonic splines. Centres are columns in matrix knots. Function values in val.
 # Quite slow for ncol(knots) > 3000 or so.  k=2 yields thin-plate splines.
@@ -122,7 +122,7 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
   }
   rm(A,B)
   x <- threads <- NULL; rm(x,threads)
-  local(vectorfun(.Call(C_evalpolyh, normfun(x), knots, w, v, k, threads),
+  local(vectorfun(.Call(C_evalpolyh, normfun(x), knots, w, v, k, threads, NULL),
             args=alist(x=, threads=getOption('chebpol.threads')),
             arity=M,domain=data.frame(apply(knots,1,range))),
         list(knots=knots,w=w,v=v,k=k,normfun=normfun))

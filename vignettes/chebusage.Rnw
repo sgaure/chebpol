@@ -10,7 +10,7 @@
 \newcommand{\figsize}{7cm}
 %\VignetteIndexEntry{Usage notes for package chebpol}
 %\VignetteEngine{knitr::knitr}
-
+%\VignetteDepends{cubature, lattice}
 \setlength{\textwidth}{\paperwidth}
 \setlength{\textheight}{\paperheight}
 \addtolength{\textwidth}{-3cm}
@@ -145,16 +145,16 @@ each dimension.  The multilinear and Floater-Hormann methods also
 work on arbitrary Cartesian grids.
 
 To illustrate how this works, here is a quite nice function on \([-1,1]^2\) and level plots
-of it and the \(8 \times 8\) Chebyshev interpolation, and the multilinear and Floater-Hormann methods on
-irregular \(8 \times 8\) grids.
+of it and the \(9 \times 9\) Chebyshev interpolation, and the multilinear and Floater-Hormann methods on
+a uniform \(9 \times 9\) grid.
 
 <<echo=FALSE>>=
-set.seed(44)
+set.seed(46)
 @ 
 <<fig.align='center',fig.dim=c(7,7)>>=
-f1 <- function(x) 1.5/log(5+sin(pi/2*(x[1]-x[2]^2)))
-ch1 <- ipol(f1, dims=c(8,8), method='cheb')
-igrid <- list(x=seq(-1,1,len=8)^3, y=sort(runif(8,-1,1)))
+f1 <- function(x) 1.5/log(5+sin(pi/2*(x[1]^2-2*x[2]^2)))
+ch1 <- ipol(f1, dims=c(9,9), method='cheb')
+igrid <- list(x=seq(-1,1,len=9), y=seq(-1,1,len=9))
 ml1 <- ipol(f1, grid=igrid, method='multilinear')
 fh1 <- ipol(f1, grid=igrid, method='fh', k=3)
 y <- x <- seq(-1,1,len=200)
@@ -162,8 +162,8 @@ testset <- expand.grid(list(x=x,y=y))
 data <- cbind(testset,fun= apply(testset,1,f1), cheb=ch1(t(testset)), 
               m.lin=ml1(t(testset)), F.H.=fh1(t(testset)))
 
-lattice::levelplot(m.lin+F.H.+fun+cheb ~ x+y, data=data, cuts=100,
-          col.regions=grey.colors(101,0.1,0.9), layout=c(2,2), colorkey=FALSE,
+lattice::levelplot(m.lin+F.H.+fun+cheb ~ x+y, data=data, cuts=10,
+          col.regions=grey.colors(11,0.1,0.9), layout=c(2,2), 
           main='Level plots of function and interpolations')
 @ 
 
@@ -187,16 +187,18 @@ set.seed(43)
 @ 
 
 <<fig.align='center', fig.width=7, fig.height=7>>=
-f2 <- function(x) 1/min(log(1.9 + sin(0.7+1.8*pi*(x+0.39*x[1]^2-x[2]^2))^2))
-ph1 <- ipol(f1, knots=matrix(runif(70,-1,1),2), method='polyharmonic', k=3)
+f2 <- function(x) 1.2/min(log(3.1 + sin(0.7+1.8*pi*(x+0.39*x[1]^2-x[2]^2))^2))
+ph1 <- ipol(f1, knots=matrix(runif(100,-1,1),2), method='polyharmonic', k=3)
 ph2 <- ipol(f2, knots=matrix(runif(4000,-1,1),2), method='polyharmonic', k=3)
-y <- x <- seq(-1,1,len=200)
 data <- cbind(testset,fun1= apply(testset,1,f1), poly1=ph1(t(testset)), 
               fun2=apply(testset,1,f2), poly2=ph2(t(testset)))
 
-lattice::levelplot(fun2+poly2+fun1+poly1 ~ x+y, data=data, cuts=100,
-          col.regions=grey.colors(101,0.1,0.9), layout=c(2,2), colorkey=FALSE,
+lattice::levelplot(fun2+poly2+fun1+poly1 ~ x+y, data=data, cuts=10,
+          col.regions=grey.colors(11,0.1,0.9), layout=c(2,2), 
           main='Level plots of functions and interpolations')
+# compute L2-error (rmse)
+sqrt(cubature::hcubature(function(x) as.matrix((ph2(x)-apply(x,2,f2))^2), rep(-1,2), rep(1,2),
+          vectorInterface=TRUE, absError=1e-6)$integral/4)
 @ 
 
 The polyharmonic spline method is quite slow. It requires solving a \(K \times K\) dense
@@ -219,7 +221,7 @@ linear system which is the pedestrian approach for finding polynomial
 interpolants. \pkg{chebpol} uses the FFT from the software package
 FFTW, if it was available during compilation.  Otherwise a slower
 matrix method is used. Creation with FFT typically takes of the order
-\(O((2n)^r\log n)\). The evaluation of Chebyshev interpolants is not
+\(O(n^r\log n)\). The evaluation of Chebyshev interpolants is not
 particularly fast, \pkg{chebpol} uses the Clenshaw-Curtis algorithm,
 which is a variant of Horner's method for evaluating polynomials. It typically
 goes in time \(n\) for each dimension, but they must be combined,
@@ -262,7 +264,7 @@ the matrix interface if more than one point is to be evaluated (such
 as in the vector interface of package \pkg{cubature}), it is a lot
 faster with \code{ph2(m)} than with \code{apply(m,2,ph2)}. 
 <<fast>>=
-f <- ipol(sin, grid=seq(0,1,1000), method='multi')
+f <- ipol(sin, grid=seq(0,1,length.out=1000), method='multilinear')
 a <- runif(1e6)
 system.time(sin(a))
 system.time(f(a,threads=4))

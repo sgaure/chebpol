@@ -42,7 +42,7 @@
 #' # we also get an approximation outside of the domain, of disputable quality
 #' ml2(c(1,2)); f(c(1,2))
 #' 
-#' @export mlappx
+#' @export
 mlappx <- function(val, grid, ...) {
   x <- threads <- NULL; rm(x,threads) # avoid cran check warning 
   if(is.numeric(grid)) grid <- list(grid)
@@ -58,7 +58,7 @@ mlappx <- function(val, grid, ...) {
 #  if(adjust!=0) {
 #    val <- val + (val - .Call(C_predmlip,grid,as.numeric(val)))*adjust
 #  }
-  local(vectorfun(.Call(C_evalmlip,grid,val,x,threads), length(grid), 
+  local(vectorfun(.Call(C_evalmlip,grid,val,x,threads,NULL), length(grid), 
                   args=alist(x=,threads=getOption('chebpol.threads')),
                   domain=lapply(grid,range)),
         list(grid=grid,val=val))

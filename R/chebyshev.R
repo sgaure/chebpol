@@ -126,9 +126,9 @@ chebcoef <- function(val, dct=FALSE) {
 #' 
 #' @export
 chebeval <- function(x,coef,intervals=NULL,threads=getOption('chebpol.threads')) {
-  if(is.null(intervals)) return(.Call(C_evalcheb,coef,x,threads))
+  if(is.null(intervals)) return(.Call(C_evalcheb,coef,x,threads,NULL))
   # map into intervals
-  .Call(C_evalcheb,coef,mapply(function(x,i) 2*(x[[1]]-mean(i))/diff(i),x,intervals),threads)
+  .Call(C_evalcheb,coef,mapply(function(x,i) 2*(x[[1]]-mean(i))/diff(i),x,intervals),threads,NULL)
 }
 
 # return a function which is a Chebyshev interpolation
@@ -210,7 +210,7 @@ chebappx <- function(val,intervals=NULL) {
   x <- threads <- NULL; rm(x,threads) # avoid cran check warning 
   if(is.null(intervals)) {
     # it's [-1,1] intervals, so drop transformation
-    fun <- local(vectorfun(.Call(C_evalcheb,cf,x,threads), K,
+    fun <- local(vectorfun(.Call(C_evalcheb,cf,x,threads,NULL), K,
                            args=alist(x=,threads=getOption('chebpol.threads')),
                            domain=lapply(rep(-1,K),c,1)),
                  list(cf=cf))
@@ -225,7 +225,7 @@ chebappx <- function(val,intervals=NULL) {
     mid <- sapply(intervals,function(x) mean(x))
     imap <- compiler::cmpfun(function(x) (x-mid)*ispan)
 
-    fun <- local(vectorfun(.Call(C_evalcheb,cf,imap(x), threads), K,
+    fun <- local(vectorfun(.Call(C_evalcheb,cf,imap(x), threads, NULL), K,
                            args=alist(x=,threads=getOption('chebpol.threads')),
                            domain=intervals),
                  list(cf=cf,imap=imap))

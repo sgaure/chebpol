@@ -7,6 +7,7 @@
 #include <R_ext/Visibility.h>
 #include "config.h"
 #include "chebpol.h"
+#define UNUSED(x) (void)(x)
 #ifdef HAVE_FFTW
 #include <fftw3.h>
 #endif
@@ -47,7 +48,11 @@ static void chebcoef(double *x, int *dims, const int rank, double *F, int dct, i
       dim.is = stride;
       dim.os = stride;
       plan = fftw_plan_guru_r2r(1, &dim, 0, NULL, F, F, &kind, FFTW_ESTIMATE);
-      if(plan == NULL) {brokenfftw = 1;	break;}
+      if(plan == NULL) {
+	if(tlen > 10000) warning("FFTW fails on strided long (%d) vector, is it MKL?",tlen);
+	brokenfftw = 1;
+	break;
+      }
       // Do them
 #pragma omp parallel for num_threads(threads) schedule(static) if (threads > 1)
       for(R_xlen_t j = 0; j < ntrans; j++) {
@@ -77,6 +82,7 @@ static void chebcoef(double *x, int *dims, const int rank, double *F, int dct, i
     for(int j = 0; j < rank; j++) {
       // Is it there already?
       int N = dims[j];
+      if(N > 10000) warning("Long vector (%d), no FFTW. This may go wrong.",N);
       double *jmat = NULL;
       for(int k = 0; k < j; k++) {
 	if(dims[k] == N) {
@@ -218,14 +224,14 @@ static double C_FH(double *fv, double *x, double **knots, int *dims, const int r
   return num/denom;
 }
 
-static SEXP R_FH(SEXP inx, SEXP vals, SEXP grid, SEXP Sweights, SEXP Rthreads) {
+static SEXP R_FH(SEXP inx, SEXP vals, SEXP grid, SEXP Sweights, SEXP Rthreads, SEXP spare) {
   int *dims;
   int siz = 1;
   double *val = REAL(vals);
   int threads = INTEGER(AS_INTEGER(Rthreads))[0];
   SEXP dim;
   int rank;
-
+  UNUSED(spare);
   // Create some pointers and stuff. 
   dim = getAttrib(vals,R_DimSymbol);
   dims = INTEGER(dim);
@@ -341,14 +347,14 @@ static double C_evalcheb(double *cf, double *x, int *dims, const int rank) {
   return bn - x[newrank]*bn1;
 }
 
-static SEXP R_evalcheb(SEXP coef, SEXP inx, SEXP Rthreads) {
+static SEXP R_evalcheb(SEXP coef, SEXP inx, SEXP Rthreads, SEXP spare) {
   int *dims;
   int siz = 1;
   double *cf = REAL(coef);
   int threads = INTEGER(AS_INTEGER(Rthreads))[0];
   SEXP dim;
   int rank;
-
+  UNUSED(spare);
   // Create some pointers and stuff. 
   dim = getAttrib(coef,R_DimSymbol);
   dims = INTEGER(dim);
@@ -418,7 +424,7 @@ double C_evalpolyh(const double *x, const double *knots, const double *weights,
   for(int i = 0; i < rank; i++) wsum += lweights[i+1] * x[i];
   return wsum;
 }
-SEXP R_evalpolyh(SEXP inx, SEXP Sknots, SEXP weights, SEXP lweights, SEXP Sk, SEXP Sthreads) {
+SEXP R_evalpolyh(SEXP inx, SEXP Sknots, SEXP weights, SEXP lweights, SEXP Sk, SEXP Sthreads, SEXP spare) {
   double *x = REAL(inx);
   double *knots = REAL(Sknots);
   double *w = REAL(weights);
@@ -427,6 +433,7 @@ SEXP R_evalpolyh(SEXP inx, SEXP Sknots, SEXP weights, SEXP lweights, SEXP Sk, SE
   int threads = INTEGER(AS_INTEGER(Sthreads))[0];
   int numvec;
   const int rank = nrows(Sknots);
+  UNUSED(spare);
   if(LENGTH(lweights) != rank+1) 
     error("linear weights (%d) should be one longer than rank(%d)",
 	  LENGTH(lweights),rank);
@@ -667,13 +674,13 @@ static double C_evalmlip(const int rank, double *x, double **grid, int *dims, do
 }
 
 /* Then a multilinear approximation */
-static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads) {
+static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads, SEXP spare) {
   const int rank = LENGTH(sgrid);
   int gridsize = 1;
   int dims[rank];
   int threads = INTEGER(AS_INTEGER(Rthreads))[0];
   double *grid[rank];
-
+  UNUSED(spare);
   if(!IS_NUMERIC(values)) error("values must be numeric");
   if(!IS_NUMERIC(x)) error("argument x must be numeric");  
   if(isMatrix(x) ? (nrows(x) != rank) : (LENGTH(x) != rank))
@@ -785,11 +792,11 @@ static SEXP R_phifunc(SEXP Sx, SEXP Sk, SEXP Sthreads) {
 }
 
 R_CallMethodDef callMethods[] = {
-  {"evalcheb", (DL_FUNC) &R_evalcheb, 3},
+  {"evalcheb", (DL_FUNC) &R_evalcheb, 4},
   {"chebcoef", (DL_FUNC) &R_chebcoef, 3},
-  {"FH", (DL_FUNC) &R_FH, 5},
+  {"FH", (DL_FUNC) &R_FH, 6},
   {"FHweights", (DL_FUNC) &R_fhweights, 3},
-  {"evalmlip", (DL_FUNC) &R_evalmlip, 4},
+  {"evalmlip", (DL_FUNC) &R_evalmlip, 5},
   {"predmlip", (DL_FUNC) &R_mlippred, 2},
   {"evalongrid", (DL_FUNC) &R_evalongrid, 2},
   {"havefftw", (DL_FUNC) &R_havefftw, 0},
@@ -797,7 +804,7 @@ R_CallMethodDef callMethods[] = {
   {"phifunc", (DL_FUNC) &R_phifunc, 3},
   {"makerbf", (DL_FUNC) &R_makerbf, 4},
   {"evalrbf", (DL_FUNC) &R_evalrbf, 3},
-  {"evalpolyh", (DL_FUNC) &R_evalpolyh, 6},
+  {"evalpolyh", (DL_FUNC) &R_evalpolyh, 7},
   {"havealglib", (DL_FUNC) &R_havealglib, 0},
   {NULL, NULL, 0}
 };

@@ -60,6 +60,9 @@
 #' a matrix of column vectors is evaluated.  The option \code{chebpol.threads}
 #' is initialized from the environment variable \code{CHEBPOL_THREADS} upon
 #' loading of the package.
+#'
+#' The interpolants are ordinary R-objects and can be saved with \code{save()} and loaded
+#' later with \code{load()} or serialized/unserialized with other tools, just like any R-object.
 #' 
 #' @name chebpol-package
 #' @aliases chebpol-package chebpol

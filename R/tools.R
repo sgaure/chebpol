@@ -24,7 +24,8 @@ vectorfun <- function(e,arity,args=alist(x=),domain=NULL) {
       stop(sprintf('Function should take %d arguments, you supplied a vector of length %d',arity,length(x)))
   }, list(fun=compiler::cmpfun(fun)))
   formals(f) <- args
-  structure(cmpfun(f),arity=arity,domain=domain)
+  structure(cmpfun(f),arity=arity,domain=as.data.frame(domain),
+            chebpol.version=utils::packageVersion('chebpol'))
 }
 
 separgs <- function(fun,...) {
@@ -74,7 +75,6 @@ separgs <- function(fun,...) {
 #' can take a matrix of column vectors as argument.  It's equivalent to
 #' \code{fun(t(expand.grid(grid)))}.
 #' 
-#' @aliases evalongrid evalongridV
 #' @param fun Multivariate real-valued function to be evaluated. Must be
 #' defined on the hypercube described by \code{intervals}.
 #' @param dims A vector of integers. The number of grid-points in each
@@ -104,7 +104,7 @@ separgs <- function(fun,...) {
 #' f <- function(x) c(prod(x),sum(x^2))
 #' evalongrid(f,grid=grid)
 #' 
-#' @export evalongrid evalongridV
+#' @export
 evalongrid <- function(fun,dims,intervals=NULL,...,grid=NULL) {
 # do a call to stuff which doesn't really expand the grid
   if(is.numeric(grid)) grid <- list(grid)
@@ -113,6 +113,8 @@ evalongrid <- function(fun,dims,intervals=NULL,...,grid=NULL) {
   .Call(C_evalongrid,function(x) mf(x,...), grid)
 }
 
+#' @rdname evalongrid
+#' @export
 evalongridV <- function(fun, dims, intervals=NULL, ..., grid=NULL) {
   if(is.numeric(grid)) grid <- list(grid)
   if(is.null(grid)) grid <- chebknots(dims,intervals)

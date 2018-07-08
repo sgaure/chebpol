@@ -6,6 +6,8 @@
 \title{Evaluate a function on a grid}
 \usage{
 evalongrid(fun, dims, intervals = NULL, ..., grid = NULL)
+
+evalongridV(fun, dims, intervals = NULL, ..., grid = NULL)
 }
 \arguments{
 \item{fun}{Multivariate real-valued function to be evaluated. Must be
