@@ -9,6 +9,7 @@
 \newcommand{\NN}{\mathbb{N}}
 \newcommand{\figsize}{7cm}
 %\VignetteIndexEntry{Usage notes for package chebpol}
+%\VignetteEngine{knitr::knitr}
 
 \setlength{\textwidth}{\paperwidth}
 \setlength{\textheight}{\paperheight}
@@ -68,7 +69,7 @@ irregular grids, or should have a denser grid near certain areas. Some functions
 can't be evaluated at all, they only come as values in some scattered points.
 Here are typical examples in two dimensions.
 
-<<igrid,fig=TRUE>>=
+<<igrid>>=
 library(chebpol)
 par(mfrow=c(2,2))
 grid <- list(x=seq(-1,1,length.out=12), y=seq(-1,1,length.out=10))
@@ -85,7 +86,7 @@ plot(y ~ x, data=data, typ='p', col='blue', main='Scattered data')
 Since the generalization to multiple dimensions is fairly straightforward, we focus on 
 the one-dimensional case. I.e. functions \([-1,1] \mapsto \RN\).  We use the following
 function:
-<<fundef,fig=TRUE>>=
+<<fundef, fig.dim=c(4,4)>>=
 f <- function(x) 1/mean(log1p(0.5 + sin(0.8+2.3*pi*c(0.6,1.4)*(x+0.09)^3)^2))
 s <- seq(-1, 1, length.out=1000)
 plot(s, sapply(s,f), typ='l')
@@ -94,7 +95,7 @@ plot(s, sapply(s,f), typ='l')
 Since this is a toy function, we can illustrate all sorts of knots. The first one out is the
 traditional Chebyshev interpolation. The oscillations are typical for polynomial interpolation
 with too few knots, that's how polynomials are.
-<<cheb,fig=TRUE>>=
+<<cheb, fig.dim=c(4,4)>>=
 ch30 <- ipol(f, dims=30, method='cheb')
 ch60 <- ipol(f, dims=60, method='cheb')
 plot(s, sapply(s,f), typ='l')
@@ -120,7 +121,7 @@ number of knots, but in practice high degrees introduce round off errors, so we 
 it small. We see some of the methods here:
 
 % \setkeys{Gin}{width=0.8\textwidth}
-<<uni,fig=TRUE>>=
+<<uni, fig.dim=c(4,4)>>=
 plot(s, sapply(s,f), typ='l')
 uni <- ipol(f, dims=20, method='uniform')
 grid <- seq(-1,1,len=20)
@@ -150,7 +151,7 @@ irregular \(8 \times 8\) grids.
 <<echo=FALSE>>=
 set.seed(44)
 @ 
-<<dim2,fig=TRUE,include=FALSE>>=
+<<fig.align='center',fig.dim=c(7,7)>>=
 f1 <- function(x) 1.5/log(5+sin(pi/2*(x[1]-x[2]^2)))
 ch1 <- ipol(f1, dims=c(8,8), method='cheb')
 igrid <- list(x=seq(-1,1,len=8)^3, y=sort(runif(8,-1,1)))
@@ -165,9 +166,7 @@ lattice::levelplot(m.lin+F.H.+fun+cheb ~ x+y, data=data, cuts=100,
           col.regions=grey.colors(101,0.1,0.9), layout=c(2,2), colorkey=FALSE,
           main='Level plots of function and interpolations')
 @ 
-\begin{center}
-\includegraphics[width=16cm,height=16cm]{chebusage-dim2}
-\end{center}
+
 It is not so easy to see in a picture, but the multilinear interpolant is not differentiable
 in the grid points, it is piecewise linear. The other interpolants are typically twice continuously
 differentiable.
@@ -187,7 +186,7 @@ requires a lot of scattered points.
 set.seed(43)
 @ 
 
-<<poly,fig=TRUE,include=FALSE>>=
+<<fig.align='center', fig.width=7, fig.height=7>>=
 f2 <- function(x) 1/min(log(1.9 + sin(0.7+1.8*pi*(x+0.39*x[1]^2-x[2]^2))^2))
 ph1 <- ipol(f1, knots=matrix(runif(70,-1,1),2), method='polyharmonic', k=3)
 ph2 <- ipol(f2, knots=matrix(runif(4000,-1,1),2), method='polyharmonic', k=3)
@@ -199,10 +198,6 @@ lattice::levelplot(fun2+poly2+fun1+poly1 ~ x+y, data=data, cuts=100,
           col.regions=grey.colors(101,0.1,0.9), layout=c(2,2), colorkey=FALSE,
           main='Level plots of functions and interpolations')
 @ 
-
-\begin{center}
-\includegraphics[width=16cm,height=16cm]{chebusage-poly}
-\end{center}
 
 The polyharmonic spline method is quite slow. It requires solving a \(K \times K\) dense
 linear system, where \(K\) is the number of knots. It helps a lot to use a tuned and 
