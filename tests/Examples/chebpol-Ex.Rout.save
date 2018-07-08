@@ -36,6 +36,7 @@ Type 'q()' to quit R.
 > 
 > ### ** Examples
 > 
+> 
 > f <- function(x) exp(-sum(x^2))
 > ## we want 3 dimensions, i.e. something like
 > ## f(x,y,z) = exp(-(x^2 + y^2 + z^2))
@@ -79,6 +80,7 @@ Type 'q()' to quit R.
 > 
 > 
 > 
+> 
 > cleanEx()
 > nameEx("chebappxg")
 > ### * chebappxg
@@ -90,6 +92,7 @@ Type 'q()' to quit R.
 > ### Aliases: chebappxg chebappxgf
 > 
 > ### ** Examples
+> 
 > 
 > ## evenly spaced grid-points
 > su <- seq(0,1,length.out=10)
@@ -131,6 +134,7 @@ Type 'q()' to quit R.
 > 
 > 
 > 
+> 
 > cleanEx()
 > nameEx("chebcoef")
 > ### * chebcoef
@@ -142,6 +146,7 @@ Type 'q()' to quit R.
 > ### Aliases: chebcoef
 > 
 > ### ** Examples
+> 
 > 
 > ## Coefficients for a 2x3x4 grid
 > a <- array(rnorm(24),dim=c(2,3,4))
@@ -173,6 +178,7 @@ Type 'q()' to quit R.
 > 
 > 
 > 
+> 
 > cleanEx()
 > nameEx("chebeval")
 > ### * chebeval
@@ -184,6 +190,7 @@ Type 'q()' to quit R.
 > ### Aliases: chebeval
 > 
 > ### ** Examples
+> 
 > 
 > # make a function which is known to be unsuitable for Chebyshev approximation
 > f <- function(x) sign(x)
@@ -209,6 +216,7 @@ Type 'q()' to quit R.
 > 
 > 
 > 
+> 
 > cleanEx()
 > nameEx("chebknots")
 > ### * chebknots
@@ -220,6 +228,7 @@ Type 'q()' to quit R.
 > ### Aliases: chebknots
 > 
 > ### ** Examples
+> 
 > 
 > ## Standard knots for degree 3
 > chebknots(4)
@@ -249,6 +258,7 @@ $z
 > 
 > 
 > 
+> 
 > cleanEx()
 > nameEx("chebpol-package")
 > ### * chebpol-package
@@ -259,10 +269,11 @@ $z
 > ### Title: Methods for creating multivariate Chebyshev interpolations on
 > ###   hypercubes
 > ### Aliases: chebpol-package chebpol
-> ### Keywords: DCT Discrete Cosine Transform Chebyshev approximation
-> ###   Floater-Hormann
+> ### Keywords: Chebyshev Cosine DCT Discrete Floater-Hormann Transform
+> ###   approximation
 > 
 > ### ** Examples
+> 
 > 
 > ## make some function values on a 50x50x50 grid
 > dims <- c(x=50,y=50,z=50)
@@ -288,6 +299,7 @@ fh   0.2501152 0.4132112 1.751460 0.001677869 0.1709544
 > 
 > 
 > 
+> 
 > cleanEx()
 > nameEx("evalongrid")
 > ### * evalongrid
@@ -299,6 +311,7 @@ fh   0.2501152 0.4132112 1.751460 0.001677869 0.1709544
 > ### Aliases: evalongrid evalongridV
 > 
 > ### ** Examples
+> 
 > 
 > f <- function(x) {a <- sum(x^2); ifelse(a == 0,0,exp(-1/a))}
 > ## Standard Chebyshev grid
@@ -375,6 +388,7 @@ fh   0.2501152 0.4132112 1.751460 0.001677869 0.1709544
 > 
 > ### ** Examples
 > 
+> 
 > ## evenly spaced grid-points
 > su <- seq(0,1,length.out=10)
 > ## irregularly spaced grid-points
@@ -399,6 +413,7 @@ fh   0.2501152 0.4132112 1.751460 0.001677869 0.1709544
 > 
 > 
 > 
+> 
 > cleanEx()
 > nameEx("ipol")
 > ### * ipol
@@ -410,6 +425,7 @@ fh   0.2501152 0.4132112 1.751460 0.001677869 0.1709544
 > ### Aliases: ipol
 > 
 > ### ** Examples
+> 
 > 
 > ## evenly spaced grid-points
 > su <- seq(0,1,length.out=10)
@@ -450,6 +466,7 @@ poly 1.170018 0.6573040 1.552691 0.9648213 0.5316708
 > 
 > 
 > 
+> 
 > cleanEx()
 > nameEx("mlappx")
 > ### * mlappx
@@ -461,6 +478,7 @@ poly 1.170018 0.6573040 1.552691 0.9648213 0.5316708
 > ### Aliases: mlappx mlappxf
 > 
 > ### ** Examples
+> 
 > 
 > ## evenly spaced grid-points
 > su <- seq(0,1,length.out=10)
@@ -504,6 +522,7 @@ poly 1.170018 0.6573040 1.552691 0.9648213 0.5316708
 > 
 > ### ** Examples
 > 
+> 
 > # a function on a 20-dimensional space
 > r <- runif(20)
 > r <- r/sum(r)
@@ -519,6 +538,7 @@ poly 1.170018 0.6573040 1.552691 0.9648213 0.5316708
 > 
 > 
 > 
+> 
 > cleanEx()
 > nameEx("ucappx")
 > ### * ucappx
@@ -530,6 +550,7 @@ poly 1.170018 0.6573040 1.552691 0.9648213 0.5316708
 > ### Aliases: ucappx ucappxf
 > 
 > ### ** Examples
+> 
 > 
 > # Runge function
 > f <- function(x) 1/(1+25*x^2)
@@ -554,12 +575,13 @@ poly 1.170018 0.6573040 1.552691 0.9648213 0.5316708
 > 
 > 
 > 
+> 
 > ### * <FOOTER>
 > ###
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  4.178 0.139 1.597 0 0 
+Time elapsed:  4.003 0.112 2.61 0 0 
 > grDevices::dev.off()
 null device 
           1 
