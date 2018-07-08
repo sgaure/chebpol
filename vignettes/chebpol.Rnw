@@ -9,7 +9,7 @@
 \newcommand{\NN}{\mathbb{N}}
 \newcommand{\figsize}{11cm}
 %\VignetteIndexEntry{Details of package chebpol}
-
+%\VignetteEngine{knitr::knitr}
 \setlength{\textwidth}{\paperwidth}
 \addtolength{\textwidth}{-2in}
 \calclayout
@@ -75,10 +75,11 @@ classical way to interpolate multivariate real functions.
 This procedure is available in package \pkg{chebpol}. Either we have the function to 
 interpolate, or we have the values in the Chebyshev-knots.
 Given a function \(f\) we may compute its Chebyshev approximation and plot it:
-<<runge,echo=FALSE>>=
+<<echo=FALSE>>=
 library(chebpol)
+#opts_chunk$set(fig.width=4, fig.height=4)
 @ 
-<<runge, fig=TRUE, png=TRUE>>=
+<<fig.dim=c(5,5)>>=
 f <- function(x) cos(3*pi*x)/(1+25*(x-0.25)^2)
 ch <- ipol(f,dims=15,method='chebyshev')
 s <- seq(-1,1,length.out=401)
@@ -137,22 +138,14 @@ It is readily verified that for \(i=1..n\) we have \(Q^n(y_i^n) = f(y_i^n)\), th
 polynomial interpolation, so the Runge phenomenon is not necessarily present.
 
 Continuing the former example, we have
-<<runge,echo=FALSE>>=
-pdf('ucrunge.pdf')
+
+<<fig.dim=c(5,5)>>=
 plot(s,f(s),type='l')
 lines(s,ch(s), col='red')
 points(kn,f(kn))
-@ 
-<<runge>>=
 uc <- ipol(f, dims=15, method='uniform')
 lines(s,uc(s),col='blue')
 @ 
-<<runge,echo=FALSE>>=
-invisible(dev.off())
-@ 
-\begin{center}
-  \includegraphics[width=\figsize]{ucrunge.pdf}
-\end{center}
 
 For the multivariate case, a separate map 
 function \code{g} is created for each dimension, which may have different number of knots.
@@ -200,7 +193,7 @@ The method \code{"general"} performs this procedure.
 In the multivariate case, it is assumed that the grid in each dimension is arbitrary,
 but the multi-dimensional grid is still a Cartesian product of these. 
 We may test this on a non-uniform grid.
-<<sqrt,fig=TRUE,png=TRUE>>=
+<<fig.dim=c(5,5)>>=
 f <- function(x) cos(3*pi*x)/(1+25*(x-0.25)^2)
 gr <- log(seq(exp(-1),exp(1),length=15))
 chg <- ipol(f, grid=gr, method='general')
@@ -220,7 +213,7 @@ the weights have alternating signs, with absolute values \(|w_0| = |w_N| = 1\),
 and \(|w_i| = 2\) for \(0 < i < N\).  See e.g.\ \cite{BT04}. In \cite{FH07} another
 set of weights which corresponds to certain blending polynomials in rational interpolants
 are found. This is used in method \code{"fh"}. Here is an example with a Runge function.
-<<lagrange,fig=TRUE,png=TRUE>>=
+<<fig.dim=c(5,5)>>=
 f <- function(x) 1/(1+25*x^2)
 # Uniform grid:
 unigrid <- list(seq(-3,2,length.out=20))
@@ -249,7 +242,7 @@ We try it out on an intricate function on \([-1,1]^4\) and
 evaluate the result along an intricate parametric curve.  Of course, if one is
 interested in this particular curve, one could interpolate along it instead. This is just an example of
 multilinear interpolation.
-<<ml,fig=TRUE,png=TRUE>>=
+<<fig.dim=c(5,5)>>=
 f <- function(x) sign(sum(x^3)-0.1)*
                   sqrt(abs(25*prod(x)-4))/
                   (1+25*sum(x)^2)
@@ -272,11 +265,11 @@ experimental implementation of polyharmonic splines in the method \code{"polyhar
 It accepts a function, or function values, and a
 matrix of centres (knots), one centre in each column. Here is a
 20-dimensional example with 3000 randomly placed knots:
-<<poly,echo=FALSE>>=
+<<poly1,echo=FALSE>>=
 set.seed(425)  # make sure we are reproducible
 @ 
 
-<<poly,fig=TRUE,png=TRUE>>=
+<<poly,fig.dim=c(5,5)>>=
 r <- runif(20)
 r <- r/sum(r)
 f <- function(x) 1/mean(log1p(r*x))
