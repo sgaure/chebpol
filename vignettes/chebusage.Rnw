@@ -10,21 +10,24 @@
 \newcommand{\figsize}{7cm}
 %\VignetteIndexEntry{Usage notes for package chebpol}
 
-
 \setlength{\textwidth}{\paperwidth}
-\addtolength{\textwidth}{-2in}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textwidth}{-3cm}
+\addtolength{\textheight}{-4cm}
 \calclayout
 
 
-\title{Usage note for package \pkg{chebpol}}
+\title{Usage notes for package \pkg{chebpol}}
 
 \author{Simen Gaure}
 \address{Ragnar Frisch Centre for Economic Research, Oslo, Norway}
 \date{July 6, 2018}
 
 \begin{document}
-\setkeys{Gin}{width=0.85\textwidth }
+\setkeys{Gin}{width=0.6\textwidth }
 \begin{abstract}
+Here are some examples of how package \pkg{chebpol} is used, with description of differences
+between the methods.
 \end{abstract}
 
 \maketitle
@@ -41,10 +44,11 @@ Which method to use depends first and foremost on one thing.
 Can we choose the points \(x_i\) freely? If \(n > 1\), can we choose the points as a grid,
 i.e. a Cartesian product of single-dimension points?
 
-Say we have a function \(f(x,y)\) defined in a square, i.e. for 
+Say we have a function \(f(x,y)\) defined in a square, i.e. for
 \(\{(x,y) \,|\, -1\le x\le 1 \text{ and } -1\le y\le 1\}\). Can we
-pick our knots exactly as we wish, e.g. as a grid \(X \times Y = \{(x,y) \,|\, x \in X \text{ and } y \in Y\}\)
-for some \(X\) and \(Y\)?
+pick our knots exactly as we wish, e.g. as a Cartesian grid
+\(X \times Y = \{(x,y) \,|\, x \in X \text{ and } y \in Y\}\) for some
+\(X\) and \(Y\)?
 
 If we want our interpolant \(g\) to be a polynomial, there is a
 canonical way to do this. The knots should preferably be the Cartesian
@@ -88,7 +92,8 @@ plot(s, sapply(s,f), typ='l')
 @ 
 
 Since this is a toy function, we can illustrate all sorts of knots. The first one out is the
-traditional Chebyshev interpolation. 
+traditional Chebyshev interpolation. The oscillations are typical for polynomial interpolation
+with too few knots, that's how polynomials are.
 <<cheb,fig=TRUE>>=
 ch30 <- ipol(f, dims=30, method='cheb')
 ch60 <- ipol(f, dims=60, method='cheb')
@@ -110,11 +115,11 @@ uniformly spaced knots, say 20 or 40 of them. We then have a couple of methods t
 from. One is called \code{"uniform"} and is a trigonometric mapping of the uniformly spaced
 knots into Chebyshev knots. Another is piecewise linear. Then there is the Floater-Hormann rational
 interpolation from \cite{FH07}.  The F.H. interpolation comes with an integer parameter which
-is the degree of certain blending polynomials. In theory it works with any degree up to the
+is the degree of certain blending polynomials. In theory it works with any degree below the
 number of knots, but in practice high degrees introduce round off errors, so we better keep
 it small. We see some of the methods here:
 
-\setkeys{Gin}{width=0.8\textwidth}
+% \setkeys{Gin}{width=0.8\textwidth}
 <<uni,fig=TRUE>>=
 plot(s, sapply(s,f), typ='l')
 uni <- ipol(f, dims=20, method='uniform')
@@ -126,18 +131,20 @@ lines(s, ml(s), col='green', lty=2)
 lines(s, fh(s, threads=4), col='red', lty=2)
 legend('topleft',c('fun','uni','ml','fh'),fill=c('black','blue','green','red'))
 @ 
-\setkeys{Gin}{width=0.6\textwidth}
+% \setkeys{Gin}{width=0.6\textwidth}
 
 \section{Multidimensional data}
-All of the above methods work with more than one dimension, but that presumes
-that the function can be evaluated on a Cartesian grid. The Chebyshev and uniform methods
-use particular grids. The method \code{"general"} is similar to \code{"uniform"} in
-that it transforms an arbitrary Cartesian grid into a Chebyshev grid by means of a monotonic spline
-in each dimension.
-The multi linear and Floater-Hormann methods also work on arbitrary Cartesian grids.
+All of the above methods work with more than one dimension via a
+standard tensor product construction, but that presupposes that the
+function can be evaluated on a Cartesian grid. The Chebyshev and
+uniform methods use particular grids. The method \code{"general"} is
+similar to \code{"uniform"} in that it transforms an arbitrary
+Cartesian grid into a Chebyshev grid by means of a monotonic spline in
+each dimension.  The multilinear and Floater-Hormann methods also
+work on arbitrary Cartesian grids.
 
 To illustrate how this works, here is a quite nice function on \([-1,1]^2\) and level plots
-of it and the \(8 \times 8\) Chebyshev interpolation, and the multi linear and Floater-Hormann methods on
+of it and the \(8 \times 8\) Chebyshev interpolation, and the multilinear and Floater-Hormann methods on
 irregular \(8 \times 8\) grids.
 
 <<echo=FALSE>>=
@@ -161,6 +168,9 @@ lattice::levelplot(m.lin+F.H.+fun+cheb ~ x+y, data=data, cuts=100,
 \begin{center}
 \includegraphics[width=16cm,height=16cm]{chebusage-dim2}
 \end{center}
+It is not so easy to see in a picture, but the multilinear interpolant is not differentiable
+in the grid points, it is piecewise linear. The other interpolants are typically twice continuously
+differentiable.
 
 There is one interpolation method we have not mentioned yet. If the
 data are scattered in two or more dimensions, none of the methods
@@ -202,7 +212,7 @@ parallel BLAS with R, such as Intel's MKL.
 There are two parts to interpolation. Creating the interpolant, and
 using it. Both of these take some time. The time depends on the method,
 as well as the dimension \(r\) of the problem, and the number of grid
-points \(n\) along a dimension, or the number of knots \(K\). I.e. for
+points \(n\) along a dimension, or the number of knots \(K\). For
 the Cartesian grids, the number of knots is \(n^r\).
 
 Traditionally, Chebyshev interpolation has been favoured for two
@@ -214,26 +224,26 @@ linear system which is the pedestrian approach for finding polynomial
 interpolants. \pkg{chebpol} uses the FFT from the software package
 FFTW, if it was available during compilation.  Otherwise a slower
 matrix method is used. Creation with FFT typically takes of the order
-\((2n)^r\log n\). The evaluation of Chebyshev interpolants is not
+\(O((2n)^r\log n)\). The evaluation of Chebyshev interpolants is not
 particularly fast, \pkg{chebpol} uses the Clenshaw-Curtis algorithm,
 which is a variant of Horner's method for evaluating polynomials. It typically
 goes in time \(n\) for each dimension, but they must be combined,
-so \(n^r\).
+so \(O(n^r)\).
 
-The multi linear interpolation is the fastest in \pkg{chebpol}. Creating
+The multilinear interpolation is the fastest in \pkg{chebpol}. Creating
 the interpolant takes little time at all, the grid and function values are
 saved, \emph{as is}, that's all. Evaluation consists of computing a convex
 combination of the function values in the corners of the surrounding hypercube.
-Typically a \(\log n\) task for each dimension, but there are \(2^r\) corners for an \(r\)-dimensional
-problem, so \(2^r r\log n\).
+Typically a \(O(\log n)\) task for each dimension, but there are \(2^r\) corners for an \(r\)-dimensional
+problem, so \(O(r 2^r +r\log n)\).
 
 Creation of the Floater-Hormann interpolation requires calculating the weights,
-roughly an \(rn^2\) task. Evaluation is \(n^r\). Quite similar to the Chebyshev method.
+roughly an \(O(rn^2)\) task. Evaluation is \(O(n^r)\). Quite similar to the Chebyshev method.
 
 The polyharmonic spline method is the most demanding. Creation requires calculating some
 weights which amounts to solving a dense
-\(K\times K\) linear system, a \(K^3\) task (or \(n^{3r}\) to compare with the grid methods).
-Evaluation is faster, of the order \(Kr\) (or \(rn^r\)).
+\(K\times K\) linear system, a \(O(K^3)\) task (or \(O(n^{3r})\) to compare with the grid methods).
+Evaluation is faster, of the order \(O(Kr)\) (or \(O(rn^r)\)).
 
 To alleviate speed problems, parts of \pkg{chebpol} has been parallelized with OpenMP.
 The number of threads is taken from \code{getOption("chebpol.threads")} which is initialized
@@ -256,6 +266,12 @@ Even if one does not have more than one CPU, it is worthwile to use
 the matrix interface if more than one point is to be evaluated (such
 as in the vector interface of package \pkg{cubature}), it is a lot
 faster with \code{ph2(m)} than with \code{apply(m,2,ph2)}. 
+<<fast>>=
+f <- ipol(sin, grid=seq(0,1,1000), method='multi')
+a <- runif(1e6)
+system.time(sin(a))
+system.time(f(a,threads=4))
+@ 
 \bibliographystyle{amsplain} \bibliography{biblio}
 
 \end{document}
