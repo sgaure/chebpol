@@ -6,7 +6,7 @@
 \usage{
 ipol(val, dims = NULL, intervals = NULL, grid = NULL, knots = NULL,
   k = NULL, method = c("chebyshev", "multilinear", "fh", "uniform",
-  "general", "polyharmonic", "crbf"), ...)
+  "general", "polyharmonic", "simplexlinear", "crbf"), ...)
 }
 \arguments{
 \item{val}{array or function. Function values on a grid, or the function
@@ -67,6 +67,8 @@ polynomials. It defaults to 4.
 
 The method \code{"polyharmonic"} needs the arguments \code{knots} and
 \code{k}, see \code{\link{polyh}}.
+
+The method \code{"simplexlinear"} needs the arguments \code{knots}.
 
 The \code{"crbf"} is the multilayer compact radial basis function
 interpolation from ALGLIB. It is only available if ALGLIB was available at

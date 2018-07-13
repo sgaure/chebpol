@@ -51,17 +51,18 @@ general for arbitrary Cartesian-product grids in \code{\link{chebappxg}}
 with a wrapper in \code{\link{chebappxgf}}. These are based on transforms of
 Chebyshev-polynomials.
 
-A multilinear interpolation is available in \code{\link{mlappx}}. The
-Floater-Hormann rational interpolation is available in \code{\link{fhappx}}.
-For scattered multi dimensional data there is a polyharmonic spline
-interpolation in \code{\link{polyh}}.
+For arbitrary Cartesian grids, a multilinear interpolation is
+available in \code{\link{mlappx}}. The Floater-Hormann rational
+interpolation is available in \code{\link{fhappx}}.  For scattered
+multi dimensional data there is a polyharmonic spline interpolation
+in \code{\link{polyh}}.
 
 There are also functions for producing Chebyshev grids
 (\code{\link{chebknots}}) as well as a support function for evaluating a
 function on a grid (\code{\link{evalongrid}}), and a function for finding
 the Chebyshev coefficients (\code{\link{chebcoef}}).
 
-All the generated interpolant functions accept as an argument a matrix of
+All the generated interpolants accept as an argument a matrix of
 column vectors. The generated functions also accept an argument
 \code{threads=getOption('chebpol.threads')} to utilize more than one CPU if
 a matrix of column vectors is evaluated.  The option \code{chebpol.threads}

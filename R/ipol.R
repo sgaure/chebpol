@@ -26,6 +26,8 @@
 #' 
 #' The method \code{"polyharmonic"} needs the arguments \code{knots} and
 #' \code{k}, see \code{\link{polyh}}.
+#'
+#' The method \code{"simplexlinear"} needs the arguments \code{knots}.
 #' 
 #' The \code{"crbf"} is the multilayer compact radial basis function
 #' interpolation from ALGLIB. It is only available if ALGLIB was available at
@@ -85,7 +87,8 @@
 #' 
 #' @export
 ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
-                 method=c('chebyshev','multilinear','fh','uniform','general','polyharmonic','crbf'),
+                 method=c('chebyshev','multilinear','fh','uniform','general','polyharmonic',
+                          'simplexlinear', 'crbf'),
                  ...) {
   method <- match.arg(method)
   switch(method,
@@ -98,6 +101,10 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
          multilinear={
            if(is.null(grid)) stop('grid must be specified for multi linear interpolation')
            return(mlappx(val,grid,...))
+         },
+         simplexlinear={
+           if(is.null(knots)) stop('knots must be specified for simplex linear interpolation')
+           return(slappx(val,knots,...))
          },
          fh={
            if(is.null(grid)) stop('grid must be specified for Floater-Hormann interpolation')

@@ -200,7 +200,7 @@ static double C_FH(double *fv, double *x, double **knots, int *dims, const int r
 
   // Special case:
   for(int i = 0; i < N; i++) {
-    if(xx == kn[i]) return C_FH(&fv[i*siz], x, knots, dims, newrank, weights);
+    if(fabs(xx - kn[i]) < 10.0*DOUBLE_EPS) return C_FH(&fv[i*siz], x, knots, dims, newrank, weights);
   }
 
 #if 1
