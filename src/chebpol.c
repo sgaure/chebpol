@@ -770,7 +770,7 @@ static double findsimplex(double *x, double *knots, int *dtri, SEXP Sort, double
       const double *or = ort + d*dim;
       double ip = 0.0;
       for(int i = 0; i < dim; i++) ip += (x[i] - ref[i])*or[i];
-      if(ip < 0) {bad = 1; break;}
+      if(ip < -1e-9) {bad = 1; break;}
     }
     if(bad) continue;
     // We found it
@@ -851,7 +851,7 @@ static SEXP R_evalsl(SEXP Sx, SEXP Sknots, SEXP Sdtri, SEXP Sort, SEXP Sbbox, SE
 
 static void findortho(int *tri, double *knots, const int dim, double *ortmat) {
   // Collect the knots in a matrix of size dim x (dim+1)
-  double mat[dim*(dim+1)];
+  double mat[dim*dim];
   double vec[dim];
   for(int vertex = 0; vertex <= dim; vertex++) {
     double *knot = knots + (tri[vertex]-1)*dim;
@@ -861,14 +861,14 @@ static void findortho(int *tri, double *knots, const int dim, double *ortmat) {
       if(v == vertex) {
 	for(int j = 0; j < dim; j++) vec[j] = knot[j];
       } else {
-	for(int j = 0; j < dim; j++) mat[matcol*(dim+1) + j] = knot[j];
-	matcol++;
+	for(int j = 0; j < dim; j++) mat[matcol + j] = knot[j];
+	matcol += dim;
       }
     }
     // Solve the system
     // Use R's least squares solver
     int one=1, N=dim, rank;
-    double work[2*dim], tol=1e-7, coef[dim], eff[dim], qraux[dim];
+    double work[2*dim], tol=1e-10, coef[dim], eff[dim], qraux[dim];
     int jpvt[dim];
     for(int i=0; i < dim; i++) jpvt[i] = i+1;
     F77_CALL(dqrls)(mat, &N, &N, vec, &one, &tol, coef, ortmat + dim*vertex, eff, &rank,
