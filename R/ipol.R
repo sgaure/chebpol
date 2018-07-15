@@ -27,7 +27,9 @@
 #' The method \code{"polyharmonic"} needs the arguments \code{knots} and
 #' \code{k}, see \code{\link{polyh}}.
 #'
-#' The method \code{"simplexlinear"} needs the arguments \code{knots}.
+#' The method \code{"simplexlinear"} needs the arguments \code{knots}. It creates a
+#' Delaunay triangulation from the knots, and does linear interpolation in each simplex
+#' by weighting the vertex values with the barycentric coordinates.
 #' 
 #' The \code{"crbf"} is the multilayer compact radial basis function
 #' interpolation from ALGLIB. It is only available if ALGLIB was available at
@@ -81,9 +83,10 @@
 #' ch2 <- ipol(f, dims=c(10,10,10), intervals=list(0:1,0:1,0:1), method='cheb')
 #' knots <- matrix(runif(3*1000),3)
 #' ph2 <- ipol(f, knots=knots, k=2, method='poly')
-#' # make 5 points in R3 to test them on
-#' m <- matrix(runif(3*5),3)
-#' rbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ph2(m))
+#' sl2 <- ipol(f, knots=knots, method='simplexlinear')
+#' # make 6 points in R3 to test them on
+#' m <- matrix(runif(3*6),3)
+#' rbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ph2(m), sl=sl2(m))
 #' 
 #' @export
 ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,

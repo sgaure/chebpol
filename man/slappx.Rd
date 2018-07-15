@@ -22,15 +22,15 @@ A call \code{fun <- slappx(val, knots)} creates a piecewise multilinear interpol
 on the Delaunay triangulation of the \code{knots}.
 }
 \note{
-The simplex linear interpolation uses package \pkg{geometry} heavily, it is not 
-optimized for dimensions larger than 2, so it is quite slow, in particular evaluation of the
-interpolant. It does not yield values for points outside the convex hull of the knots.
+By default, the interpolant will yield NaN for points outside the convex hull of the knots,
+but some extrapolation will be returned instead if the interpolant is called with the
+argument \code{epol=TRUE}.
 }
 \examples{
-knots <- matrix(runif(3*100), 3)
+knots <- matrix(runif(3*1000), 3)
 f <- function(x) exp(-sum(x^2))
 g <- slappx(f, knots)
-a <- matrix(runif(3*5), 3)
+a <- matrix(runif(3*6), 3)
 rbind(true=apply(a,2,f), sl=g(a))
 
 }

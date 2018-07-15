@@ -4,6 +4,8 @@
 #include <Rdefines.h>
 #include <R_ext/Rdynload.h>
 #include <R_ext/BLAS.h>
+#include <R_ext/Lapack.h>
+#include <R_ext/Applic.h>
 #include <R_ext/Visibility.h>
 #include "config.h"
 #include "chebpol.h"
@@ -186,7 +188,7 @@ static SEXP R_chebcoef(SEXP x, SEXP sdct, SEXP Sthreads) {
   return resvec;
 }
 
-static double C_FH(double *fv, double *x, double **knots, int *dims, const int rank, double **weights) {
+static double FH(double *fv, double *x, double **knots, int *dims, const int rank, double **weights) {
   // Use Floater-Hormann method
   if(rank == 0) return fv[0];
   int siz = 1;
@@ -200,7 +202,7 @@ static double C_FH(double *fv, double *x, double **knots, int *dims, const int r
 
   // Special case:
   for(int i = 0; i < N; i++) {
-    if(fabs(xx - kn[i]) < 10.0*DOUBLE_EPS) return C_FH(&fv[i*siz], x, knots, dims, newrank, weights);
+    if(fabs(xx - kn[i]) < 10.0*DOUBLE_EPS) return FH(&fv[i*siz], x, knots, dims, newrank, weights);
   }
 
 #if 1
@@ -216,7 +218,7 @@ static double C_FH(double *fv, double *x, double **knots, int *dims, const int r
   }
 #endif 
   for(int i = 0,j=0; i < N; i++,j+=siz) {
-    const double val = C_FH(&fv[j], x, knots, dims, newrank, weights);
+    const double val = FH(&fv[j], x, knots, dims, newrank, weights);
     double pole = w[i] / (xx-kn[i]);
     num += pole * val;
     denom += pole;
@@ -269,7 +271,7 @@ static SEXP R_FH(SEXP inx, SEXP vals, SEXP grid, SEXP Sweights, SEXP Rthreads, S
   double *out = REAL(resvec);
 #pragma omp parallel for num_threads(threads) schedule(static) if (numvec > 1 && threads > 1)
   for(int i = 0; i < numvec; i++) {
-    out[i] = C_FH(val, xp+i*rank, knots, dims, rank, weights);
+    out[i] = FH(val, xp+i*rank, knots, dims, rank, weights);
   }
   UNPROTECT(1);
   return resvec;
@@ -741,6 +743,181 @@ static SEXP R_sqdiffs(SEXP x1, SEXP x2, SEXP Sthreads) {
   return res;
 }
 
+static double findsimplex(double *x, double *knots, int *dtri, SEXP Sort, double *bbox, int epol,
+			    const int dim, const int numsimplex) {
+  int retval = INT_MIN;
+
+  for(int simplex = 0; simplex < numsimplex; simplex++) {
+    // x must be in the bounding box
+    double *box = bbox + simplex*2*dim;
+    int bad = 0;
+    for(int i = 0; i < dim; i++) {
+      if(x[i] < box[0] || x[i] > box[1]) {bad = 1; break;}
+      box += 2;
+    }
+    if(bad) continue;
+    //    Rprintf("Check simplex %d\n",simplex+1);
+    // Ok, it's in the bounding box. Is it in the simplex?
+    // for each of the points in the simplex, check the
+    // orthogonal vector pointing towards it. Does it have
+    // positive inner product with our point?
+    // Loop over the points in the simplex
+    const int *tri = dtri + simplex * (dim+1); //nrows(Sdtri);
+    const double *ort = REAL(VECTOR_ELT(Sort, simplex));
+    for(int d = 0; d <= dim; d++) {
+      // Remember tri is zero-based
+      const double *ref = (d==0) ? knots+(tri[1]-1)*dim : knots+(tri[0]-1)*dim;
+      const double *or = ort + d*dim;
+      double ip = 0.0;
+      for(int i = 0; i < dim; i++) ip += (x[i] - ref[i])*or[i];
+      if(ip < 0) {bad = 1; break;}
+    }
+    if(bad) continue;
+    // We found it
+    retval = simplex+1; // 1-based
+    break;
+  }
+  
+  if(retval == INT_MIN && epol) {
+    // Find the closest simplex
+    double mindist = 1e99;
+    int nearest = 0;
+    for(int simplex = 0; simplex < numsimplex; simplex++) {
+      double dist = 1e99;
+      const int *tri = dtri + simplex * (dim+1);
+      for(int d = 0; d <= dim; d++) {
+	double *pt = knots + (tri[d]-1)*dim;
+	double ddist = 0.0;
+	for(int i = 0; i < dim; i++) ddist += (pt[i]-x[i])*(pt[i]-x[i]);
+	if(ddist < dist) dist = ddist;
+      }
+      if(dist < mindist) {mindist = dist; nearest = simplex;}
+    }
+    retval = nearest+1;  // 1-based
+  }
+  return retval;
+}
+
+static SEXP R_evalsl(SEXP Sx, SEXP Sknots, SEXP Sdtri, SEXP Sort, SEXP Sbbox, SEXP Sval,
+			  SEXP extrapolate, SEXP Sthreads, SEXP spare) {
+  UNUSED(spare); 
+  // Loop over the triangulation
+  int *dtri = INTEGER(Sdtri);
+  const int numsimplex = ncols(Sdtri);
+  double *x = REAL(Sx);
+  const int dim = nrows(Sknots);
+  const int numvec = ncols(Sx);
+  double *bbox = REAL(Sbbox);
+  double *knots = REAL(Sknots);
+  double *val = REAL(Sval);
+  int threads = INTEGER(AS_INTEGER(Sthreads))[0];
+  //  SEXP ret = PROTECT(NEW_INTEGER(ncols(Sx)));
+  //  int *pret = INTEGER(ret);
+  SEXP ret = PROTECT(NEW_NUMERIC(ncols(Sx)));
+  double *resvec = REAL(ret);
+  int epol = LOGICAL(AS_LOGICAL(extrapolate))[0];
+#pragma omp parallel for num_threads(threads) schedule(static) if(threads > 1 && numvec > 1)
+  for(int i = 0; i < numvec; i++) {
+    double *xx = x + i*dim;
+    //    pret[i] = findsimplex(xx, knots, dtri, Sort, bbox, epol, dim, numsimplex);
+    const int simplex = findsimplex(xx, knots, dtri, Sort, bbox, epol, dim, numsimplex);
+    if(simplex == INT_MIN) {resvec[i] = NA_REAL; continue;}
+    // Collect the vertices to solve for the barycentric coordinates of xx
+    double mat[(dim+1)*(dim+1)], vec[dim+1];
+    for(int j = 0; j <= dim; j++) {
+      double *knot = knots + (dtri[simplex*(dim+1)+j]-1)*dim;
+      for(int k=0; k < dim; k++) mat[j*(dim+1)+k] = knot[k];
+      mat[(j+1)*(dim+1)-1] = 1.0;
+    }
+    for(int j = 0; j < dim; j++) vec[j] = xx[j];
+    vec[dim] = 1.0;
+    // now, solve mat X = vec
+    int N = dim+1, one=1, info;
+    int ipiv[N];
+    F77_CALL(dgesv)(&N, &one, mat, &N, ipiv, vec, &N, &info);
+    // Now, the barycentric coordinates are in vec
+    double sum = 0.0;
+    for(int j = 0; j <= dim; j++) {
+      // which knot?
+      int knot = dtri[simplex*(dim+1)+j]-1;
+      sum += val[knot]*vec[j];
+    }
+    resvec[i] = sum;
+  }
+  UNPROTECT(1);
+  return ret;
+}
+
+
+static void findortho(int *tri, double *knots, const int dim, double *ortmat) {
+  // Collect the knots in a matrix of size dim x (dim+1)
+  double mat[dim*(dim+1)];
+  double vec[dim];
+  for(int vertex = 0; vertex <= dim; vertex++) {
+    double *knot = knots + (tri[vertex]-1)*dim;
+    // Copy all vertices except this into mat, this one into vec
+    int matcol = 0;
+    for(int v = 0; v <= dim; v++) {
+      if(v == vertex) {
+	for(int j = 0; j < dim; j++) vec[j] = knot[j];
+      } else {
+	for(int j = 0; j < dim; j++) mat[matcol*(dim+1) + j] = knot[j];
+	matcol++;
+      }
+    }
+    // Solve the system
+    // Use R's least squares solver
+    int one=1, N=dim, rank;
+    double work[2*dim], tol=1e-7, coef[dim], eff[dim], qraux[dim];
+    int jpvt[dim];
+    for(int i=0; i < dim; i++) jpvt[i] = i+1;
+    F77_CALL(dqrls)(mat, &N, &N, vec, &one, &tol, coef, ortmat + dim*vertex, eff, &rank,
+		    jpvt, qraux, work);
+  }
+}
+static SEXP R_findortho(SEXP Sdtri, SEXP Sknots, SEXP Sthreads) {
+  int threads = INTEGER(AS_INTEGER(Sthreads))[0];
+  int *dtri = INTEGER(Sdtri);
+  double *knots = REAL(Sknots);
+  const int dim = nrows(Sknots);
+  const int numsimplex = ncols(Sdtri);
+  SEXP retlist = PROTECT(NEW_LIST(numsimplex));
+  for(int i = 0; i < numsimplex; i++) {
+    SET_VECTOR_ELT(retlist,i,allocMatrix(REALSXP,dim,dim+1));
+  }
+#pragma omp parallel for num_threads(threads) schedule(static) if(threads > 1 && numsimplex > 1)
+  for(int simplex = 0; simplex < numsimplex; simplex++) {
+    findortho(dtri + simplex*(dim+1), knots, dim, REAL(VECTOR_ELT(retlist,simplex)));
+  }
+  UNPROTECT(1);
+  return retlist;
+}
+
+static SEXP R_findbbox(SEXP Sdtri, SEXP Sknots, SEXP Sthreads) {
+  int threads = INTEGER(AS_INTEGER(Sthreads))[0];
+  int *dtri = INTEGER(Sdtri);
+  double *knots = REAL(Sknots);
+  const int dim = nrows(Sknots);
+  const int numsimplex = ncols(Sdtri);
+  SEXP retmat = PROTECT(allocMatrix(REALSXP, 2*dim, numsimplex));
+  double *mat = REAL(retmat);
+#pragma omp parallel for num_threads(threads) schedule(static) if(threads > 1 && numsimplex > 1)
+  for(int simplex = 0; simplex < numsimplex; simplex++) {
+    int *tri = dtri + simplex*(dim+1);
+    double *m = mat + simplex*2*dim;
+    for(int j = 0; j < dim; j++) {m[2*j] = 1e100; m[2*j+1] = -1e100;}
+    for(int i = 0; i <= dim; i++) {
+      double *kn = knots + (tri[i]-1)*dim;
+      for(int j = 0; j < dim; j++) {
+	if(kn[j] < m[2*j]) m[2*j] = kn[j];
+	if(kn[j] > m[2*j+1]) m[2*j+1] = kn[j];
+      }
+    }
+  }
+  UNPROTECT(1);
+  return retmat;
+}
+
 static SEXP R_havefftw() {
 #ifdef HAVE_FFTW
   return ScalarLogical(TRUE);
@@ -805,6 +982,9 @@ R_CallMethodDef callMethods[] = {
   {"makerbf", (DL_FUNC) &R_makerbf, 4},
   {"evalrbf", (DL_FUNC) &R_evalrbf, 3},
   {"evalpolyh", (DL_FUNC) &R_evalpolyh, 7},
+  {"evalsl", (DL_FUNC) &R_evalsl, 9},
+  {"findortho", (DL_FUNC) &R_findortho, 3},
+  {"findbbox", (DL_FUNC) &R_findbbox, 3},
   {"havealglib", (DL_FUNC) &R_havealglib, 0},
   {NULL, NULL, 0}
 };
