@@ -765,7 +765,7 @@ static double findsimplex(double *x, double *knots, int *dtri, SEXP Sort, double
     const int *tri = dtri + simplex * (dim+1); //nrows(Sdtri);
     const double *ort = REAL(VECTOR_ELT(Sort, simplex));
     for(int d = 0; d <= dim; d++) {
-      // Remember tri is zero-based
+      // Remember tri is 1-based
       const double *ref = (d==0) ? knots+(tri[1]-1)*dim : knots+(tri[0]-1)*dim;
       const double *or = ort + d*dim;
       double ip = 0.0;
@@ -774,7 +774,7 @@ static double findsimplex(double *x, double *knots, int *dtri, SEXP Sort, double
     }
     if(bad) continue;
     // We found it
-    retval = simplex+1; // 1-based
+    retval = simplex;
     break;
   }
   
@@ -793,7 +793,7 @@ static double findsimplex(double *x, double *knots, int *dtri, SEXP Sort, double
       }
       if(dist < mindist) {mindist = dist; nearest = simplex;}
     }
-    retval = nearest+1;  // 1-based
+    retval = nearest;
   }
   return retval;
 }
@@ -819,15 +819,17 @@ static SEXP R_evalsl(SEXP Sx, SEXP Sknots, SEXP Sdtri, SEXP Sort, SEXP Sbbox, SE
 #pragma omp parallel for num_threads(threads) schedule(static) if(threads > 1 && numvec > 1)
   for(int i = 0; i < numvec; i++) {
     double *xx = x + i*dim;
-    //    pret[i] = findsimplex(xx, knots, dtri, Sort, bbox, epol, dim, numsimplex);
     const int simplex = findsimplex(xx, knots, dtri, Sort, bbox, epol, dim, numsimplex);
     if(simplex == INT_MIN) {resvec[i] = NA_REAL; continue;}
     // Collect the vertices to solve for the barycentric coordinates of xx
+    // Hmm, that should be possible to do directly with the orthogonal vectors in Sort
+    // Have a look at it later.
     double mat[(dim+1)*(dim+1)], vec[dim+1];
+    int *tri = dtri + simplex*(dim+1);
     for(int j = 0; j <= dim; j++) {
-      double *knot = knots + (dtri[simplex*(dim+1)+j]-1)*dim;
+      double *knot = knots + (tri[j]-1)*dim;
       for(int k=0; k < dim; k++) mat[j*(dim+1)+k] = knot[k];
-      mat[(j+1)*(dim+1)-1] = 1.0;
+      mat[j*(dim+1)+dim] = 1.0;
     }
     for(int j = 0; j < dim; j++) vec[j] = xx[j];
     vec[dim] = 1.0;
@@ -839,7 +841,7 @@ static SEXP R_evalsl(SEXP Sx, SEXP Sknots, SEXP Sdtri, SEXP Sort, SEXP Sbbox, SE
     double sum = 0.0;
     for(int j = 0; j <= dim; j++) {
       // which knot?
-      int knot = dtri[simplex*(dim+1)+j]-1;
+      int knot = tri[j]-1;
       sum += val[knot]*vec[j];
     }
     resvec[i] = sum;
@@ -854,14 +856,16 @@ static void findortho(int *tri, double *knots, const int dim, double *ortmat) {
   double mat[dim*dim];
   double vec[dim];
   for(int vertex = 0; vertex <= dim; vertex++) {
-    double *knot = knots + (tri[vertex]-1)*dim;
+
     // Copy all vertices except this into mat, this one into vec
     int matcol = 0;
+    double *ref = (vertex == 0) ? knots + (tri[1]-1)*dim : knots + (tri[0]-1)*dim;
     for(int v = 0; v <= dim; v++) {
+      double *knot = knots + (tri[v]-1)*dim;
       if(v == vertex) {
-	for(int j = 0; j < dim; j++) vec[j] = knot[j];
+	for(int j = 0; j < dim; j++) vec[j] = knot[j] - ref[j];
       } else {
-	for(int j = 0; j < dim; j++) mat[matcol + j] = knot[j];
+	for(int j = 0; j < dim; j++) mat[matcol + j] = knot[j] - ref[j];
 	matcol += dim;
       }
     }
@@ -871,8 +875,14 @@ static void findortho(int *tri, double *knots, const int dim, double *ortmat) {
     double work[2*dim], tol=1e-10, coef[dim], eff[dim], qraux[dim];
     int jpvt[dim];
     for(int i=0; i < dim; i++) jpvt[i] = i+1;
-    F77_CALL(dqrls)(mat, &N, &N, vec, &one, &tol, coef, ortmat + dim*vertex, eff, &rank,
+    double *ort = ortmat + dim*vertex;
+    F77_CALL(dqrls)(mat, &N, &N, vec, &one, &tol, coef, ort, eff, &rank,
 		    jpvt, qraux, work);
+    // Nnormalize it:
+    double sum = 0.0;
+    for(int i = 0; i < dim; i++) sum += ort[i]*ort[i];
+    sum = 1/sqrt(sum);
+    for(int i = 0; i < dim; i++) ort[i] *= sum;
   }
 }
 static SEXP R_findortho(SEXP Sdtri, SEXP Sknots, SEXP Sthreads) {

@@ -263,8 +263,41 @@ lines(s,wml,col='blue') # multilinear interpolation
 
 \section{Scattered data}
 In some cases multidimensional data points are not organized in a
-grid, rather they are scattered.  For this case, there is an
-experimental implementation of polyharmonic splines in the method \code{"polyharmonic"}.
+grid, rather they are scattered.  For this case, \pkg{chebpol} has
+two methods.
+\subsection{Simplex linear interpolation}
+The first one is linear in simplices. A Delaunay triangulation is created from the 
+scattered data, i.e.\ a simplicial complex (a collection of triangles, tetrahedra, and their
+higher dimensional analogues). When evaluating the interpolant, the simplex enclosing
+the point is found, and the value in the point is a convex combination of 
+the function values in the corners of the simplex, with the weights being the barycentric coordinates
+of the point.
+<<>>=
+set.seed(42)
+@ 
+<<fig.dim=c(5,5)>>=
+f <- function(x) 10/(1+25*sum(x^2))
+# make non-uniform grid
+grid <- list(x=seq(-1,1,len=15), y=seq(-1,1,len=15))
+knots <- t(expand.grid(grid))
+knots <- knots + rnorm(length(knots),sd=0.05)
+g <- ipol(f,knots=knots,method='simplexlinear')
+ml <- ipol(f,grid=grid,method='multilinear')
+# yank out the simplices for drawing
+simp <- get('dtri',environment(get('fun',environment(g))))
+drawtri <- function(pts,col) {
+  segments(pts[1,1],pts[2,1],pts[1,2],pts[2,2], col=col)
+  segments(pts[1,1],pts[2,1],pts[1,3],pts[2,3], col=col)
+  segments(pts[1,2],pts[2,2],pts[1,3],pts[2,3], col=col)
+}
+plot(knots[1,],knots[2,],typ='p',pch=20,xlab='x',ylab='y',main='Delaunay triangulation')
+invisible(apply(simp,2,function(kn) {drawtri(knots[,kn],col='blue')}))
+test <- matrix(runif(2*6,-1,1),2)
+rbind(true=apply(test,2,f), sl=g(test), ml=ml(test))
+@ 
+
+\subsection{Polyharmonic splines}
+There is also an implementation of polyharmonic splines in the method \code{"polyharmonic"}.
 It accepts a function, or function values, and a
 matrix of centres (knots), one centre in each column. Here is a
 20-dimensional example with 3000 randomly placed knots:
