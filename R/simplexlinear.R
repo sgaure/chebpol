@@ -23,7 +23,7 @@
 slappx <- function(val, knots, ...) {
   x <- threads <- epol <- NULL; rm(x,threads,epol)
   if(is.function(val)) val <- apply(knots,2,val)
-  dtri <- t(geometry::delaunayn(t(knots),options="Qt Pp"))
+  dtri <- t(geometry::delaunayn(t(knots),options="Qt Qu Pp"))
   # For fast evaluation: For each vertex in a simplex, we need an
   # orthonormal vector pointing from the remaining simplex towards it
   # for a test point, the inner product with these vectors should all be positive.

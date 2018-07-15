@@ -48,7 +48,7 @@
 #' available in \code{\link{mlappx}}. The Floater-Hormann rational
 #' interpolation is available in \code{\link{fhappx}}.  For scattered
 #' multi dimensional data there is a polyharmonic spline interpolation
-#' in \code{\link{polyh}}.
+#' in \code{\link{polyh}} as well as a simplex linear method in \code{\link{slappx}}.
 #' 
 #' There are also functions for producing Chebyshev grids
 #' (\code{\link{chebknots}}) as well as a support function for evaluating a
