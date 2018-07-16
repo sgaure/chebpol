@@ -272,32 +272,39 @@ higher dimensional analogues). When evaluating the interpolant, the simplex encl
 the point is found, and the value in the point is a convex combination of 
 the function values in the corners of the simplex, with the weights being the barycentric coordinates
 of the point.
-<<>>=
+We create a function defined on a circle, and put some random knots in there, and see what
+the Delaunay triangulation looks like.
+<<echo=FALSE>>=
 set.seed(42)
 @ 
-<<fig.dim=c(5,5)>>=
-f <- function(x) 10/(1+25*sum(x^2))
-# make non-uniform grid
-grid <- list(x=seq(-1,1,len=15), y=seq(-1,1,len=15))
-knots <- t(expand.grid(grid))
-knots <- knots + rnorm(length(knots),sd=0.05)
-g <- ipol(f,knots=knots,method='simplexlinear')
-ml <- ipol(f,grid=grid,method='multilinear')
+<<fig.width=5,fig.asp=1.1,message=FALSE>>=
+f <- function(x) sqrt(1-sum(x^2))
+theta <- runif(150, 0, 2*pi)
+r <- sqrt(runif(150))
+knots <- rbind(r*cos(theta), r*sin(theta))
+g <- ipol(f, knots=knots, method='simplexlinear')
 # yank out the simplices for drawing
-simp <- get('dtri',environment(get('fun',environment(g))))
-drawtri <- function(pts,col) {
-  segments(pts[1,1],pts[2,1],pts[1,2],pts[2,2], col=col)
-  segments(pts[1,1],pts[2,1],pts[1,3],pts[2,3], col=col)
-  segments(pts[1,2],pts[2,2],pts[1,3],pts[2,3], col=col)
-}
-plot(knots[1,],knots[2,],typ='p',pch=20,xlab='x',ylab='y',main='Delaunay triangulation')
-invisible(apply(simp,2,function(kn) {drawtri(knots[,kn],col='blue')}))
-test <- matrix(runif(2*6,-1,1),2)
-rbind(true=apply(test,2,f), sl=g(test), ml=ml(test))
+simp <- get('dtri', environment(get('fun', environment(g))))
+drawtri <- function(pts,col) lines(c(pts[1,],pts[1,1]), c(pts[2,],pts[2,1]), col=col)
+plot(knots[1,], knots[2,], typ='p', pch=20, xlab='x', ylab='y', main='Triangulation')
+invisible(apply(simp,2,function(kn) drawtri(knots[,kn], col='blue')))
+theta <- runif(6, 0, 2*pi)
+r <- runif(6)
+test <- rbind(r*cos(theta), r*sin(theta))
+rbind(true=apply(test,2,f), sl=g(test,epol=TRUE))
 @ 
 
+The main shortcoming of this method is visible in the Delaunay triangulation. Some
+of the triangles near the borders are very stretched out. This can happen even
+if we have a very large number of knots. This is because the triangles
+must cover the convex hull, and there is no other way to do that. Such long simplices will
+lead to poor linear approximation if second derivatives there are large. By default, the
+interpolant will return \code{NA} for inputs which are outside the convex hull of
+the knots, but an extrapolation from the nearest simplex will be done if the
+argument \code{epol=TRUE} is specified.
+
 \subsection{Polyharmonic splines}
-There is also an implementation of polyharmonic splines in the method \code{"polyharmonic"}.
+The other scattered method is polyharmonic splines in the method \code{"polyharmonic"}.
 It accepts a function, or function values, and a
 matrix of centres (knots), one centre in each column. Here is a
 20-dimensional example with 3000 randomly placed knots:

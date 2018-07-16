@@ -26,11 +26,9 @@ slappx <- function(val, knots, ...) {
   dtri <- t(geometry::delaunayn(t(knots),options="Qt Pp"))
   # For fast evaluation: For each simplex, we precompute the LU-factorization
   # needed for transforming to barycentric coordinates. These are used for finding the right simplex.
-  lu <- .Call(C_findlu, dtri, knots, getOption('chebpol.threads'))
-  # To filter out most of the simplices, we create a bounding box for each.
-  bbox <- .Call(C_findbbox, dtri, knots, getOption('chebpol.threads'))
-  local(vectorfun(.Call(C_evalsl, x, knots, dtri, lu, bbox, val, epol, threads, NULL),
+  adata <- .Call(C_analyzesimplex, dtri, knots, getOption('chebpol.threads'))
+  local(vectorfun(.Call(C_evalsl, x, knots, dtri, adata, val, epol, threads, NULL),
                   arity=nrow(knots), args=alist(x=, threads=getOption('chebpol.threads'), epol=FALSE)),
-        list(val=val, knots=knots, dtri=dtri, lu=lu, bbox=bbox))
+        list(val=val, knots=knots, dtri=dtri, adata=adata))
 }
 

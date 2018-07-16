@@ -743,13 +743,14 @@ static SEXP R_sqdiffs(SEXP x1, SEXP x2, SEXP Sthreads) {
   return res;
 }
 
-static double findsimplex(double *x, double *knots, int *dtri, SEXP Slu, double *bbox, int epol,
-			  double *val, const int dim, const int numsimplex) {
-  SEXP lumats = VECTOR_ELT(Slu,0);
-  SEXP ipivs = VECTOR_ELT(Slu,1);
+static double findsimplex(double *x, double *knots, int *dtri, SEXP adata, int epol,
+			  double *val, const int dim, const int numsimplex, int nknots) {
+
+  SEXP lumats = VECTOR_ELT(adata,0);
+  SEXP ipivs = VECTOR_ELT(adata,1);
+  double *bbox = REAL(VECTOR_ELT(adata,2));
   double vec[dim+1];
   int N=dim+1, one=1, info;
-
   for(int simplex = 0; simplex < numsimplex; simplex++) {
     // x must be in the bounding box. Perhaps we should do binary search, or organize them hierarchically?
     double *box = bbox + simplex*2*dim;
@@ -763,36 +764,39 @@ static double findsimplex(double *x, double *knots, int *dtri, SEXP Slu, double 
     // bounding box matches. Transform to barycentric coordinates, check that they are positive.
     double *lumat = REAL(VECTOR_ELT(lumats, simplex));
     int *ipiv = INTEGER(VECTOR_ELT(ipivs, simplex));
-    const int *tri = dtri + simplex * (dim+1); //nrows(Sdtri);
     for(int d = 0; d < dim; d++) vec[d] = x[d];
     vec[dim] = 1.0;
     F77_CALL(dgetrs)("N", &N, &one, lumat, &N, ipiv, vec, &N, &info);
+    for(int d = 0; d < N; d++) if(vec[d] < 0) {bad = 1; break;}
+    if(bad) continue;
+
+    // We found it
+    const int *tri = dtri + simplex * N;
     double sum = 0;
-    for(int d = 0; d <= dim; d++) {
-      if(vec[d] < 0) {bad = 1; break;}
+    for(int d = 0; d < N; d++) {
       sum += vec[d]*val[tri[d]-1];
     }
-    if(bad) continue;
-    // We found it
-    return(sum);
+    return sum;
   }
   
   if(epol) {
-    // Find the closest simplex
+    // Find the closest knot
     double mindist = 1e99;
-    int nearest = 0;
+    int nearknot = 0;
+    for(int k = 0; k < nknots; k++) {
+      double dist = 0.0;
+      for(int i = 0; i < dim; i++) dist += (x[i] - knots[k*dim + i])*(x[i] - knots[k*dim + i]);
+      if(dist < mindist) {mindist = dist; nearknot = k;}
+    }
+    
+    // Now, find a simplex with this knot
+    int nearest = -1;
     for(int simplex = 0; simplex < numsimplex; simplex++) {
-      double dist = 1e99;
-      const int *tri = dtri + simplex * (dim+1);
-      for(int d = 0; d <= dim; d++) {
-	double *pt = knots + (tri[d]-1)*dim;
-	double ddist = 0.0;
-	for(int i = 0; i < dim; i++) ddist += (pt[i]-x[i])*(pt[i]-x[i]);
-	if(ddist < dist) dist = ddist;
-      }
-      if(dist < mindist) {mindist = dist; nearest = simplex;}
+      for(int j = 0; j < N; j++) if(dtri[simplex*N + j] == nearknot+1) {nearest = simplex; break;}
+      if(nearest != -1) break;
     }
 
+    if(nearest == -1) return NA_REAL;
     double *lumat = REAL(VECTOR_ELT(lumats, nearest));
     int *ipiv = INTEGER(VECTOR_ELT(ipivs, nearest));
     const int *tri = dtri + nearest * (dim+1);
@@ -806,7 +810,7 @@ static double findsimplex(double *x, double *knots, int *dtri, SEXP Slu, double 
   return NA_REAL;
 }
 
-static SEXP R_evalsl(SEXP Sx, SEXP Sknots, SEXP Sdtri, SEXP Slu, SEXP Sbbox, SEXP Sval,
+static SEXP R_evalsl(SEXP Sx, SEXP Sknots, SEXP Sdtri, SEXP adata, SEXP Sval,
 		     SEXP extrapolate, SEXP Sthreads, SEXP spare) {
   UNUSED(spare); 
   // Loop over the triangulation
@@ -815,84 +819,65 @@ static SEXP R_evalsl(SEXP Sx, SEXP Sknots, SEXP Sdtri, SEXP Slu, SEXP Sbbox, SEX
   double *x = REAL(Sx);
   const int dim = nrows(Sknots);
   const int numvec = ncols(Sx);
-  double *bbox = REAL(Sbbox);
   double *knots = REAL(Sknots);
   double *val = REAL(Sval);
   int threads = INTEGER(AS_INTEGER(Sthreads))[0];
-  //  SEXP ret = PROTECT(NEW_INTEGER(ncols(Sx)));
-  //  int *pret = INTEGER(ret);
   SEXP ret = PROTECT(NEW_NUMERIC(ncols(Sx)));
   double *resvec = REAL(ret);
   int epol = LOGICAL(AS_LOGICAL(extrapolate))[0];
 #pragma omp parallel for num_threads(threads) schedule(guided) if(threads > 1 && numvec > 1)
   for(int i = 0; i < numvec; i++) {
-    resvec[i] = findsimplex(x + i*dim, knots, dtri, Slu, bbox, epol, val, dim, numsimplex);
+    resvec[i] = findsimplex(x + i*dim, knots, dtri, adata, epol, val, dim, numsimplex, ncols(Sknots));
   }
   UNPROTECT(1);
   return ret;
 }
 
-static void findlu(int *tri, double *knots, const int dim, double *lumat, int *ipiv) {
-  for(int vertex = 0; vertex <= dim; vertex++) {
-    // Copy all vertices into mat, with a final rows of ones to LU-factorize
-    // Preparation for transforming into barycentric coordinates
-    for(int v = 0; v <= dim; v++) {
-      double *knot = knots + (tri[v]-1)*dim;
-      for(int j = 0; j < dim; j++) lumat[v*(dim+1) + j] = knot[j];
-      lumat[v*(dim+1) + dim] = 1.0;
-    }
-    int N = dim+1, info;
-    F77_CALL(dgetrf)(&N, &N, lumat, &N, ipiv, &info);
-  }
-}
-static SEXP R_findlu(SEXP Sdtri, SEXP Sknots, SEXP Sthreads) {
+static SEXP R_analyzesimplex(SEXP Sdtri, SEXP Sknots, SEXP Sthreads) {
   int threads = INTEGER(AS_INTEGER(Sthreads))[0];
   int *dtri = INTEGER(Sdtri);
   double *knots = REAL(Sknots);
   const int dim = nrows(Sknots);
   const int numsimplex = ncols(Sdtri);
-  SEXP retlist = PROTECT(NEW_LIST(2));
+  int N = dim+1;
+  SEXP retlist = PROTECT(NEW_LIST(3));
+  // Allocate everything before parallel for
   SET_VECTOR_ELT(retlist, 0, NEW_LIST(numsimplex));
   SET_VECTOR_ELT(retlist, 1, NEW_LIST(numsimplex));
+  SET_VECTOR_ELT(retlist,2,allocMatrix(REALSXP, 2*dim, numsimplex));
   SEXP lumats = VECTOR_ELT(retlist,0);
   SEXP pivots = VECTOR_ELT(retlist,1);
+  double *bboxmat = REAL(VECTOR_ELT(retlist,2));
   for(int i = 0; i < numsimplex; i++) {
-    SET_VECTOR_ELT(lumats,i,allocMatrix(REALSXP,dim+1,dim+1));
-    SET_VECTOR_ELT(pivots,i,NEW_INTEGER(dim+1));
+    SET_VECTOR_ELT(lumats,i,allocMatrix(REALSXP,N,N));
+    SET_VECTOR_ELT(pivots,i,NEW_INTEGER(N));
     for(int j = 0; j <= dim; j++) INTEGER(VECTOR_ELT(pivots,i))[j] = j+1;
   }
-#pragma omp parallel for num_threads(threads) schedule(static) if(threads > 1 && numsimplex > 1)
-  for(int simplex = 0; simplex < numsimplex; simplex++) {
-    findlu(dtri + simplex*(dim+1), knots, dim, 
-	   REAL(VECTOR_ELT(lumats,simplex)), INTEGER(VECTOR_ELT(pivots,simplex)));
-  }
-  UNPROTECT(1);
-  return retlist;
-}
 
-static SEXP R_findbbox(SEXP Sdtri, SEXP Sknots, SEXP Sthreads) {
-  int threads = INTEGER(AS_INTEGER(Sthreads))[0];
-  int *dtri = INTEGER(Sdtri);
-  double *knots = REAL(Sknots);
-  const int dim = nrows(Sknots);
-  const int numsimplex = ncols(Sdtri);
-  SEXP retmat = PROTECT(allocMatrix(REALSXP, 2*dim, numsimplex));
-  double *mat = REAL(retmat);
 #pragma omp parallel for num_threads(threads) schedule(static) if(threads > 1 && numsimplex > 1)
   for(int simplex = 0; simplex < numsimplex; simplex++) {
     int *tri = dtri + simplex*(dim+1);
-    double *m = mat + simplex*2*dim;
+    double *lumat = REAL(VECTOR_ELT(lumats,simplex));
+    int *ipiv = INTEGER(VECTOR_ELT(pivots,simplex));
+    int info;
+    double *m = bboxmat + simplex*2*dim;
     for(int j = 0; j < dim; j++) {m[2*j] = 1e100; m[2*j+1] = -1e100;}
-    for(int i = 0; i <= dim; i++) {
-      double *kn = knots + (tri[i]-1)*dim;
+    // Copy all vertices into mat, with a final row of ones to LU-factorize
+    // Preparation for transforming into barycentric coordinates
+    for(int v = 0; v <= dim; v++) {
+      const double *knot = knots + (tri[v]-1)*dim;
       for(int j = 0; j < dim; j++) {
-	if(kn[j] < m[2*j]) m[2*j] = kn[j];
-	if(kn[j] > m[2*j+1]) m[2*j+1] = kn[j];
+	lumat[v*(dim+1) + j] = knot[j];
+	if(knot[j] < m[2*j]) m[2*j] = knot[j];
+	if(knot[j] > m[2*j+1]) m[2*j+1] = knot[j];
       }
+      lumat[v*(dim+1) + dim] = 1.0;
     }
+    F77_CALL(dgetrf)(&N, &N, lumat, &N, ipiv, &info);
   }
+
   UNPROTECT(1);
-  return retmat;
+  return retlist;
 }
 
 static SEXP R_havefftw() {
@@ -960,8 +945,7 @@ R_CallMethodDef callMethods[] = {
   {"evalrbf", (DL_FUNC) &R_evalrbf, 3},
   {"evalpolyh", (DL_FUNC) &R_evalpolyh, 7},
   {"evalsl", (DL_FUNC) &R_evalsl, 9},
-  {"findlu", (DL_FUNC) &R_findlu, 3},
-  {"findbbox", (DL_FUNC) &R_findbbox, 3},
+  {"analyzesimplex", (DL_FUNC) &R_analyzesimplex, 3},
   {"havealglib", (DL_FUNC) &R_havealglib, 0},
   {NULL, NULL, 0}
 };
