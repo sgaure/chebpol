@@ -23,15 +23,14 @@
 slappx <- function(val, knots, ...) {
   x <- threads <- epol <- NULL; rm(x,threads,epol)
   if(is.function(val)) val <- apply(knots,2,val)
-  dtri <- t(geometry::delaunayn(t(knots),options="Qt Qu Pp"))
-  # For fast evaluation: For each vertex in a simplex, we need an
-  # orthonormal vector pointing from the remaining simplex towards it
-  # for a test point, the inner product with these vectors should all be positive.
-  ort <- .Call(C_findortho, dtri, knots, getOption('chebpol.threads'))
+  dtri <- t(geometry::delaunayn(t(knots),options="Qt Pp"))
+  # For fast evaluation: For each simplex, we precompute the LU-factorization
+  # needed for transforming to barycentric coordinates. These are used for finding the right simplex.
+  lu <- .Call(C_findlu, dtri, knots, getOption('chebpol.threads'))
   # To filter out most of the simplices, we create a bounding box for each.
   bbox <- .Call(C_findbbox, dtri, knots, getOption('chebpol.threads'))
-  local(vectorfun(.Call(C_evalsl, x, knots, dtri, ort, bbox, val, epol, threads, NULL),
+  local(vectorfun(.Call(C_evalsl, x, knots, dtri, lu, bbox, val, epol, threads, NULL),
                   arity=nrow(knots), args=alist(x=, threads=getOption('chebpol.threads'), epol=FALSE)),
-        list(val=val, knots=knots, dtri=dtri, ort=ort, bbox=bbox))
+        list(val=val, knots=knots, dtri=dtri, lu=lu, bbox=bbox))
 }
 

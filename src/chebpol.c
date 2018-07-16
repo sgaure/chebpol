@@ -743,9 +743,12 @@ static SEXP R_sqdiffs(SEXP x1, SEXP x2, SEXP Sthreads) {
   return res;
 }
 
-static double findsimplex(double *x, double *knots, int *dtri, SEXP Sort, double *bbox, int epol,
-			    const int dim, const int numsimplex) {
-  int retval = INT_MIN;
+static double findsimplex(double *x, double *knots, int *dtri, SEXP Slu, double *bbox, int epol,
+			  double *val, const int dim, const int numsimplex) {
+  SEXP lumats = VECTOR_ELT(Slu,0);
+  SEXP ipivs = VECTOR_ELT(Slu,1);
+  double vec[dim+1];
+  int N=dim+1, one=1, info;
 
   for(int simplex = 0; simplex < numsimplex; simplex++) {
     // x must be in the bounding box. Perhaps we should do binary search, or organize them hierarchically?
@@ -756,29 +759,25 @@ static double findsimplex(double *x, double *knots, int *dtri, SEXP Sort, double
       box += 2;
     }
     if(bad) continue;
-    //    Rprintf("Check simplex %d\n",simplex+1);
-    // Ok, it's in the bounding box. Is it in the simplex?
-    // for each of the points in the simplex, check the
-    // orthogonal vector pointing towards it. Does it have
-    // positive inner product with our point?
-    // Loop over the points in the simplex
+
+    // bounding box matches. Transform to barycentric coordinates, check that they are positive.
+    double *lumat = REAL(VECTOR_ELT(lumats, simplex));
+    int *ipiv = INTEGER(VECTOR_ELT(ipivs, simplex));
     const int *tri = dtri + simplex * (dim+1); //nrows(Sdtri);
-    const double *ort = REAL(VECTOR_ELT(Sort, simplex));
+    for(int d = 0; d < dim; d++) vec[d] = x[d];
+    vec[dim] = 1.0;
+    F77_CALL(dgetrs)("N", &N, &one, lumat, &N, ipiv, vec, &N, &info);
+    double sum = 0;
     for(int d = 0; d <= dim; d++) {
-      // Remember tri is 1-based
-      const double *ref = (d==0) ? knots+(tri[1]-1)*dim : knots+(tri[0]-1)*dim;
-      const double *or = ort + d*dim;
-      double ip = 0.0;
-      for(int i = 0; i < dim; i++) ip += (x[i] - ref[i])*or[i];
-      if(ip < 0.0) {bad = 1; break;}
+      if(vec[d] < 0) {bad = 1; break;}
+      sum += vec[d]*val[tri[d]-1];
     }
     if(bad) continue;
     // We found it
-    retval = simplex;
-    break;
+    return(sum);
   }
   
-  if(retval == INT_MIN && epol) {
+  if(epol) {
     // Find the closest simplex
     double mindist = 1e99;
     int nearest = 0;
@@ -793,12 +792,21 @@ static double findsimplex(double *x, double *knots, int *dtri, SEXP Sort, double
       }
       if(dist < mindist) {mindist = dist; nearest = simplex;}
     }
-    retval = nearest;
+
+    double *lumat = REAL(VECTOR_ELT(lumats, nearest));
+    int *ipiv = INTEGER(VECTOR_ELT(ipivs, nearest));
+    const int *tri = dtri + nearest * (dim+1);
+    for(int d = 0; d < dim; d++) vec[d] = x[d];
+    vec[dim] = 1.0;
+    F77_CALL(dgetrs)("N", &N, &one, lumat, &N, ipiv, vec, &N, &info);
+    double sum = 0;
+    for(int d = 0; d <= dim; d++) sum += vec[d]*val[tri[d]-1];
+    return sum;
   }
-  return retval;
+  return NA_REAL;
 }
 
-static SEXP R_evalsl(SEXP Sx, SEXP Sknots, SEXP Sdtri, SEXP Sort, SEXP Sbbox, SEXP Sval,
+static SEXP R_evalsl(SEXP Sx, SEXP Sknots, SEXP Sdtri, SEXP Slu, SEXP Sbbox, SEXP Sval,
 		     SEXP extrapolate, SEXP Sthreads, SEXP spare) {
   UNUSED(spare); 
   // Loop over the triangulation
@@ -818,82 +826,45 @@ static SEXP R_evalsl(SEXP Sx, SEXP Sknots, SEXP Sdtri, SEXP Sort, SEXP Sbbox, SE
   int epol = LOGICAL(AS_LOGICAL(extrapolate))[0];
 #pragma omp parallel for num_threads(threads) schedule(guided) if(threads > 1 && numvec > 1)
   for(int i = 0; i < numvec; i++) {
-    double *xx = x + i*dim;
-    const int simplex = findsimplex(xx, knots, dtri, Sort, bbox, epol, dim, numsimplex);
-    if(simplex == INT_MIN) {resvec[i] = NA_REAL; continue;}
-    // Collect the vertices to solve for the barycentric coordinates of xx
-    // Hmm, that should be possible to do directly with the orthogonal vectors in Sort
-    // Have a look at it later.
-    double mat[(dim+1)*(dim+1)], vec[dim+1];
-    int *tri = dtri + simplex*(dim+1);
-    for(int j = 0; j <= dim; j++) {
-      double *knot = knots + (tri[j]-1)*dim;
-      for(int k=0; k < dim; k++) mat[j*(dim+1)+k] = knot[k];
-      mat[j*(dim+1)+dim] = 1.0;
-    }
-    for(int j = 0; j < dim; j++) vec[j] = xx[j];
-    vec[dim] = 1.0;
-    // now, solve mat X = vec
-    int N = dim+1, one=1, info;
-    int ipiv[N];
-    F77_CALL(dgesv)(&N, &one, mat, &N, ipiv, vec, &N, &info);
-    // Now, the barycentric coordinates are in vec
-    double sum = 0.0;
-    for(int j = 0; j <= dim; j++) sum += val[tri[j]-1]*vec[j];
-    resvec[i] = sum;
+    resvec[i] = findsimplex(x + i*dim, knots, dtri, Slu, bbox, epol, val, dim, numsimplex);
   }
   UNPROTECT(1);
   return ret;
 }
 
-
-static void findortho(int *tri, double *knots, const int dim, double *ortmat) {
-  // Collect the knots in a matrix of size dim x (dim+1)
-  double mat[dim*dim];
-  double vec[dim];
+static void findlu(int *tri, double *knots, const int dim, double *lumat, int *ipiv) {
   for(int vertex = 0; vertex <= dim; vertex++) {
-
-    // Copy all vertices except this into mat, this one into vec
-    int matcol = 0;
-    double *ref = (vertex == 0) ? knots + (tri[1]-1)*dim : knots + (tri[0]-1)*dim;
+    // Copy all vertices into mat, with a final rows of ones to LU-factorize
+    // Preparation for transforming into barycentric coordinates
     for(int v = 0; v <= dim; v++) {
       double *knot = knots + (tri[v]-1)*dim;
-      if(v == vertex) {
-	for(int j = 0; j < dim; j++) vec[j] = knot[j] - ref[j];
-      } else {
-	for(int j = 0; j < dim; j++) mat[matcol + j] = knot[j] - ref[j];
-	matcol += dim;
-      }
+      for(int j = 0; j < dim; j++) lumat[v*(dim+1) + j] = knot[j];
+      lumat[v*(dim+1) + dim] = 1.0;
     }
-    // Solve the system
-    // Use R's least squares solver
-    int one=1, N=dim, rank;
-    double work[2*dim], tol=1e-10, coef[dim], eff[dim], qraux[dim];
-    int jpvt[dim];
-    for(int i=0; i < dim; i++) jpvt[i] = i+1;
-    double *ort = ortmat + dim*vertex;
-    F77_CALL(dqrls)(mat, &N, &N, vec, &one, &tol, coef, ort, eff, &rank,
-		    jpvt, qraux, work);
-    // Nnormalize it:
-    double sum = 0.0;
-    for(int i = 0; i < dim; i++) sum += ort[i]*ort[i];
-    sum = 1/sqrt(sum);
-    for(int i = 0; i < dim; i++) ort[i] *= sum;
+    int N = dim+1, info;
+    F77_CALL(dgetrf)(&N, &N, lumat, &N, ipiv, &info);
   }
 }
-static SEXP R_findortho(SEXP Sdtri, SEXP Sknots, SEXP Sthreads) {
+static SEXP R_findlu(SEXP Sdtri, SEXP Sknots, SEXP Sthreads) {
   int threads = INTEGER(AS_INTEGER(Sthreads))[0];
   int *dtri = INTEGER(Sdtri);
   double *knots = REAL(Sknots);
   const int dim = nrows(Sknots);
   const int numsimplex = ncols(Sdtri);
-  SEXP retlist = PROTECT(NEW_LIST(numsimplex));
+  SEXP retlist = PROTECT(NEW_LIST(2));
+  SET_VECTOR_ELT(retlist, 0, NEW_LIST(numsimplex));
+  SET_VECTOR_ELT(retlist, 1, NEW_LIST(numsimplex));
+  SEXP lumats = VECTOR_ELT(retlist,0);
+  SEXP pivots = VECTOR_ELT(retlist,1);
   for(int i = 0; i < numsimplex; i++) {
-    SET_VECTOR_ELT(retlist,i,allocMatrix(REALSXP,dim,dim+1));
+    SET_VECTOR_ELT(lumats,i,allocMatrix(REALSXP,dim+1,dim+1));
+    SET_VECTOR_ELT(pivots,i,NEW_INTEGER(dim+1));
+    for(int j = 0; j <= dim; j++) INTEGER(VECTOR_ELT(pivots,i))[j] = j+1;
   }
 #pragma omp parallel for num_threads(threads) schedule(static) if(threads > 1 && numsimplex > 1)
   for(int simplex = 0; simplex < numsimplex; simplex++) {
-    findortho(dtri + simplex*(dim+1), knots, dim, REAL(VECTOR_ELT(retlist,simplex)));
+    findlu(dtri + simplex*(dim+1), knots, dim, 
+	   REAL(VECTOR_ELT(lumats,simplex)), INTEGER(VECTOR_ELT(pivots,simplex)));
   }
   UNPROTECT(1);
   return retlist;
@@ -989,7 +960,7 @@ R_CallMethodDef callMethods[] = {
   {"evalrbf", (DL_FUNC) &R_evalrbf, 3},
   {"evalpolyh", (DL_FUNC) &R_evalpolyh, 7},
   {"evalsl", (DL_FUNC) &R_evalsl, 9},
-  {"findortho", (DL_FUNC) &R_findortho, 3},
+  {"findlu", (DL_FUNC) &R_findlu, 3},
   {"findbbox", (DL_FUNC) &R_findbbox, 3},
   {"havealglib", (DL_FUNC) &R_havealglib, 0},
   {NULL, NULL, 0}
