@@ -748,7 +748,7 @@ static double findsimplex(double *x, double *knots, int *dtri, SEXP Sort, double
   int retval = INT_MIN;
 
   for(int simplex = 0; simplex < numsimplex; simplex++) {
-    // x must be in the bounding box
+    // x must be in the bounding box. Perhaps we should do binary search, or organize them hierarchically?
     double *box = bbox + simplex*2*dim;
     int bad = 0;
     for(int i = 0; i < dim; i++) {
@@ -770,7 +770,7 @@ static double findsimplex(double *x, double *knots, int *dtri, SEXP Sort, double
       const double *or = ort + d*dim;
       double ip = 0.0;
       for(int i = 0; i < dim; i++) ip += (x[i] - ref[i])*or[i];
-      if(ip < -1e-9) {bad = 1; break;}
+      if(ip < 0.0) {bad = 1; break;}
     }
     if(bad) continue;
     // We found it
@@ -799,7 +799,7 @@ static double findsimplex(double *x, double *knots, int *dtri, SEXP Sort, double
 }
 
 static SEXP R_evalsl(SEXP Sx, SEXP Sknots, SEXP Sdtri, SEXP Sort, SEXP Sbbox, SEXP Sval,
-			  SEXP extrapolate, SEXP Sthreads, SEXP spare) {
+		     SEXP extrapolate, SEXP Sthreads, SEXP spare) {
   UNUSED(spare); 
   // Loop over the triangulation
   int *dtri = INTEGER(Sdtri);
@@ -816,7 +816,7 @@ static SEXP R_evalsl(SEXP Sx, SEXP Sknots, SEXP Sdtri, SEXP Sort, SEXP Sbbox, SE
   SEXP ret = PROTECT(NEW_NUMERIC(ncols(Sx)));
   double *resvec = REAL(ret);
   int epol = LOGICAL(AS_LOGICAL(extrapolate))[0];
-#pragma omp parallel for num_threads(threads) schedule(static) if(threads > 1 && numvec > 1)
+#pragma omp parallel for num_threads(threads) schedule(guided) if(threads > 1 && numvec > 1)
   for(int i = 0; i < numvec; i++) {
     double *xx = x + i*dim;
     const int simplex = findsimplex(xx, knots, dtri, Sort, bbox, epol, dim, numsimplex);
@@ -839,11 +839,7 @@ static SEXP R_evalsl(SEXP Sx, SEXP Sknots, SEXP Sdtri, SEXP Sort, SEXP Sbbox, SE
     F77_CALL(dgesv)(&N, &one, mat, &N, ipiv, vec, &N, &info);
     // Now, the barycentric coordinates are in vec
     double sum = 0.0;
-    for(int j = 0; j <= dim; j++) {
-      // which knot?
-      int knot = tri[j]-1;
-      sum += val[knot]*vec[j];
-    }
+    for(int j = 0; j <= dim; j++) sum += val[tri[j]-1]*vec[j];
     resvec[i] = sum;
   }
   UNPROTECT(1);
