@@ -65,7 +65,7 @@ extern "C" {
     double *out = REAL(res);
     double *vec = REAL(vectors);
     int threads = INTEGER(AS_INTEGER(Sthreads))[0];
-    // No OpenMP yet, awkward interface in alglib
+
     bool useomp = false;
 #ifdef _OPENMP
     useomp = N > 1 && threads > 1;

@@ -1,5 +1,6 @@
 \documentclass[a4paper]{amsart}
 \usepackage{graphicx}
+\usepackage{hyperref}
 \newcommand{\strong}[1]{{\normalfont\fontseries{b}\selectfont #1}}
 \let\pkg=\strong
 \newcommand\code{\bgroup\@codex}
@@ -205,6 +206,42 @@ The polyharmonic spline method is quite slow. It requires solving a \(K \times K
 linear system, where \(K\) is the number of knots. It helps a lot to use a tuned and 
 parallel BLAS with R, such as Intel's MKL.
 
+\section{Radial basis functions with compact support (ALGLIB)}
+{\raggedright
+  The ALGLIB library (\url{http://www.alglib.net/interpolation/fastrbf.php}) contains an implementation
+of compact support radial basis function interpolation on scattered data. It is available with
+\code{ipol(..., method='crbf')} if ALGLIB was available at build time. 
+
+By default, this is not true for Windows, however if it is available,
+\pkg{chebpol} can be built with it from source by editing the file
+\code{src/Makevars.win}. The library must be put into the
+\code{PKG\_LIBS} as something like \code{-LC:/somewhere/libs -lalglib},
+and the compiler must be told where to find ALGLIB's include file by
+inserting something like \code{-IC:/somewhere/include -DHAVE\_ALGLIB}
+in the \code{PKG\_CPPFLAGS}.
+
+On linux and other unix-variants, ALGLIB should be put into the
+\code{pkg-config} database so that the command \code{pkg-config --libs
+  alglib} reports the link and compiler flags. This amounts
+to creating a file \code{alglib.pc} in the search path of \code{pkg-config} with the
+necessary content (\code{Libs:} and \code{Cflags:})
+The author has put ALGLIB in \code{/usr/local}, and \code{alglib.pc} contains:
+}
+\begin{verbatim}
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include/alglib
+
+Name: ALGLIB
+Description: Various numerical mathematics
+Version: 3.14.0
+Libs: -L${libdir} -lalglib
+Cflags: -I${includedir}
+\end{verbatim}
+
+When this works, \pkg{chebpol} will be built with ALGLIB when you do an \code{install.packages('chebpol')}.
+
 \section{Speed considerations}
 There are two parts to interpolation. Creating the interpolant, and
 using it. Both of these take some time. The time depends on the method,
@@ -241,6 +278,17 @@ The polyharmonic spline method is the most demanding. Creation requires calculat
 weights which amounts to solving a dense
 \(K\times K\) linear system, a \(O(K^3)\) task (or \(O(n^{3r})\) to compare with the grid methods).
 Evaluation is faster, of the order \(O(Kr)\) (or \(O(rn^r)\)).
+
+Creation of the simplex linear interpolation requires calculation of
+the Delaunay triangulation of the knots. This is usually quite fast,
+using the \code{qhull} library (\url{http://www.qhull.org}) available through package
+\pkg{geometry}.  Evaluation requires finding the enclosing simplex of
+the point, this is done linearly by filtering out bounding boxes which
+does not include the point, this is quite fast, and then for the
+remaining simplices, by verifying that the barycentric coordinates of
+the point are in \([0,1]\). It works reasonably fast for a few thousand knots
+and dimension below 4-5. With more knots, or higher dimensions, both creation and
+evaluation is markedly slower due to exceedingly high numbers of simplices.
 
 To alleviate speed problems, parts of \pkg{chebpol} has been parallelized with OpenMP.
 The number of threads is taken from \code{getOption("chebpol.threads")} which is initialized
