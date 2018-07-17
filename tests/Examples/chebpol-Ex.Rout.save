@@ -266,11 +266,9 @@ $z
 > flush(stderr()); flush(stdout())
 > 
 > ### Name: chebpol-package
-> ### Title: Methods for creating multivariate Chebyshev interpolations on
-> ###   hypercubes
+> ### Title: Methods for creating multivariate interpolations on hypercubes
 > ### Aliases: chebpol-package chebpol
-> ### Keywords: Chebyshev Cosine DCT Discrete Floater-Hormann Transform
-> ###   approximation
+> ### Keywords: Chebyshev DCT Floater-Hormann interpolation
 > 
 > ### ** Examples
 > 
@@ -411,6 +409,29 @@ fh   0.2501152 0.4132112 1.751460 0.001677869 0.1709544
 [1] 1.221713
 [1] 1.232409
 > 
+> 
+> 
+> 
+> cleanEx()
+> nameEx("interpolant")
+> ### * interpolant
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: interpolant
+> ### Title: Evaluate an interpolant in a point
+> ### Aliases: interpolant
+> 
+> ### ** Examples
+> 
+> grid <- list(x=seq(0,1,length.out=10), y=seq(0,1,length.out=10))
+> val <- runif(100)
+> dim(val) <- c(10,10)
+> ip <- ipol(val, grid=grid, method='fh')
+> ip(c(0.3, 0.8))
+[1] 0.2284498
+> ip(matrix(runif(12),2), threads=2)
+[1] 0.74713282 0.83340490 0.00568654 0.70100518 0.39261432 0.71810846
 > 
 > 
 > 
@@ -614,7 +635,7 @@ sl   0.4015017 0.1820496 0.5184662 0.3228145 0.1176867 0.4867692
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  4.288 0.117 2.895 0 0 
+Time elapsed:  4.157 0.132 3.021 0 0 
 > grDevices::dev.off()
 null device 
           1 

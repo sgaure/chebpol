@@ -75,7 +75,7 @@ by weighting the vertex values with the barycentric coordinates, see also \code{
 The \code{"crbf"} is the multilayer compact radial basis function
 interpolation in ALGLIB (\url{http://www.alglib.net/interpolation/fastrbf.php}).
 It is only available if ALGLIB was available at
-compile time. In this case \code{k} must be vector of length 3, the rbase,
+compile time. In this case \code{k} must be a vector of length 3, the rbase,
 the number of layers and the non-linear smoothing parameter lambda.
 
 There are also some usage examples and more in \code{vignette("chebpol")} and \code{vignette('chebusage')}.
