@@ -215,7 +215,7 @@ and \(|w_i| = 2\) for \(0 < i < N\).  See e.g.\ \cite{BT04}. In \cite{FH07} anot
 set of weights which corresponds to certain blending polynomials in rational interpolants
 are found. This is used in method \code{"fh"}. Here is an example with a Runge function.
 
-<<fig.dim=c(4,4)>>=
+<<fig.dim=c(5,5)>>=
 f <- function(x) 1/(1+25*x^2)
 # Uniform grid:
 unigrid <- list(seq(-3,2,length.out=20))
@@ -272,15 +272,15 @@ higher dimensional analogues). When evaluating the interpolant, the simplex encl
 the point is found, and the value in the point is a convex combination of 
 the function values in the corners of the simplex, with the weights being the barycentric coordinates
 of the point.
-We create a function defined on a circle, and put some random knots in there, and see what
+We create a function defined on the unit circle, and put some random knots in there, and see what
 the Delaunay triangulation looks like.
 <<echo=FALSE>>=
 set.seed(42)
 @ 
-<<fig.width=5,fig.asp=1.1,message=FALSE>>=
+<<fig.width=5,fig.asp=1.1,fig.align='center',message=FALSE>>=
 f <- function(x) sqrt(1-sum(x^2))
-theta <- runif(150, 0, 2*pi)
-r <- sqrt(runif(150))
+theta <- runif(200, 0, 2*pi)
+r <- sqrt(runif(200))
 knots <- rbind(r*cos(theta), r*sin(theta))
 g <- ipol(f, knots=knots, method='simplexlinear')
 # yank out the simplices for drawing
@@ -288,20 +288,28 @@ simp <- get('dtri', environment(get('fun', environment(g))))
 drawtri <- function(pts,col) lines(c(pts[1,],pts[1,1]), c(pts[2,],pts[2,1]), col=col)
 plot(knots[1,], knots[2,], typ='p', pch=20, xlab='x', ylab='y', main='Triangulation')
 invisible(apply(simp,2,function(kn) drawtri(knots[,kn], col='blue')))
-theta <- runif(6, 0, 2*pi)
-r <- runif(6)
+theta <- runif(7, 0, 2*pi)
+r <- sqrt(runif(7))
 test <- rbind(r*cos(theta), r*sin(theta))
 rbind(true=apply(test,2,f), sl=g(test,epol=TRUE))
 @ 
 
-The main shortcoming of this method is visible in the Delaunay triangulation. Some
-of the triangles near the borders are very stretched out. This can happen even
-if we have a very large number of knots. This is because the triangles
-must cover the convex hull, and there is no other way to do that. Such long simplices will
-lead to poor linear approximation if second derivatives there are large. By default, the
-interpolant will return \code{NA} for inputs which are outside the convex hull of
-the knots, but an extrapolation from the nearest simplex will be done if the
-argument \code{epol=TRUE} is specified.
+The main shortcoming of this method is visible in the Delaunay
+triangulation. Some of the triangles near the borders are very
+stretched out. This can happen even if we have a large number of
+knots. This is because the triangles must cover the convex hull, and
+there is no other way to do that. Such long simplices will lead to
+poor linear approximation if second derivatives there are
+large. Another shortcoming is that the entire triangulation is
+computed when the interpolant is created, not only the parts needed
+for interpolating specific points. The number of simplices grows with
+the dimension \(d\), typically as \(d!\). This quickly gets out of
+hand when \(d\) grows.
+
+By default, the interpolant will return \code{NA} for inputs which are
+outside the convex hull of the knots, but an extrapolation from the
+nearest simplex will be done if the argument \code{epol=TRUE} is
+specified.
 
 \subsection{Polyharmonic splines}
 The other scattered method is polyharmonic splines in the method \code{"polyharmonic"}.
@@ -346,7 +354,7 @@ Note that the fitting may fail, in particular for \(k < 0\) and irregular data. 
 case a least squares fit is used, and a warning is issued. The \(k\)
 parameter then may need to be tuned for the problem at hand. Note that by
 default the knots and coordinates are transformed into a unit hypercube if any of the knots
-are outside, see the help entry for \code{polyh}.  Note that for positive \code{k} the theory 
+are outside, see the help entry for \code{polyh}.  Note that for positive \(k\) the theory 
 in \cite[Proposition 6]{HL12} says that there are enough splines even if we do not scale, but
 the numerics may be more favourable when we scale.  There is more about polyharmonic splines in 
 \cite{Rabut92}.

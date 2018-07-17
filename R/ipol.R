@@ -32,15 +32,16 @@
 #' by weighting the vertex values with the barycentric coordinates, see also \code{\link{slappx}}.
 #' 
 #' The \code{"crbf"} is the multilayer compact radial basis function
-#' interpolation from ALGLIB. It is only available if ALGLIB was available at
-#' compile time. In this case \code{k} must be vector of length 3, the rbase,
+#' interpolation in ALGLIB (\url{http://www.alglib.net/interpolation/fastrbf.php}).
+#' It is only available if ALGLIB was available at
+#' compile time. In this case \code{k} must be a vector of length 3, the rbase,
 #' the number of layers and the non-linear smoothing parameter lambda.
 #' 
-#' There is also some usage examples and more in \code{vignette("chebpol")}.
+#' There are also some usage examples and more in \code{vignette("chebpol")} and \code{vignette('chebusage')}.
 #' 
 #' @param val array or function. Function values on a grid, or the function
 #' itself. If it is the values, the \code{"dim"}-attribute must be
-#' appropriately set.
+#' appropriately set. If it is a function, it will be evaluated in the grid points.
 #' @param dims integer vector. The number of grid points in each dimension. Not
 #' needed if \code{val} is an array or \code{grid} is used.
 #' @param intervals list of length 2 numeric vectors. The lower and upper bound
@@ -51,7 +52,7 @@
 #' @param k numeric. Additional value, used with some methods.
 #' @param method character. The interpolation method to use.
 #' @param ... Further arguments to the function, if \code{is.function(val)}.
-#' @return A \code{function(x, threads)} defined on a hypercube, an interpolant
+#' @return A \code{function(x, threads=getOption('chebpol.threads'))} defined on a hypercube, an \link{interpolant}
 #' for the given function. The argument \code{x} can be a matrix of column
 #' vectors which are evaluated in parallel in a number of threads.  The
 #' function yields values for arguments outside the hypercube as well, though

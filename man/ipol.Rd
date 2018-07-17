@@ -11,7 +11,7 @@ ipol(val, dims = NULL, intervals = NULL, grid = NULL, knots = NULL,
 \arguments{
 \item{val}{array or function. Function values on a grid, or the function
 itself. If it is the values, the \code{"dim"}-attribute must be
-appropriately set.}
+appropriately set. If it is a function, it will be evaluated in the grid points.}
 
 \item{dims}{integer vector. The number of grid points in each dimension. Not
 needed if \code{val} is an array or \code{grid} is used.}
@@ -31,7 +31,7 @@ dimension.  These need not be Chebyshev-knots, nor evenly spaced.}
 \item{...}{Further arguments to the function, if \code{is.function(val)}.}
 }
 \value{
-A \code{function(x, threads)} defined on a hypercube, an interpolant
+A \code{function(x, threads=getOption('chebpol.threads'))} defined on a hypercube, an \link{interpolant}
 for the given function. The argument \code{x} can be a matrix of column
 vectors which are evaluated in parallel in a number of threads.  The
 function yields values for arguments outside the hypercube as well, though
@@ -73,11 +73,12 @@ Delaunay triangulation from the knots, and does linear interpolation in each sim
 by weighting the vertex values with the barycentric coordinates, see also \code{\link{slappx}}.
 
 The \code{"crbf"} is the multilayer compact radial basis function
-interpolation from ALGLIB. It is only available if ALGLIB was available at
+interpolation in ALGLIB (\url{http://www.alglib.net/interpolation/fastrbf.php}).
+It is only available if ALGLIB was available at
 compile time. In this case \code{k} must be vector of length 3, the rbase,
 the number of layers and the non-linear smoothing parameter lambda.
 
-There is also some usage examples and more in \code{vignette("chebpol")}.
+There are also some usage examples and more in \code{vignette("chebpol")} and \code{vignette('chebusage')}.
 }
 \examples{
 
