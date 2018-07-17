@@ -106,8 +106,11 @@ ch2 <- ipol(f, dims=c(10,10,10), intervals=list(0:1,0:1,0:1), method='cheb')
 knots <- matrix(runif(3*1000),3)
 ph2 <- ipol(f, knots=knots, k=2, method='poly')
 sl2 <- ipol(f, knots=knots, method='simplexlinear')
-# make 6 points in R3 to test them on
-m <- matrix(runif(3*6),3)
-rbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ph2(m), sl=sl2(m))
+# my alglib is a bit slow, so stick to 100 knots
+if(havealglib()) crb <- ipol(f, knots=knots[,1:100], k=c(2,5,0), method='crbf') 
+# make 7 points in R3 to test them on
+m <- matrix(runif(3*7),3)
+rbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ph2(m), sl=sl2(m),
+crbf=if(havealglib()) crb(m) else NULL )
 
 }

@@ -290,6 +290,16 @@ the point are in \([0,1]\). It works reasonably fast for a few thousand knots
 and dimension below 4-5. With more knots, or higher dimensions, both creation and
 evaluation is markedly slower due to exceedingly high numbers of simplices.
 
+The compact radial basis functions approach of ALGLIB in \code{method='crbf'} \emph{requires}
+tuning. The three parameters in \code{k} is the base radius, the number of layers and
+a smoothing parameter \(\lambda\). The ALGLIB docs says that the base radius should be
+larger than the typical Euclidean distance between the knots. Each layer halves
+the radius, and the final radius should be smaller than the minimal distance, to capture the 
+most rapid changes. The smoothing parameter \(\lambda\) defaults to \(0\), but typical
+values can be around \(10^{-6}\) or \(10^{-5}\).  The default in \code{ipol} is \((2, 5, 0)\),
+but this may be a very bad choice for your data.  A commercial variant of ALGLIB is available,
+with parallelization and instruction-level optimizations, the author has not tried it.
+
 To alleviate speed problems, parts of \pkg{chebpol} has been parallelized with OpenMP.
 The number of threads is taken from \code{getOption("chebpol.threads")} which is initialized
 from the environment variable \code{CHEBPOL\_THREADS}. It defaults to 1. Some of the
