@@ -107,6 +107,7 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
          },
          multilinear={
            if(is.null(grid)) stop('grid must be specified for multi linear interpolation')
+           if(unsortedgrid(grid)) stop("grid must be distinct ordered values")
            return(mlappx(val,grid,...))
          },
          simplexlinear={
@@ -116,6 +117,7 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
          fh={
            if(is.null(grid)) stop('grid must be specified for Floater-Hormann interpolation')
            if(!is.list(grid)) grid <- list(grid)
+           if(unsortedgrid(grid)) stop("grid must be distinct ordered values")
            if(is.null(k)) k <- pmin(4,sapply(grid,length)-1)
            return(fhappx(val,grid,d=k))
          },
@@ -127,6 +129,7 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
          },
          general={
            if(is.null(grid)) stop('grid must be specified for general interpolation')
+           if(unsortedgrid(grid)) stop("grid must be distinct ordered values")
            if(is.function(val)) return(chebappxgf(val,grid,...))
            return(chebappxg(val,grid))
          },
@@ -145,3 +148,6 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
          )
 }
 
+unsortedgrid <- function(g) {
+  any(sapply(g,function(s) is.unsorted(s,strictly=TRUE) && is.unsorted(-s,strictly=TRUE)))
+}

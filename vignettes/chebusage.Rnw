@@ -11,7 +11,7 @@
 \newcommand{\figsize}{7cm}
 %\VignetteIndexEntry{Usage notes for package chebpol}
 %\VignetteEngine{knitr::knitr}
-%\VignetteDepends{cubature, lattice}
+%\VignetteDepends{cubature, lattice, plot3D}
 \setlength{\textwidth}{\paperwidth}
 \setlength{\textheight}{\paperheight}
 \addtolength{\textwidth}{-3cm}
@@ -206,15 +206,45 @@ The polyharmonic spline method is quite slow. It requires solving a \(K \times K
 linear system, where \(K\) is the number of knots. It helps a lot to use a tuned and 
 parallel BLAS with R, such as Intel's MKL.
 
+Here is a 3d-picture of the function \(f(x,y) = 4/(4+(x+y)^2)\) on \([-5,5] \times [-5,5]\) 
+with a perturbed \(15 \times 15\) grid.
+<<fig.align='center', fig.dim=c(5,5)>>=
+f <- function(x) 1 / (1+mean(x^2))
+GN <- 15
+D <- 5
+grid <- list(x=sort(seq(-D,D,len=GN)+c(0,rnorm(GN-2,sd=D/GN),0)), 
+             y=sort(seq(-D,D,len=GN)+c(0,rnorm(GN-2,sd=D/GN),0)))
+fh <- ipol(f, grid=grid, method='fh')
+knots <- t(expand.grid(grid))
+sl <- ipol(f, knots=knots, method='simplex')
+ph <- ipol(f, knots=knots, method='poly')
+g <- list(x=seq(-5,5,len=100), y=seq(-5,5,len=100))
+
+par(mfrow=c(2,2),mar=c(0,0,0,0))
+light <- list(specular=0.8,ambient=0,diffuse=0.4)
+col <- 'green'
+plot3D::persp3D(g$x, g$y, evalongrid(f,grid=g), colvar=NULL, lighting=light,
+        theta=0, ltheta=-30, lphi=45, col=col, axes=FALSE, bty='n',zlim=c(0,1))
+plot3D::persp3D(g$x, g$y, evalongridV(ph,grid=g), colvar=NULL, lighting=light,
+        theta=0, ltheta=-30, lphi=45, col=col, axes=FALSE, bty='n',zlim=c(0,1))
+plot3D::persp3D(g$x, g$y, evalongridV(fh,grid=g), colvar=NULL, lighting=light,
+        theta=0, ltheta=-30, lphi=45, col=col, axes=FALSE, bty='n',zlim=c(0,1))
+plot3D::persp3D(g$x, g$y, evalongridV(sl,grid=g,epol=TRUE), colvar=NULL, lighting=light,
+        theta=0, ltheta=-30, lphi=45, col=col, axes=FALSE, bty='n',zlim=c(0,1))
+@ 
+
+% \begin{center}
+% \includegraphics[width=0.8\textwidth]{rungetest.png}
+% \end{center}
+
 \section{Radial basis functions with compact support (ALGLIB)}
-{\raggedright
   The ALGLIB library (\url{http://www.alglib.net/interpolation/fastrbf.php}) contains an implementation
 of compact support radial basis function interpolation on scattered data. It is available with
 \code{ipol(..., method='crbf')} if ALGLIB was available at build time. 
 
-By default, this is not true for Windows, however if it is available,
+By default, this is not true for Windows. However if ALGLIB is available,
 \pkg{chebpol} can be built with it from source by editing the file
-\code{src/Makevars.win}. The library must be put into the
+\code{src/Makevars.win}. The library must be put into the make variable
 \code{PKG\_LIBS} as something like \code{-LC:/somewhere/libs -lalglib},
 and the compiler must be told where to find ALGLIB's include file by
 inserting something like \code{-IC:/somewhere/include -DHAVE\_ALGLIB}
@@ -226,7 +256,7 @@ On linux and other unix-variants, ALGLIB should be put into the
 to creating a file \code{alglib.pc} in the search path of \code{pkg-config} with the
 necessary content (\code{Libs:} and \code{Cflags:})
 The author has put ALGLIB in \code{/usr/local}, and \code{alglib.pc} contains:
-}
+
 \begin{verbatim}
 prefix=/usr/local
 exec_prefix=${prefix}
