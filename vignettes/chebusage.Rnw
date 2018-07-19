@@ -1,5 +1,6 @@
 \documentclass[a4paper]{amsart}
 \usepackage{graphicx}
+\usepackage{subfig}
 \usepackage{hyperref}
 \newcommand{\strong}[1]{{\normalfont\fontseries{b}\selectfont #1}}
 \let\pkg=\strong
@@ -206,36 +207,26 @@ The polyharmonic spline method is quite slow. It requires solving a \(K \times K
 linear system, where \(K\) is the number of knots. It helps a lot to use a tuned and 
 parallel BLAS with R, such as Intel's MKL.
 
-Here is a 3d-picture of the function \(f(x,y) = 4/(4+(x+y)^2)\) on \([-5,5] \times [-5,5]\) 
-with a perturbed \(15 \times 15\) grid.
-<<fig.align='center', fig.dim=c(5,5)>>=
-f <- function(x) 1 / (1+mean(x^2))
-GN <- 15
-D <- 5
-grid <- list(x=sort(seq(-D,D,len=GN)+c(0,rnorm(GN-2,sd=D/GN),0)), 
-             y=sort(seq(-D,D,len=GN)+c(0,rnorm(GN-2,sd=D/GN),0)))
-fh <- ipol(f, grid=grid, method='fh')
+In Figure \ref{fig:volcano} are various interpolated 3d-pictures of the classic volcano.
+
+<<volcano, fig.align='center', fig.pos='!ht', fig.cap='Volcanoes', out.width='.37\\linewidth', fig.ncol=2, fig.subcap=c('low resolution','polyharmonic','Floater-Hormann','simplex')>>=
+data(volcano)
+volc <- volcano[seq(1,nrow(volcano),3),seq(1,ncol(volcano),3)] #low res volcano
+grid <- list(x=as.numeric(seq_len(nrow(volc))), y=as.numeric(seq_len(ncol(volc))))
+fh <- ipol(volc, grid=grid, method='fh')
 knots <- t(expand.grid(grid))
-sl <- ipol(f, knots=knots, method='simplex')
-ph <- ipol(f, knots=knots, method='poly')
-g <- list(x=seq(-5,5,len=100), y=seq(-5,5,len=100))
-
-par(mfrow=c(2,2),mar=c(0,0,0,0))
+sl <- ipol(volc, knots=knots, method='simplex')
+ph <- ipol(volc, knots=knots, method='poly')
+g <- list(x=seq(1,nrow(volc), len=100), y=seq(1,ncol(volc),len=100))
+par(mar=rep(0,4)); col <- 'lightblue'
 light <- list(specular=0.8,ambient=0,diffuse=0.4)
-col <- 'green'
-plot3D::persp3D(g$x, g$y, evalongrid(f,grid=g), colvar=NULL, lighting=light,
-        theta=0, ltheta=-30, lphi=45, col=col, axes=FALSE, bty='n',zlim=c(0,1))
-plot3D::persp3D(g$x, g$y, evalongridV(ph,grid=g), colvar=NULL, lighting=light,
-        theta=0, ltheta=-30, lphi=45, col=col, axes=FALSE, bty='n',zlim=c(0,1))
-plot3D::persp3D(g$x, g$y, evalongridV(fh,grid=g), colvar=NULL, lighting=light,
-        theta=0, ltheta=-30, lphi=45, col=col, axes=FALSE, bty='n',zlim=c(0,1))
-plot3D::persp3D(g$x, g$y, evalongridV(sl,grid=g,epol=TRUE), colvar=NULL, lighting=light,
-        theta=0, ltheta=-30, lphi=45, col=col, axes=FALSE, bty='n',zlim=c(0,1))
+plot3D::persp3D(grid$x, grid$y, volc, colvar=NULL, lighting=light,
+        theta=135, ltheta=90, lphi=40, col=col, axes=FALSE, bty='n')
+for(f in list(ph, fh, sl)) {
+plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,
+        theta=135, ltheta=90, lphi=40, col=col, axes=FALSE, bty='n')
+}
 @ 
-
-% \begin{center}
-% \includegraphics[width=0.8\textwidth]{rungetest.png}
-% \end{center}
 
 \section{Radial basis functions with compact support (ALGLIB)}
   The ALGLIB library (\url{http://www.alglib.net/interpolation/fastrbf.php}) contains an implementation
