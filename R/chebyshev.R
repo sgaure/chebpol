@@ -345,7 +345,7 @@ chebappxg <- function(val,grid=NULL,mapdim=NULL) {
 
   intervals <- lapply(grid,range)
   # create monotone splines with splinefun, method monoH.FC
-  gridmaps <- mapply(splinefun, grid, chebknots(dim(val)), MoreArgs=list(method='monoH.FC'))
+  gridmaps <- mapply(stats::splinefun, grid, chebknots(dim(val)), MoreArgs=list(method='monoH.FC'))
 #  gridmaps <- mapply(polyh, chebknots(dim(val)), grid, MoreArgs=list(k=1))
   gridmap <- function(x) {
     if(!is.matrix(x)) return(mapply(function(gm,x) gm(x),gridmaps,x))

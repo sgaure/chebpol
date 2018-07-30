@@ -58,14 +58,14 @@ ucappx <- function(val, intervals=NULL) {
   dims <- dim(val)
   ch <- chebappx(val)
   if(is.null(intervals)) {
-    gridmap <- cmpfun(function(x) mapply(function(xi,d) ugm(xi,d),x,dims))
+    gridmap <- compiler::cmpfun(function(x) mapply(function(xi,d) ugm(xi,d),x,dims))
   } else {
     # precompute interval mid points and inverse lengths
     md <- lapply(intervals,mean)
     ispan <- lapply(intervals, function(i) 2/diff(i))
-    gridmap <- cmpfun(function(x) mapply(function(xi,mid,is,d) ugm(is*(xi-mid),d),x,md,ispan,dims))
+    gridmap <- compiler::cmpfun(function(x) mapply(function(xi,mid,is,d) ugm(is*(xi-mid),d),x,md,ispan,dims))
   }
-  gm <- cmpfun(function(x) {
+  gm <- compiler::cmpfun(function(x) {
     if(is.matrix(x)) apply(x,2,gridmap) else gridmap(x)
   })
   local(vectorfun(ch(gm(x), threads), length(dims), 

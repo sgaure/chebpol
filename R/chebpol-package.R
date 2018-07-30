@@ -71,6 +71,4 @@
 #' rbind(true=apply(m,2,f), cheb=ch(m), fh=fh(m))
 #' 
 #' @useDynLib chebpol, .registration=TRUE, .fixes='C_'
-#' @importFrom compiler cmpfun
-#' @importFrom stats lm.fit splinefun
 NULL

@@ -84,7 +84,7 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
   }
 
   # trickery to get it in place
-  phi <- cmpfun(function(x) {
+  phi <- compiler::cmpfun(function(x) {
     eval.parent(as.call(list(quote(.Call), C_phifunc, substitute(x), k, getOption('chebpol.threads'))))
   })
 
@@ -113,7 +113,7 @@ polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
       if(!nowarn)
         warning('Failed to fit exactly, fallback to least squares fit.',
                 if(!normalize) ' You could try normalize=TRUE.' else '')
-      wv <- lm.fit(mat,rhs)$coefficients
+      wv <- stats::lm.fit(mat,rhs)$coefficients
       wv[is.na(wv)] <- 0
     }
     w <- wv[1:N]

@@ -207,24 +207,25 @@ The polyharmonic spline method is quite slow. It requires solving a \(K \times K
 linear system, where \(K\) is the number of knots. It helps a lot to use a tuned and 
 parallel BLAS with R, such as Intel's MKL.
 
-In Figure \ref{fig:volcano} are various interpolated 3d-pictures of the classic volcano.
+In Figure \ref{fig:volcano} are various interpolated 3d-pictures of the Maungawhau volcano
+(Mt.\ Eden, Auckland, New Zealand).
 
 <<volcano, fig.align='center', fig.pos='!ht', fig.cap='Volcanoes', out.width='.37\\linewidth', fig.ncol=2, fig.subcap=c('low resolution','polyharmonic','Floater-Hormann','simplex')>>=
 data(volcano)
-volc <- volcano[seq(1,nrow(volcano),3),seq(1,ncol(volcano),3)] #low res volcano
+volc <- volcano[seq(1,nrow(volcano),3),seq(1,ncol(volcano),3)]/10 #low res volcano
 grid <- list(x=as.numeric(seq_len(nrow(volc))), y=as.numeric(seq_len(ncol(volc))))
 fh <- ipol(volc, grid=grid, method='fh')
 knots <- t(expand.grid(grid))
 sl <- ipol(volc, knots=knots, method='simplex')
 ph <- ipol(volc, knots=knots, method='poly')
 g <- list(x=seq(1,nrow(volc), len=100), y=seq(1,ncol(volc),len=100))
-par(mar=rep(0,4)); col <- 'lightblue'
-light <- list(specular=0.8,ambient=0,diffuse=0.4)
+par(mar=rep(0,4)); col <- 'green'
+light <- list(specular=0.2,ambient=0.0,diffuse=0.6)
 plot3D::persp3D(grid$x, grid$y, volc, colvar=NULL, lighting=light,
-        theta=135, ltheta=90, lphi=40, col=col, axes=FALSE, bty='n')
+        theta=135, ltheta=90, lphi=40, col=col, axes=FALSE, bty='n',scale=FALSE)
 for(f in list(ph, fh, sl)) {
 plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,
-        theta=135, ltheta=90, lphi=40, col=col, axes=FALSE, bty='n')
+        theta=135, ltheta=90, lphi=40, col=col, axes=FALSE, bty='n', scale=FALSE)
 }
 @ 
 

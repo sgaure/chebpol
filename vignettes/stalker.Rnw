@@ -1,0 +1,431 @@
+\documentclass[a4paper]{amsart}
+\usepackage{graphicx}
+\usepackage{subfig}
+\usepackage{hyperref}
+\newcommand{\strong}[1]{{\normalfont\fontseries{b}\selectfont #1}}
+\let\pkg=\strong
+\newcommand\code{\bgroup\@codex}
+\def\@codex#1{{\normalfont\ttfamily\hyphenchar\font=-1 #1}\egroup}
+
+\newcommand{\RN}{\mathbb{R}}
+\newcommand{\NN}{\mathbb{N}}
+\newcommand{\figsize}{7cm}
+\newcommand{\sign}{\operatorname{sgn}}
+%% \VignetteIndexEntry{Usage notes for package chebpol}
+%% \VignetteEngine{knitr::knitr}
+%% \VignetteDepends{cubature, lattice, plot3D}
+\setlength{\textwidth}{\paperwidth}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textwidth}{-3cm}
+\addtolength{\textheight}{-4cm}
+\calclayout
+
+
+\title{The stalker spline}
+
+\author{Simen Gaure}
+\address{Ragnar Frisch Centre for Economic Research, Oslo, Norway}
+\date{July 28, 2018}
+
+\begin{document}
+\setkeys{Gin}{width=0.6\textwidth }
+\begin{abstract}
+The idea behind the stalker spline in package \pkg{chebpol} is outlined.
+It is designed to be almost shape preserving in the sense that
+it attempts to honour monotonocity properties and local extreme points
+in the data, though not entirely. It is achieved by somewhat non-traditional
+means, by sacrificing analyticity, and in a corner case even differentiability.
+The name comes from the fact that it follows the data frighteningly close, 
+though it sometimes seems stupid with little foresight. The interpolation isn't
+then a proper spline, since it is not a polynomial. We also obtain a limit in
+intuitive geometric terms on how large the overshoot can be.
+\end{abstract}
+\maketitle
+\section{Introduction}
+The multilinear interpolation in \pkg{chebpol} is easy to understand. 
+We have some points on the \(x\)-axis.
+At every point we have a value, and we just draw straight lines between the ``knots'':
+
+<<fig.dim=c(4,4),echo=FALSE>>=
+library(chebpol)
+set.seed(42)
+N <- 10
+pts <- as.numeric(seq(1,N))
+val <- runif(N)
+val[5] <- val[4]
+val[6] <- val[6] - 0.3
+val[7] <- val[8] + 0.00001
+s <- seq(1,N,len=1000)
+plot(pts,val,pch=20,xlab='x',ylab='y')
+ml <- ipol(val,grid=pts,method='multi')
+lines(s,ml(s))
+@ 
+
+There is another way to think about this, we can imagine that at each
+knot \(i\) there lives a function \(f_i(x)\). Whenever we are between
+two knots, the interpolated value is a convex combination of the two
+functions at each side. Say we are in \(x=3.3\). We should have a part
+of \(f_3(3.3)\), and a part of \(f_4(3.3)\), the value should be
+\(0.7f_3(3.3) + 0.3f_4(3.3)\), or more generally for \(3 \leq x \leq
+4\), \(t f_3(x) + (1-t)f_4(x)\) where \(0 \leq t=4-x \leq 1\).  In the
+multilinear case, all the functions are constant, and equal to the
+value in the point where it lives.
+
+<<out.width='0.5\\linewidth', echo=FALSE>>=
+plot(pts,val,pch=20,xlab='x',ylab='y')
+for(i in seq_along(pts)) {
+    lines(pts[i]+c(-1,1),c(val[i],val[i]))
+}
+@ 
+
+When we make a convex combination of two constant values \(v_i\) and
+\(v_{i+1}\), we obtain a straight line: \(t v_i + (1-t) v_{i+1}\).
+This linear interpolation is faithful to the data in the sense that
+it honours local extrema as well as monotonicity.
+
+In the stalker spline we replace these constant functions with non-constant
+functions. I.e. the function \(f_i(x)\) should not be constant, but pass
+through the 3 knots \(i-1, i\) and \(i+1\). A classical method is to
+let \(f_i\) be the unique quadratic which passes through the three knots. 
+
+<<fig.dim=c(5,5), echo=FALSE>>=
+plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
+for(i in seq_along(pts)[c(-1,-length(pts))]) {
+    a <- val[i]
+    b <- (val[i+1] - val[i-1])/2
+    c <- val[i+1]-a-b
+    ss <- seq(-1,1,len=20)
+    lines(ss+i,a+b*ss+c*ss^2,col=c('blue','green','red')[i%%3+1])
+}
+@ 
+
+The interpolated value between two knots is still a convex combination
+of the two functions living there. The result is that the interpolant between
+any two points is a cubic, with a value between the two functions
+living there.
+
+In the random points
+we have chosen, we have deliberately made the fourth and fifth points
+equal. The 7th and 8th differ by only 0.00001. 
+This accentuates a phenomenon which in some cases can be
+a problem, no polynomial except for the constant
+can be constant on an interval. There is ``overshoot'' between knots
+4 and 5. Indeed, many of the functions overshoot, like between 7 
+and 8.
+
+
+The idea behind the stalker spline is to reduce the overshoot, this is
+achieved by ensuring that if the knots \(i-1, i\) and \(i+1\) are
+monotonic (either increasing or decreasing), then the function
+\(f_i(x)\) will also be monotonic.  Other splines, like the Fritsch-Carlson spline in
+\code{splinefun(...,method='mono.FC')} also does something similar.
+We achieve this by non-traditionally using a
+fractional degree, i.e. a function of the form \(a + bx + c|x|^r\),
+with \(1\leq r \leq 2\).
+
+\section{The stalker spline}
+To simplify, we consider a basis function \(f(x)\) on the
+interval \([-1,1]\). We have its function values in the three knots
+\(f(-1) = v_-\), \(f(0) = v_0\), and \(f(1) = v_+\). We assume
+
+\begin{equation}
+f(x) = a + bx + c|x|^r.
+\end{equation}
+Inserting our three points, we obtain three equations with three unknowns:
+\begin{equation}\label{cdef}
+\begin{aligned}
+&a - b + c &= v_-,\\
+&a &= v_0,\\
+&a + b + c &= v_+.\\
+\end{aligned}
+\end{equation}
+
+The solution is 
+\begin{equation}\label{cvals}
+\begin{aligned}
+a &= v_0,\\
+b &= \frac12 (v_+-v_-),\\
+c &= \frac12 (v_+ + v_-) - v_0.\\
+\end{aligned}
+\end{equation}
+
+These coefficients will work with any \(r\). Typically we will pick
+\(r = 2\), but
+as we have seen, this may destroy monotonicity.
+The three knots are monotonic (either increasing or decreasing)
+whenever \(|c| < |b|\). This can be seen from equation~\eqref{cdef}.
+Monotonicity occurs when \(v_+ - v_0 = b+c\) has the same sign 
+as \(v_0 - v_- = b-c\), which is precisely when \(|c| < |b|\).
+
+If this is the case we will use monotonicity
+to find a suitable \(r\).  To be specific, we have
+\begin{equation}\label{deriv}
+f'(x) = b + cr|x|^{r-1}\sign(x),
+\end{equation}
+where \(\sign(x)\) is the sign function.  We have a critical point
+\(f'(x) = 0\) for \(|x|^{r-1}\sign(x) = -b/(cr)\). This equation has a
+solution in \(-1 < x < 1\) if \(|b| < r|c|\).  We pick an \(r\) so
+that the critical point disappears from the interior.  More
+specifically, if \(r=2\) results in non-monotonicity, i.e.\ if
+\(|b| < 2|c|\), we pick the largest \(r\) which will make \(f(x)\)
+monotonic. That is, \(r = |b/c| < 2\), this will relegate the
+critical point to one of the end points.
+
+There are some special cases.  What if \(c=0\)? This
+only happens when the knots are collinear, i.e. on a straight line,
+but then \(r\) is irrelevant,
+so we do not need to compute it.
+What about the corner case \(|b|=|c|\)? This happens if \(v_0\) equals
+either \(v_-\) or \(v_+\), i.e. if we have a horizontal region. In
+this special case, \(r=1\), and we have a non-differentiable 
+\(f(x) = a + b(x \pm |x|)\), which is constant on one side of 0 and linear
+on the other.
+
+At the outset, we only need to adjust \(r\) away from 2 when there is
+monotonicity which is violated by a quadratic, i.e. 
+when \(|c| < |b| < 2|c|\). If we stick strictly to this idea,
+it means that as soon as \(|b| < |c|\), we will change the degree
+\(r\) from 1 to 2 in a jump. That is, for \(|b|=|c|\) we have a
+constant/linear function, but if \(|b|\) decreases ever so little,
+\(|b| = |c| - \epsilon\), we suddenly shift to a quadratic which may
+have considerable overshoot.  To make this transition smoother, we (somewhat
+arbitrarily) set
+\(r = |c/b|\) whenever \(|c/2| < |b| < |c|\), i.e. we gradually creep
+back to \(r=2\).
+
+Here is a plot of some of the functions for the case \(v_-=0\), \(v_+=1\),
+with varying \(v_0\) (the black dots).
+
+<<echo=FALSE,fig.dim=c(6,6)>>=
+fun <- function(x,f0) {
+    a <- f0
+    b = 0.5
+    c = 0.5-a
+    if(abs(c) <= abs(b)) {
+        # monotonic function
+        pw <- if(2*abs(c) >= abs(b)) abs(b/c) else 2
+    } else {
+        pw <- abs(c/b)
+    }
+    if(pw > 2) pw <- 2
+    a + b*x + c*abs(x)^pw
+}
+
+s <- seq(-1,1,len=1000)
+plot(range(s),c(-0.7,1.7),pch='',xlab='x',ylab='y')
+invisible(sapply(seq(-0.7,1.7,len=41), function(f0) {
+    val <- sapply(s, fun, f0=f0)
+    points(0,f0,pch=20)
+    lines(s,val,col='blue')
+}))
+# paint the exact quadratic in green, i.e. where 2c = b
+# f0=0.25
+lines(s,sapply(s,fun,f0=0.25),col='lightgreen',lwd=2)
+lines(s,sapply(s,fun,f0=0.75),col='lightgreen',lwd=2)
+lines(s,sapply(s,fun,f0=-0.5),col='darkgreen',lwd=2)
+lines(s,sapply(s,fun,f0=1.5),col='darkgreen',lwd=2)
+lines(s,sapply(s,fun,f0=0),col='red',lwd=2)
+lines(s,sapply(s,fun,f0=1),col='red',lwd=2)
+clip(0,0.5,-2,2)
+abline(h=-0.7,lty=2)
+clip(-0.5/(2*(0.5+0.7)),0.5,-2,2)
+abline(h=-0.7-0.25/(4*(0.5+0.7)), lty=2)
+clip(-2,2,-2,2)
+text(x=0.7,y=-0.63,'} overshoot',pos=1)
+@ 
+
+Functions either inside the light green or outside the dark green curves
+are quadratic. Functions inside the red parallellogram are monotonic.
+Every function except for the two red ones are differentiable.
+If we let \(|v_0|\) grow further, the function will stay quadratic, and
+the extreme point and the overshoot will converge to 0. If either \(v_-\)
+or \(v_+\) grows, \(|b/c|\) converges to 1, so we will converge
+to the non-differentiable case. 
+
+\section{Summary}
+To sum up, the function passing through \((-1,v_-)\), \((0,v_0)\) and
+\((1,v_+)\) is 
+\begin{equation}
+f(x) = a + bx + c|x|^r.
+  \end{equation}
+The coefficients \(a\), \(b\), and \(c\) are as in~\eqref{cvals}. For \(c\neq 0\) the exponent \(r\) is 
+chosen as follows:
+\begin{equation}
+r = \begin{cases}
+ |b/c| &\text{for \(|c| \leq |b| < 2|c|\)},\\
+ |c/b| & \text{for \(|b| < |c| < 2|b|\)},\\
+ 2 & \text{otherwise}.
+\end{cases}
+\end{equation}
+
+It is clear that \(1 \leq r \leq 2\).
+The functions with \(1 < r < 2\) are everywhere
+differentiable, but the second derivative is unbounded near 0, so
+the graph may turn arbitrarily abruptly in the knots.
+
+We define the overshoot as 0 for monotonic knots, and as \(|v_0 - f(x_0)|\) where
+\(x_0\) is the critical point of the function: \(f'(x_0) = 0\).
+From equation~\eqref{deriv} we have by elementary calculus \(x_0 = -\sign(bc)|b/(rc)|^{1/(r-1)}\).  
+If \(|b| >= 2|c|\) then \(x \notin (-1,1)\), hence the min/max
+occurs in an end point, in which case it is not an overshoot.  
+We look at the case \(|b| < r|c|\).
+
+For \(r=2\) we must by definition have \(|c| \geq 2|b|\).
+We have \(x_0 = -b/(2c)\). The function value in \(- b/(2c)\) is
+\(a-b^2/(4c)\), the vertical distance from the point \(v_0=a\) is
+\(d = |b^2/(4c)| \leq |b|/8\). Now, \(|b|\) is half the distance between
+\(v_+\) and \(v_-\), so the overshoot will always be smaller than
+\(|v_+ - v_-|/16\) for \(r=2\).
+
+For \(r < 2\), \(r\) is either equal to
+\(|b/c|\), in which case there is no overshoot, or \(r=|c/b|\) when
+\(|c/2| < |b| < |c|\). We have \(x_0 = -\sign(bc) |b/(rc)|^{1/(r-1)}  = 
+-\sign(bc)r^{2/(1-r)}.\)
+
+The function value in the extreme point \(x_0\) is then
+\(a - |b| \sign(c) r^{2/(1-r)} +  cr^{2r/(1-r)}\). The distance to \(v_0=a\) is
+\(d_r = \left|  |c| r^{2r/(1-r)} - |b| r^{2/(1-r)}  \right| =
+|b| \left| r^{(1+r)/(1-r)} - r^{2/(1-r)}\right|\).
+Again, it is easy to show by elementary calculus that \(d_r\) is increasing in \(r\),
+so \(d_r  \leq |b|/8\).
+
+We can prove more. If we have \(|b| < |c|\) it means that \(v_0\) is the smallest
+or the largest of the three knots. To simplify we assume that \(v_0 < v_- < v_+\), i.e. that
+\(0 < b < c < 2b\). We are below the red area in the above diagram, the situation is symmetric above.
+We have that \(c-b = v_- - v_0\), the amount that
+the middle knot is below the next lowest knot. We also have \(c-b = b(r-1)\).
+If we compute the overshoot as a fraction of this ``knot overshoot'': \(d_r/(c-b) = d_r/(b(r-1))\), again
+we get \(d_r/(v_- - v_0) =| r^{(1+r)/(1-r)} - r^{2/(1-r)} |/(r-1) \leq e^{-2} \approx 0.135\). (check w/maple.)
+
+In short, the overshoot is always less than 14\% of the vertical distance from the lowest/highest knot
+to the next lowest/highest knot.
+
+\subsection{Some variations}
+If the sharp turns in flat areas is a problem, it is possible
+to enforce a minimum degree, e.g. let \(r = \max(1.2,|b/c|)\), no
+changes to \(a\), \(b\), and \(c\) are necessary. This avoids the
+non-differentiable case for \(|b|=|c|\) as well as the very
+sharp turns when \(|b|\) is close to \(|c|\) when two consecutive
+values are very close, but it will result in
+larger overshoot.
+
+There is a basis function in every knot, so when \(x_2 - x_1 = 1\) and 
+\(x_1 \leq x \leq x_2\) we glue the functions \(f_1\) and \(f_2\) together
+as a convex combination \(tf_1(x-x_1) + (1-t)f_2(x-x_2)\). By default
+we choose \(t = x_2 - x\). It also works by choosing some other \emph{blending function} \(t =t(x)\) as long
+as \(t(x_1) = 1\) and \(t(x_2) = 0\). We may e.g.\ use \(t(x) = \cos^2(\frac\pi2 (x-x_1))\).
+
+\section{Examples}
+In this section we compare the stalker spline to the 
+\code{"natural"} and \code{"mono.FC"} spline from \code{stats::splinefun}.
+We also illustrate a stalker spline with minimum degree 1.5.
+
+<<echo=FALSE,fig.dim=c(5.5,5.5)>>=
+interp <- function(x,val,pts,mindeg=1,maxdeg=2,bd=1) {
+    N <- length(pts)
+    i <- findInterval(x,pts)
+    if(i == N) return(val[N])
+    # compute the share of the interval from the left
+    tl <- (x-pts[i])/(pts[i+1]-pts[i])
+    tu <- tl-1
+    if(i == 1) {
+        al <- val[1]
+        bl <- val[2]-val[1]
+        cl <- 0
+    } else {
+        al <- val[i]
+        cl <- 0.5*(val[i-1]+val[i+1])-val[i]
+        bl <- 0.5*(val[i+1]-val[i-1])
+    }
+    if(i == N-1) {
+        au <- val[N]
+        bu <- val[N]-val[N-1]
+        cu <- 0
+    } else {
+        au <- val[i+1]
+        bu <- 0.5*(val[i+2] - val[i])
+        cu <- 0.5*(val[i+2] + val[i]) - val[i+1]
+    }
+
+    if(abs(cl) < abs(bl)) {
+        pwl <- if(2*abs(cl) >= abs(bl)) abs(bl/cl) else 2
+    } else {
+        pwl <- abs(cl/bl)
+    }
+    if(abs(cu) < abs(bu)) {
+        pwu <- if(2*abs(cu) >= abs(bu)) abs(bu/cu) else 2
+    } else {
+        pwu <- abs(cu/bu)
+    }
+#    message('pw ',round(pwl,2), ' ', round(pwu,2))
+    if(is.na(pwl) || pwl > maxdeg) pwl <- maxdeg
+    if(pwl < mindeg) pwl <- mindeg
+    if(is.na(pwu) || pwu > maxdeg) pwu <- maxdeg
+    if(pwu < mindeg) pwu <- mindeg
+    vl <- al + bl*tl + cl*abs(tl)^pwl
+    vu <- au + bu*tu + cu*abs(tu)^pwu
+#    tl <- cospi(0.5*(x-pts[i]))^2
+    (1-tl^bd)*vl + tl^bd*vu
+}
+
+pts <- pts-min(pts)
+pts <- pts/max(pts)
+plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
+ns <- splinefun(pts,val,method='natural')
+ms <- splinefun(pts,val,method='mono')
+s <- seq(0,1,len=1000)
+lines(s,ns(s),col='blue')
+lines(s,ms(s),col='green')
+lines(s, sapply(s,interp,val=val,pts=pts),col='magenta')
+lines(s, sapply(s,interp,val=val,pts=pts,mindeg=1.5),col='red')
+legend('topright',legend=c('stalker','mono','natural','stalker 1.5'),
+       fill=c('magenta','green','blue','red'))
+@ 
+
+Note that both the stalker and the \code{"mono.FC"} spline honours the
+completely flat region between points 4 and 5, but between points 7
+and 8 \code{"mono.FC"} has considerable overshoot, even though the
+points are very close. The reason is that point 8 is slightly lower
+than point 7, so that points 7-10 are not monotonic, and then the
+spline there abandons its monotonicity constraint entirely.  Mathematically,
+the stalker spline is differentiable except in points 4 and 5, even though it
+looks like a sharp corner in point 8 due to a very large second derivative.
+
+We also illustrate the same splines on a monotonic set of points. If all the
+knots are monotonic, the Fritsch-Carlson spline is superb, it ensures monotonicity
+and differentiability. The stalker spline does not in case there are completely
+flat regions, then differentiability is abandoned.
+
+<<fig.dim=c(5,5),echo=FALSE>>=
+val <- sort(val)
+plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
+ns <- splinefun(pts,val,method='natural')
+ms <- splinefun(pts,val,method='mono')
+s <- seq(0,1,len=1000)
+lines(s,ns(s),col='blue')
+lines(s,ms(s),col='green')
+lines(s, sapply(s,interp,val=val,pts=pts),col='magenta')
+lines(s, sapply(s,interp,val=val,pts=pts,mindeg=1.5),col='red')
+legend('topleft',legend=c('stalker','mono','natural','stalker 1.5'),
+       fill=c('magenta','green','blue','red'))
+@ 
+
+An interesting case is when the knots are pairwise constant. The stalker spline
+will in this case reduce to a linear interpolation. The knots are not
+exactly pairwise constant, they differ by \(10^{-16}\). This is sufficient
+to make \code{"code.FC"} overshoot.
+
+<<fig.dim=c(5,5),echo=FALSE>>=
+val <- rep(runif(N/2),each=2) + c(0,1e-16)
+plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
+ns <- splinefun(pts,val,method='natural')
+ms <- splinefun(pts,val,method='mono')
+s <- seq(0,1,len=1000)
+lines(s,ns(s),col='blue')
+lines(s,ms(s),col='green')
+lines(s, sapply(s,interp,val=val,pts=pts),col='magenta')
+lines(s, sapply(s,interp,val=val,pts=pts,mindeg=1.5),col='red')
+legend('topleft',legend=c('stalker','mono','natural','stalker 1.5'),
+       fill=c('magenta','green','blue','red'))
+@ 
+\end{document}

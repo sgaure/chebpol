@@ -24,7 +24,7 @@ vectorfun <- function(e,arity,args=alist(x=),domain=NULL) {
       stop(sprintf('Function should take %d arguments, you supplied a vector of length %d',arity,length(x)))
   }, list(fun=compiler::cmpfun(fun)))
   formals(f) <- args
-  structure(cmpfun(f),arity=arity,domain=as.data.frame(domain),
+  structure(compiler::cmpfun(f),arity=arity,domain=as.data.frame(domain),
             chebpol.version=utils::packageVersion('chebpol'))
 }
 
