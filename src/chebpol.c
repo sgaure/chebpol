@@ -1,12 +1,3 @@
-#include <math.h>
-#include <Rmath.h>
-#include <R.h>
-#include <Rdefines.h>
-#include <R_ext/Rdynload.h>
-#include <R_ext/BLAS.h>
-#include <R_ext/Lapack.h>
-#include <R_ext/Applic.h>
-#include <R_ext/Visibility.h>
 #include "config.h"
 #include "chebpol.h"
 #define UNUSED(x) (void)(x)
@@ -626,7 +617,7 @@ static SEXP R_mlippred(SEXP sgrid, SEXP values) {
   return resvec;
 }
 
-static double C_evalmlip(const int rank, double *x, double **grid, int *dims, double *values) {
+static double C_evalmlip(const int rank, double *x, double **grid, int *dims, double *values, int smooth) {
 
   double weight[rank];
   int valpos = 0;
@@ -663,9 +654,19 @@ static double C_evalmlip(const int rank, double *x, double **grid, int *dims, do
     double cw = 1;
     for(int g = 0; g < rank; g++) {
       if( (1<<g) & i) {
-	cw *= weight[g];
+	if(smooth) {
+	  double sw = sinpi(0.5*weight[g]);
+	  cw *= sw*sw;
+	} else {
+	  cw *= weight[g];
+	}
       } else {
-	cw *= 1.0-weight[g];
+	if(smooth) {
+	  double sw = sinpi(0.5*(1-weight[g]));
+	  cw *= sw*sw;
+	} else {
+	  cw *= 1.0-weight[g];
+	}
 	vpos -= stride;
       }
       stride *= dims[g];
@@ -676,13 +677,13 @@ static double C_evalmlip(const int rank, double *x, double **grid, int *dims, do
 }
 
 /* Then a multilinear approximation */
-static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads, SEXP spare) {
+static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads, SEXP Ssmooth) {
   const int rank = LENGTH(sgrid);
   int gridsize = 1;
   int dims[rank];
   int threads = INTEGER(AS_INTEGER(Rthreads))[0];
   double *grid[rank];
-  UNUSED(spare);
+  int smooth = isNull(Ssmooth) ? 0 : INTEGER(AS_INTEGER(Ssmooth))[0];
   if(!IS_NUMERIC(values)) error("values must be numeric");
   if(!IS_NUMERIC(x)) error("argument x must be numeric");  
   if(isMatrix(x) ? (nrows(x) != rank) : (LENGTH(x) != rank))
@@ -708,7 +709,7 @@ static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads, SEXP spar
   double *out = REAL(resvec);
 #pragma omp parallel for num_threads(threads) schedule(static) if (numvec > 1 && threads > 1)
   for(int i = 0; i < numvec; i++) {
-    out[i] = C_evalmlip(rank,xp+i*rank,grid,dims,REAL(values));
+    out[i] = C_evalmlip(rank,xp+i*rank,grid,dims,REAL(values),smooth);
   }
   UNPROTECT(1);
   return resvec;
@@ -767,7 +768,7 @@ static double findsimplex(double *x, double *knots, int *dtri, SEXP adata, int e
     for(int d = 0; d < dim; d++) vec[d] = x[d];
     vec[dim] = 1.0;
     F77_CALL(dgetrs)("N", &N, &one, lumat, &N, ipiv, vec, &N, &info);
-    for(int d = 0; d < N; d++) if(vec[d] < 0) {bad = 1; break;}
+    for(int d = 0; d < N; d++) if(vec[d] < -1e-10) {bad = 1; break;}
     if(bad) continue;
 
     // We found it
@@ -945,6 +946,8 @@ R_CallMethodDef callMethods[] = {
   {"evalrbf", (DL_FUNC) &R_evalrbf, 3},
   {"evalpolyh", (DL_FUNC) &R_evalpolyh, 7},
   {"evalsl", (DL_FUNC) &R_evalsl, 8},
+  {"evalstalker", (DL_FUNC) &R_evalstalker, 6},
+  {"makestalker", (DL_FUNC) &R_makestalker, 3},
   {"analyzesimplex", (DL_FUNC) &R_analyzesimplex, 3},
   {"havealglib", (DL_FUNC) &R_havealglib, 0},
   {NULL, NULL, 0}

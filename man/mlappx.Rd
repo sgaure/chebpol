@@ -26,10 +26,13 @@ hypercube as well, as a linear extension.
 Multilinear interpolation on an arbitrary Cartesian product.
 }
 \details{
-A call \code{fun <- mlappx(val,grid)} creates a multilinear interpolation on
+A call \code{fun <- mlappx(val,grid)} creates a multilinear interpolant on
 the grid.  The value on the grid points will be exact, the value between the
 grid points is a convex combination of the values in the corners of the
-hypercube surrounding it.
+hypercube surrounding it. The interpolant has an argument \code{smooth} which
+defaults to \code{FALSE}. It can be set to \code{TRUE} to create smoothed corners by
+simplistically forcing the derivative to be zero in every corner, essentially like
+a stalker spline of degree 0.
 
 If \code{val} is a function it will be evaluated on the grid.
 }

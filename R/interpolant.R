@@ -1,9 +1,10 @@
 #' Evaluate an interpolant in a point
 #'
-#' An interpolant is a function which has prespecified values in some
+#' An interpolant is a function returned by \code{\link{ipol}} which has prespecified values in some
 #' points, and which fills in between with some reasonable values.
 #'
 #' @name interpolant
+#' @aliases chebyshev multilinear fh uniform general polyharmonic simplex stalker crbf
 #' @param x The argument of the function. A function of more then one variable takes a
 #' vector. \code{x} can also be a matrix of column vectors.
 #' @param threads The number of threads to use for evaluation. All  interpolants created by
@@ -11,6 +12,10 @@
 #' be evaluated in parallel.
 #' @param ... Other parameters. Currently used for simplex linear interpolants with the logical argument
 #' \code{epol} which makes the interpolant extrapolate to points outside the domain.
+#' The stalker spline has three such arguments: \code{mindeg} is the minimum degree, \code{maxdeg} is
+#' the maximum degree, and a logical \code{smooth}.
+#' The multilinear interpolant has a logical argument \code{smooth} for smoothing the corners by enforcing
+#' the derivative there to be 0.
 #' @return A numeric. If more than one point was evaluated, a vector.
 #' @examples
 #' grid <- list(x=seq(0,1,length.out=10), y=seq(0,1,length.out=10))

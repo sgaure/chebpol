@@ -37,8 +37,9 @@ in the data, though not entirely. It is achieved by somewhat non-traditional
 means, by sacrificing analyticity, and in a corner case even differentiability.
 The name comes from the fact that it follows the data frighteningly close, 
 though it sometimes seems stupid with little foresight. The interpolation isn't
-then a proper spline, since it is not a polynomial. We also obtain a limit in
-intuitive geometric terms on how large the overshoot can be.
+a proper spline, since it is not a polynomial. We also obtain a limit in
+intuitive geometric terms on how large the overshoot can be. The stalker spline
+can be used when a little more smoothness than multilinear is required.
 \end{abstract}
 \maketitle
 \section{Introduction}
@@ -118,7 +119,7 @@ The idea behind the stalker spline is to reduce the overshoot, this is
 achieved by ensuring that if the knots \(i-1, i\) and \(i+1\) are
 monotonic (either increasing or decreasing), then the function
 \(f_i(x)\) will also be monotonic.  Other splines, like the Fritsch-Carlson spline in
-\code{splinefun(...,method='mono.FC')} also does something similar.
+\code{splinefun(...,method='monoH.FC')} also does something similar.
 We achieve this by non-traditionally using a
 fractional degree, i.e. a function of the form \(a + bx + c|x|^r\),
 with \(1\leq r \leq 2\).
@@ -300,7 +301,22 @@ we get \(d_r/(v_- - v_0) =| r^{(1+r)/(1-r)} - r^{2/(1-r)} |/(r-1) \leq e^{-2} \a
 In short, the overshoot is always less than 14\% of the vertical distance from the lowest/highest knot
 to the next lowest/highest knot.
 
-\subsection{Some variations}
+\subsection{Blending}
+We always use normalized coordinates around a knot. When we
+evaluate a basis function around a knot \(x > x_0\), we use the
+normalized coordinate \(x' = (x-x_0)/(x_+-x_0)\), and on the left
+side we use \(x' = (x-x_0)/(x_0 - x_-)\).
+
+There is a basis function in every knot, so we glue the functions \(f_1\) and \(f_2\) together
+as a convex combination \(tf_1(x') + (1-t)f_2(x'-1)\) (\(x'-1\) is the normalized
+coordinate for \(f_2\), the basis function in the knot \(x_+\)). We can use a linear blender,
+\(t = 1 - x'\), but we may also introduce a \emph{blending function} \(t' =\beta(t)\) as long
+as \(\beta(0) = 0\) and \(\beta(1-t) = 1-\beta(t)\), and for smoothness \(\beta'(0) = \beta'(1) = 0\).
+The stalker interpolant returned by \code{ipol()} has a logical argument
+\code{smooth}. The default is \code{FALSE}
+which is \(\beta(t) = t\). If \code{TRUE} is specified, the blending function is
+\(\beta(t) = \sin^2(\pi t /2)\).
+
 If the sharp turns in flat areas is a problem, it is possible
 to enforce a minimum degree, e.g. let \(r = \max(1.2,|b/c|)\), no
 changes to \(a\), \(b\), and \(c\) are necessary. This avoids the
@@ -309,82 +325,30 @@ sharp turns when \(|b|\) is close to \(|c|\) when two consecutive
 values are very close, but it will result in
 larger overshoot.
 
-There is a basis function in every knot, so when \(x_2 - x_1 = 1\) and 
-\(x_1 \leq x \leq x_2\) we glue the functions \(f_1\) and \(f_2\) together
-as a convex combination \(tf_1(x-x_1) + (1-t)f_2(x-x_2)\). By default
-we choose \(t = x_2 - x\). It also works by choosing some other \emph{blending function} \(t =t(x)\) as long
-as \(t(x_1) = 1\) and \(t(x_2) = 0\). We may e.g.\ use \(t(x) = \cos^2(\frac\pi2 (x-x_1))\).
-
 \section{Examples}
 In this section we compare the stalker spline to the 
-\code{"natural"} and \code{"mono.FC"} spline from \code{stats::splinefun}.
+\code{"natural"} and \code{"monoH.FC"} spline from \code{stats::splinefun}.
 We also illustrate a stalker spline with minimum degree 1.5.
 
-<<echo=FALSE,fig.dim=c(5.5,5.5)>>=
-interp <- function(x,val,pts,mindeg=1,maxdeg=2,bd=1) {
-    N <- length(pts)
-    i <- findInterval(x,pts)
-    if(i == N) return(val[N])
-    # compute the share of the interval from the left
-    tl <- (x-pts[i])/(pts[i+1]-pts[i])
-    tu <- tl-1
-    if(i == 1) {
-        al <- val[1]
-        bl <- val[2]-val[1]
-        cl <- 0
-    } else {
-        al <- val[i]
-        cl <- 0.5*(val[i-1]+val[i+1])-val[i]
-        bl <- 0.5*(val[i+1]-val[i-1])
-    }
-    if(i == N-1) {
-        au <- val[N]
-        bu <- val[N]-val[N-1]
-        cu <- 0
-    } else {
-        au <- val[i+1]
-        bu <- 0.5*(val[i+2] - val[i])
-        cu <- 0.5*(val[i+2] + val[i]) - val[i+1]
-    }
-
-    if(abs(cl) < abs(bl)) {
-        pwl <- if(2*abs(cl) >= abs(bl)) abs(bl/cl) else 2
-    } else {
-        pwl <- abs(cl/bl)
-    }
-    if(abs(cu) < abs(bu)) {
-        pwu <- if(2*abs(cu) >= abs(bu)) abs(bu/cu) else 2
-    } else {
-        pwu <- abs(cu/bu)
-    }
-#    message('pw ',round(pwl,2), ' ', round(pwu,2))
-    if(is.na(pwl) || pwl > maxdeg) pwl <- maxdeg
-    if(pwl < mindeg) pwl <- mindeg
-    if(is.na(pwu) || pwu > maxdeg) pwu <- maxdeg
-    if(pwu < mindeg) pwu <- mindeg
-    vl <- al + bl*tl + cl*abs(tl)^pwl
-    vu <- au + bu*tu + cu*abs(tu)^pwu
-#    tl <- cospi(0.5*(x-pts[i]))^2
-    (1-tl^bd)*vl + tl^bd*vu
-}
-
+<<echo=FALSE,fig.dim=c(4,4)>>=
 pts <- pts-min(pts)
 pts <- pts/max(pts)
 plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
 ns <- splinefun(pts,val,method='natural')
 ms <- splinefun(pts,val,method='mono')
+st <- ipol(val,grid=pts,method='stalker')
 s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
 lines(s,ms(s),col='green')
-lines(s, sapply(s,interp,val=val,pts=pts),col='magenta')
-lines(s, sapply(s,interp,val=val,pts=pts,mindeg=1.5),col='red')
+lines(s, st(s), col='magenta')
+lines(s, st(s,mindeg=1.5),col='red')
 legend('topright',legend=c('stalker','mono','natural','stalker 1.5'),
        fill=c('magenta','green','blue','red'))
 @ 
 
-Note that both the stalker and the \code{"mono.FC"} spline honours the
+Note that both the stalker and the \code{"monoH.FC"} spline honours the
 completely flat region between points 4 and 5, but between points 7
-and 8 \code{"mono.FC"} has considerable overshoot, even though the
+and 8 \code{"monoH.FC"} has considerable overshoot, even though the
 points are very close. The reason is that point 8 is slightly lower
 than point 7, so that points 7-10 are not monotonic, and then the
 spline there abandons its monotonicity constraint entirely.  Mathematically,
@@ -396,36 +360,106 @@ knots are monotonic, the Fritsch-Carlson spline is superb, it ensures monotonici
 and differentiability. The stalker spline does not in case there are completely
 flat regions, then differentiability is abandoned.
 
-<<fig.dim=c(5,5),echo=FALSE>>=
+<<fig.dim=c(4,4),echo=FALSE>>=
 val <- sort(val)
 plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
 ns <- splinefun(pts,val,method='natural')
 ms <- splinefun(pts,val,method='mono')
+st <- ipol(val,grid=pts, method='stalker')
 s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
 lines(s,ms(s),col='green')
-lines(s, sapply(s,interp,val=val,pts=pts),col='magenta')
-lines(s, sapply(s,interp,val=val,pts=pts,mindeg=1.5),col='red')
+lines(s, st(s), col='magenta')
+lines(s, st(s,mindeg=1.5), col='red')
 legend('topleft',legend=c('stalker','mono','natural','stalker 1.5'),
        fill=c('magenta','green','blue','red'))
 @ 
 
 An interesting case is when the knots are pairwise constant. The stalker spline
-will in this case reduce to a linear interpolation. The knots are not
+will in this case reduces to a linear interpolation. The knots below are not
 exactly pairwise constant, they differ by \(10^{-16}\). This is sufficient
-to make \code{"code.FC"} overshoot.
+to make \code{"monoH.FC"} overshoot.
 
-<<fig.dim=c(5,5),echo=FALSE>>=
+<<fig.dim=c(4,4),echo=FALSE>>=
 val <- rep(runif(N/2),each=2) + c(0,1e-16)
 plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
 ns <- splinefun(pts,val,method='natural')
 ms <- splinefun(pts,val,method='mono')
+st <- ipol(val,grid=pts, method='stalker')
 s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
 lines(s,ms(s),col='green')
-lines(s, sapply(s,interp,val=val,pts=pts),col='magenta')
-lines(s, sapply(s,interp,val=val,pts=pts,mindeg=1.5),col='red')
+lines(s, st(s), col='magenta')
+lines(s, st(s,mindeg=1.5), col='red')
 legend('topleft',legend=c('stalker','mono','natural','stalker 1.5'),
        fill=c('magenta','green','blue','red'))
 @ 
+
+\section{Higher dimensions}
+The stalker spline in higher dimension is simplistic. It works on a grid.
+In each grid point, a stalker basis function is created.
+A point between the
+grid points is a combination of all the basis functions in the corners of the surrounding
+hypercube. I.e. the point is projected onto each border, the basis functions are evaluated
+there, and the values are blended ``in all directions'', i.e. with a weight which is the
+barycentric coordinate of point, i.e. the fraction of the hypervolume ``behind'' the point.
+
+In the figure below, we consider the corner \((0,0)\).
+There are basis stalker functions along the x-dimension \(f_1(x)\), 
+and along the y-dimension \(f_2(y)\). 
+The point is in \((0.3, 0.5)\). The x-axis basis function is evaluated in 0.3, \(v_1=f_1(0.3)\),
+the y-axis function is evaluated in 0.5, \(v_2 = f_2(0.5)\). More or less arbitrary, we
+take the average  \(v=(v_1+v_2)/2\) of these basis functions.
+The barycentric coordinate of \((0.3, 0.5)\) relative to the corner \((0,0)\) is the area
+of the upper right rectangle \(0.7 \times 0.5 = 0.35\). The contribution from
+the \((0,0)\) corner is \(0.35v\), or if we use a blending function \(t\):
+\(t(0.7)t(0.5)v\).
+For the other corners there are other basis functions which contribute likewise.
+
+<<fig.dim=c(3,3),echo=FALSE>>=
+plot(c(0,1,1,0,0),c(0,0,1,1,0),typ='l',xlab='',ylab='',bty='n')
+points(0.3,0.5,pch=20)
+abline(h=0.5)
+abline(v=0.3)
+@ 
+
+Then we take a look at 2d-interpolation, first the Maungawhau volcano with exaggerated height.
+
+<<volcano, fig.dim=c(4,4), fig.align='center', fig.pos='!ht', fig.cap='Maungawhau', out.width='.37\\linewidth', fig.ncol=2, fig.subcap=c('low resolution','multilinear','stalker','thin plate spline')>>=
+data(volcano)
+volc <- volcano[seq(1,nrow(volcano),3),seq(1,ncol(volcano),3)]/10 #low res volcano
+grid <- list(x=as.numeric(seq_len(nrow(volc))), y=as.numeric(seq_len(ncol(volc))))
+ph <- ipol(volc, grid=grid, method='polyharmonic',k=2)
+st <- ipol(volc, grid=grid, method='stalker')
+ml <- ipol(volc, grid=grid, method='multilinear')
+g <- list(x=seq(1,nrow(volc), len=100), y=seq(1,ncol(volc),len=100))
+par(mar=rep(0,4)); col <- 'green'
+light <- list(specular=0.2,ambient=0.0,diffuse=0.6)
+plot3D::persp3D(grid$x, grid$y, volc, colvar=NULL, lighting=light,
+        theta=135, ltheta=90, lphi=40, col=col, axes=FALSE, bty='n',scale=FALSE)
+for(f in list(ml, st, ph)) {
+plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,
+        theta=135, ltheta=90, lphi=40, col=col, axes=FALSE, bty='n', scale=FALSE)
+}
+@ 
+
+Then we interpolate some random points. There is
+no advanced shading in \code{plot3D::persp3D}, so the \(100\times 100\) resolution can be seen if you zoom in.
+<<fig.dim=c(3.5,3.5), fig.pos='!h', fig.align='center',fig.cap='Random surface',out.width='.4\\linewidth',fig.ncol=2,fig.subcap=c('stalker','simplex', 'stalker 1.5 smooth','thin plate spline')>>=
+set.seed(42); N <- 6
+grid <- list(x=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0), 
+             y=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0))
+val <- matrix(runif(N*N,0,0.3),N)
+st <- ipol(val,grid=grid, method='stalker')
+sl <- ipol(val,grid=grid, method='simplex')
+st1.5s <- function(x) st(x,mindeg=1.5,smooth=TRUE)
+ph <- ipol(val,grid=grid, method='polyharmonic',k=2)
+g <- list(x=seq(0,1, len=100), y=seq(0,1,len=100))
+par(mar=rep(0,4)); col <- 'green'
+for(f in list(st, sl, st1.5s, ph)) {
+  plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,
+         theta=135, ltheta=110, lphi=40, col=col, axes=FALSE, bty='n', scale=FALSE,zlim=c(0,1))
+}
+@ 
+
 \end{document}

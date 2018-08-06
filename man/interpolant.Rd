@@ -2,6 +2,15 @@
 % Please edit documentation in R/interpolant.R
 \name{interpolant}
 \alias{interpolant}
+\alias{chebyshev}
+\alias{multilinear}
+\alias{fh}
+\alias{uniform}
+\alias{general}
+\alias{polyharmonic}
+\alias{simplex}
+\alias{stalker}
+\alias{crbf}
 \title{Evaluate an interpolant in a point}
 \arguments{
 \item{x}{The argument of the function. A function of more then one variable takes a
@@ -12,13 +21,17 @@ vector. \code{x} can also be a matrix of column vectors.}
 be evaluated in parallel.}
 
 \item{...}{Other parameters. Currently used for simplex linear interpolants with the logical argument
-\code{epol} which makes the interpolant extrapolate to points outside the domain.}
+\code{epol} which makes the interpolant extrapolate to points outside the domain.
+The stalker spline has three such arguments: \code{mindeg} is the minimum degree, \code{maxdeg} is
+the maximum degree, and a logical \code{smooth}.
+The multilinear interpolant has a logical argument \code{smooth} for smoothing the corners by enforcing
+the derivative there to be 0.}
 }
 \value{
 A numeric. If more than one point was evaluated, a vector.
 }
 \description{
-An interpolant is a function which has prespecified values in some
+An interpolant is a function returned by \code{\link{ipol}} which has prespecified values in some
 points, and which fills in between with some reasonable values.
 }
 \examples{

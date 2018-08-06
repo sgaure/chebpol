@@ -5,7 +5,7 @@
 #' \code{ipol} is just a wrapper around the other functions in \pkg{chebpol}.
 #' Which arguments to specify depends on the method.
 #' 
-#' The method \code{"chebyshev"} needs only the number of Chebyshev knots to in
+#' The method \code{"chebyshev"} needs only the number of Chebyshev knots in
 #' each dimension. This is either the \code{"dim"} attribute of the array
 #' \code{val}, or the \code{dims} argument if \code{val} is a function.  Also
 #' the intervals can be specified if different from [-1, 1]. See
@@ -14,12 +14,13 @@
 #' The method \code{"uniform"} is similar to the \code{"chebyshev"}, but
 #' uniformly spaced knots are created. See \code{\link{ucappx}}.  The argument
 #' \code{intervals} generally goes with \code{dims} when something else than
-#' standard intervals \code{[-1, 1]} are used.
+#' standard intervals \code{[-1, 1]} are used. 
 #' 
-#' The method \code{"multilinear"}, \code{"fh"} (Floater-Hormann), and
+#' The methods \code{"multilinear"}, \code{"fh"} (Floater-Hormann), \code{"stalker"}, and
 #' \code{"general"} needs the argument \code{grid}.  These are the methods
 #' which can use arbitrary Cartesian grids.  See \code{\link{mlappx}},
-#' \code{\link{fhappx}}, and \code{\link{chebappxg}}.  The Floater-Hormann
+#' \code{\link{fhappx}}, and \code{\link{chebappxg}}.  The stalker spline
+#' is described in \code{vignette("stalker",package="chebpol")}. The Floater-Hormann
 #' method (\code{"fh"}) also needs the \code{k} argument, which is passed to
 #' the \code{d} argument of \code{\link{fhappx}}, the degree of the blending
 #' polynomials. It defaults to 4.
@@ -30,6 +31,9 @@
 #' The method \code{"simplexlinear"} needs the arguments \code{knots}. It creates a
 #' Delaunay triangulation from the knots, and does linear interpolation in each simplex
 #' by weighting the vertex values with the barycentric coordinates, see also \code{\link{slappx}}.
+#'
+#' If knots are required, but the grid argument is given, knots are constructed as
+#' \code{t(expand.grid(grid))}
 #' 
 #' The \code{"crbf"} is the multilayer compact radial basis function
 #' interpolation in ALGLIB (\url{http://www.alglib.net/interpolation/fastrbf.php}).
@@ -95,7 +99,7 @@
 #' @export
 ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
                  method=c('chebyshev','multilinear','fh','uniform','general','polyharmonic',
-                          'simplexlinear', 'crbf'),
+                          'simplexlinear', 'stalker', 'crbf'),
                  ...) {
   method <- match.arg(method)
   switch(method,
@@ -113,7 +117,12 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
            return(mlappx(val,grid,...))
          },
          simplexlinear={
-           if(is.null(knots)) stop('knots must be specified for simplex linear interpolation')
+           if(is.null(knots)) {
+             if(!is.null(grid)) 
+               knots <- t(expand.grid(grid))
+             else
+               stop('knots must be specified for simplex linear interpolation')
+           }
            return(slappx(val,knots,...))
          },
          fh={
@@ -126,6 +135,10 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
          },
          uniform={
            if(is.function(val) && is.null(dims)) stop('Must specify dims for uniform intervals')
+           if(is.null(intervals) && !is.null(grid)) {
+             intervals <- lapply(grid,range)
+             warning("intervals constructed from ranges of grid-argument")
+           }
            if(is.function(val)) return(ucappxf(val,dims,intervals,...))
            if(is.null(dim(val)) && !is.null(dims)) dim(val) <- dims
            return(ucappx(val,intervals))
@@ -139,9 +152,21 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
            return(chebappxg(val,grid))
          },
          polyharmonic={
-           if(is.null(knots)) stop('Must specify knots for polyharmonic splines.')
+           if(is.null(knots)) {
+             if(!is.null(grid)) 
+               knots <- t(expand.grid(grid))
+             else
+               stop('Must specify knots for polyharmonic splines.')
+           }
            if(is.null(k)) k <- 3
            return(polyh(val,knots,k,...))
+         },
+         stalker={
+           if(is.null(grid)) stop('grid must be specified for stalker interpolation')
+           if(!is.list(grid)) grid <- list(grid)
+           if(unsortedgrid(grid)) stop('grid must be distinct ordered values')
+           grid <- lapply(grid,as.numeric)
+           return(stalkerappx(val,grid))
          },
          crbf={
            if(is.null(knots)) stop('Must specify knots for radial basis functions.')

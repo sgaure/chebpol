@@ -55,6 +55,7 @@ fhappx <- function(val,grid=NULL, d=1, ...) {
   if(!is.list(grid)) grid <- list(grid)
   grid <- lapply(grid,as.numeric)
   if(is.function(val)) val <- evalongrid(val, grid=grid, ...)
+  if(!is.array(val)) dim(val) <- sapply(grid,length)
   dd <- as.integer(d)
   dd <- rep(dd, length(grid) %/% length(d))
   # calculate weights, formula 18 in Floater & Hormann, in C, parallelized

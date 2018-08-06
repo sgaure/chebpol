@@ -6,7 +6,7 @@
 \usage{
 ipol(val, dims = NULL, intervals = NULL, grid = NULL, knots = NULL,
   k = NULL, method = c("chebyshev", "multilinear", "fh", "uniform",
-  "general", "polyharmonic", "simplexlinear", "crbf"), ...)
+  "general", "polyharmonic", "simplexlinear", "stalker", "crbf"), ...)
 }
 \arguments{
 \item{val}{array or function. Function values on a grid, or the function
@@ -46,7 +46,7 @@ A wrapper for all the functions in the package
 \code{ipol} is just a wrapper around the other functions in \pkg{chebpol}.
 Which arguments to specify depends on the method.
 
-The method \code{"chebyshev"} needs only the number of Chebyshev knots to in
+The method \code{"chebyshev"} needs only the number of Chebyshev knots in
 each dimension. This is either the \code{"dim"} attribute of the array
 \code{val}, or the \code{dims} argument if \code{val} is a function.  Also
 the intervals can be specified if different from [-1, 1]. See
@@ -57,10 +57,11 @@ uniformly spaced knots are created. See \code{\link{ucappx}}.  The argument
 \code{intervals} generally goes with \code{dims} when something else than
 standard intervals \code{[-1, 1]} are used.
 
-The method \code{"multilinear"}, \code{"fh"} (Floater-Hormann), and
+The methods \code{"multilinear"}, \code{"fh"} (Floater-Hormann), \code{"stalker"}, and
 \code{"general"} needs the argument \code{grid}.  These are the methods
 which can use arbitrary Cartesian grids.  See \code{\link{mlappx}},
-\code{\link{fhappx}}, and \code{\link{chebappxg}}.  The Floater-Hormann
+\code{\link{fhappx}}, and \code{\link{chebappxg}}.  The stalker spline
+is described in \code{vignette("stalker",package="chebpol")}. The Floater-Hormann
 method (\code{"fh"}) also needs the \code{k} argument, which is passed to
 the \code{d} argument of \code{\link{fhappx}}, the degree of the blending
 polynomials. It defaults to 4.
@@ -71,6 +72,9 @@ The method \code{"polyharmonic"} needs the arguments \code{knots} and
 The method \code{"simplexlinear"} needs the arguments \code{knots}. It creates a
 Delaunay triangulation from the knots, and does linear interpolation in each simplex
 by weighting the vertex values with the barycentric coordinates, see also \code{\link{slappx}}.
+
+If knots are required, but the grid argument is given, knots are constructed as
+\code{t(expand.grid(grid))}
 
 The \code{"crbf"} is the multilayer compact radial basis function
 interpolation in ALGLIB (\url{http://www.alglib.net/interpolation/fastrbf.php}).
