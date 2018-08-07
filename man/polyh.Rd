@@ -4,9 +4,11 @@
 \alias{polyh}
 \title{Polyharmonic splines on scattered data}
 \usage{
-polyh(val, knots, k = 2, normalize = NA, nowarn = FALSE, ...)
+polyh(...)
 }
 \arguments{
+\item{...}{Further arguments to the function, if \code{is.function(val)}.}
+
 \item{val}{array or function. Function values on scattered data, or the
 function itself.}
 
@@ -19,8 +21,6 @@ polyharmonic spline.}
 normalized?}
 
 \item{nowarn}{logical. Avoid warning about fallback to least squares fit.}
-
-\item{...}{Further arguments to the function, if \code{is.function(val)}.}
 }
 \value{
 A \code{function(x)} defined on the multidimensional space,
@@ -47,7 +47,7 @@ vector of length 2 \code{c(a, b)} if the same normalization should apply in
 each dimension.  Set \code{normalize=FALSE} if you do not want any scaling.
 }
 \examples{
-
+\dontrun{
 # a function on a 20-dimensional space
 r <- runif(20)
 r <- r/sum(r)
@@ -58,5 +58,6 @@ phs <- polyh(f, knots, 3)
 # test it in a random point
 s <- runif(20)
 c(true=f(s), phs(s))
-
 }
+}
+\keyword{internal}

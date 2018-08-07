@@ -4,15 +4,15 @@
 \alias{slappx}
 \title{Simplex Linear approximation on scattered data}
 \usage{
-slappx(val, knots, ...)
+slappx(...)
 }
 \arguments{
+\item{...}{Further arguments to the function, if \code{is.function(val)}.}
+
 \item{val}{Array or function. Function values in the knots, or the function
 itself.}
 
 \item{knots}{matrix. Each column is a point in M-dimensional space.}
-
-\item{...}{Further arguments to the function, if \code{is.function(val)}.}
 }
 \value{
 A \code{function(x)} interpolating the values.
@@ -27,10 +27,13 @@ but some extrapolation will be returned instead if the interpolant is called wit
 argument \code{epol=TRUE}.
 }
 \examples{
+\dontrun{
 knots <- matrix(runif(3*1000), 3)
 f <- function(x) exp(-sum(x^2))
 g <- slappx(f, knots)
 a <- matrix(runif(3*6), 3)
 rbind(true=apply(a,2,f), sl=g(a))
+}
 
 }
+\keyword{internal}

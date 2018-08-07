@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2018-07-01 r74950) -- "Unsuffered Consequences"
+R version 3.4.4 (2018-03-15) -- "Someone to Lean On"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -51,7 +51,7 @@ Have FFTW: TRUE
 > if(havefftw()) {
 + # A long one-dimensional
 + f <- function(x) ifelse(x==0,0,sin(1/x))
-+ ch <- chebappxf(f,dims=50000)
++ ch <- ipol(f,dims=50000,method='chebyshev')
 + cat('Long test:',ch(0.03),f(0.03),ch(0.031),f(0.031),'\n')
 + }
 Long test: 0.9400964 0.9405296 0.7465345 0.7460684 
@@ -104,7 +104,6 @@ $z
 > s <- su^3
 > ## create approximation on the irregularly spaced grid
 > ch <- ipol(exp(s),grid=list(s), method='general')
-> #ch <- Vectorize(chebappxg(exp(s),list(s)))
 > ## test it:
 > r <- runif(1); cat('true:',exp(r),'appx:',ch(r),'\n')
 true: 1.414461 appx: 1.422548 
@@ -195,14 +194,16 @@ true 0.3503825 appx: 0.3504539 lip: 0.349812
 > f(a); phs(a)
 [1] 0.3536114
 [1] 0.3539679
-> phs <- polyh(f,knots,5,FALSE); nphs <- polyh(f,knots,5,TRUE)
+> phs <- ipol(f,knots=knots,k=5,method='poly',normalize=FALSE)
 Warning message:
-In polyh(f, knots, 5, FALSE) :
+In (function (val, knots, k = 2, normalize = NA, nowarn = FALSE,  :
   Failed to fit exactly, fallback to least squares fit. You could try normalize=TRUE.
+> nphs <- ipol(f,knots=knots,k=5,method='poly',normalize=TRUE)
 > phs(a); nphs(a)
 [1] 0.3537533
 [1] 0.3539086
-> phs <- polyh(f,knots,-1,FALSE); nphs <- polyh(f,knots,-1,TRUE)
+> phs <- ipol(f,knots=knots,k=-1,method='poly',normalize=FALSE)
+> nphs <- ipol(f,knots=knots,k=-1,method='poly',normalize=TRUE)
 > phs(a); nphs(a)
 [1] 0.3561987
 [1] 0.3523617
@@ -224,4 +225,4 @@ In polyh(f, knots, 5, FALSE) :
 > 
 > proc.time()
    user  system elapsed 
-  7.473   0.382   4.787 
+  3.014   1.305   2.116 

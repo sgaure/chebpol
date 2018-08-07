@@ -28,7 +28,8 @@ dimension.  These need not be Chebyshev-knots, nor evenly spaced.}
 
 \item{method}{character. The interpolation method to use.}
 
-\item{...}{Further arguments to the function, if \code{is.function(val)}.}
+\item{...}{Further arguments to the function, if \code{is.function(val)}. And some
+extra arguments for interpolant creation described in section Details.}
 }
 \value{
 A \code{function(x, threads=getOption('chebpol.threads'))} defined on a hypercube, an \link{interpolant}
@@ -44,34 +45,37 @@ A wrapper for all the functions in the package
 }
 \details{
 \code{ipol} is just a wrapper around the other functions in \pkg{chebpol}.
-Which arguments to specify depends on the method.
+Which arguments to specify depends on the method. The interpolation methods are described
+in \code{vignette("chebpol",package="chebpol")}.
 
 The method \code{"chebyshev"} needs only the number of Chebyshev knots in
 each dimension. This is either the \code{"dim"} attribute of the array
 \code{val}, or the \code{dims} argument if \code{val} is a function.  Also
-the intervals can be specified if different from [-1, 1]. See
-\code{\link{chebappx}}.
+the intervals can be specified if different from [-1, 1].
 
 The method \code{"uniform"} is similar to the \code{"chebyshev"}, but
-uniformly spaced knots are created. See \code{\link{ucappx}}.  The argument
+uniformly spaced knots are created.  The argument
 \code{intervals} generally goes with \code{dims} when something else than
 standard intervals \code{[-1, 1]} are used.
 
 The methods \code{"multilinear"}, \code{"fh"} (Floater-Hormann), \code{"stalker"}, and
 \code{"general"} needs the argument \code{grid}.  These are the methods
-which can use arbitrary Cartesian grids.  See \code{\link{mlappx}},
-\code{\link{fhappx}}, and \code{\link{chebappxg}}.  The stalker spline
+which can use arbitrary Cartesian grids.
+The stalker spline
 is described in \code{vignette("stalker",package="chebpol")}. The Floater-Hormann
-method (\code{"fh"}) also needs the \code{k} argument, which is passed to
-the \code{d} argument of \code{\link{fhappx}}, the degree of the blending
+method (\code{"fh"}) also needs the \code{k} argument, the degree of the blending
 polynomials. It defaults to 4.
 
 The method \code{"polyharmonic"} needs the arguments \code{knots} and
-\code{k}, see \code{\link{polyh}}.
+\code{k}. In addition it can take the logical argument \code{normalize}
+for normalizing the knots to the unit hypercube. The default is \code{NA}, which
+uses normalization if any of the knots are outside the unit hypercube. Also, a logical
+\code{nowarn} is accepted, it is used to suppress a warning in case the system can't
+be solved exactly and a least squares fallback method is used.
 
 The method \code{"simplexlinear"} needs the arguments \code{knots}. It creates a
 Delaunay triangulation from the knots, and does linear interpolation in each simplex
-by weighting the vertex values with the barycentric coordinates, see also \code{\link{slappx}}.
+by weighting the vertex values with the barycentric coordinates.
 
 If knots are required, but the grid argument is given, knots are constructed as
 \code{t(expand.grid(grid))}
@@ -79,8 +83,8 @@ If knots are required, but the grid argument is given, knots are constructed as
 The \code{"crbf"} is the multilayer compact radial basis function
 interpolation in ALGLIB (\url{http://www.alglib.net/interpolation/fastrbf.php}).
 It is only available if ALGLIB was available at
-compile time. In this case \code{k} must be a vector of length 3, the rbase,
-the number of layers and the non-linear smoothing parameter lambda.
+compile time. It takes the extra arguments \code{"rbase"}, \code{"layers"}, and
+\code{"lambda"}. These are discussed in the ALGLIB documentation.
 
 There are also some usage examples and more in \code{vignette("chebpol")} and \code{vignette('chebusage')}.
 }
@@ -111,7 +115,8 @@ knots <- matrix(runif(3*1000),3)
 ph2 <- ipol(f, knots=knots, k=2, method='poly')
 sl2 <- ipol(f, knots=knots, method='simplexlinear')
 # my alglib is a bit slow, so stick to 100 knots
-if(havealglib()) crb <- ipol(f, knots=knots[,1:100], k=c(2,5,0), method='crbf') 
+if(havealglib()) crb <- ipol(f, knots=knots[,1:100], method='crbf',
+  rbase=2, layers=5, lambda=0) 
 # make 7 points in R3 to test them on
 m <- matrix(runif(3*7),3)
 rbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ph2(m), sl=sl2(m),

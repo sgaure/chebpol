@@ -30,7 +30,7 @@
 #' @return A \code{function(x)} defined on the multidimensional space,
 #' approximating the given function.
 #' @examples
-#' 
+#' \dontrun{
 #' # a function on a 20-dimensional space
 #' r <- runif(20)
 #' r <- r/sum(r)
@@ -41,9 +41,11 @@
 #' # test it in a random point
 #' s <- runif(20)
 #' c(true=f(s), phs(s))
-#' 
+#' }
 #' @export
-polyh <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
+#' @keywords internal
+polyh <- function(...) deprecated('polyh',...)
+polyh.real <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
 # Linear polyharmonic splines. Centres are columns in matrix knots. Function values in val.
 # Quite slow for ncol(knots) > 3000 or so.  k=2 yields thin-plate splines.
 # There exist faster evaluation methods for dimensions <= 4

@@ -13,14 +13,18 @@
 #' but some extrapolation will be returned instead if the interpolant is called with the
 #' argument \code{epol=TRUE}.
 #' @examples
+#' \dontrun{
 #' knots <- matrix(runif(3*1000), 3)
 #' f <- function(x) exp(-sum(x^2))
 #' g <- slappx(f, knots)
 #' a <- matrix(runif(3*6), 3)
 #' rbind(true=apply(a,2,f), sl=g(a))
-#'
+#'}
+#' 
 #' @export
-slappx <- function(val, knots, ...) {
+#' @keywords internal
+slappx <- function(...) deprecated('slappx',...)
+slappx.real <- function(val, knots, ...) {
   x <- threads <- epol <- smooth <- NULL; rm(x,threads,epol,smooth)
   if(is.function(val)) val <- apply(knots,2,val)
   dtri <- t(geometry::delaunayn(t(knots),options="Qt Pp"))

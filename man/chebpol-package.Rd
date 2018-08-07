@@ -89,9 +89,7 @@ rbind(true=apply(m,2,f), cheb=ch(m), fh=fh(m))
 \seealso{
 \link{ipol}, \link{interpolant}
 }
-\concept{
-DCT Floater-Hormann
-}
+\concept{DCT Floater-Hormann}
 \keyword{Chebyshev}
 \keyword{DCT}
 \keyword{Floater-Hormann}

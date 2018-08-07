@@ -5,11 +5,13 @@
 \alias{ucappxf}
 \title{Interpolation on a uniform grid}
 \usage{
-ucappx(val, intervals = NULL)
+ucappx(...)
 
-ucappxf(fun, dims, intervals = NULL, ...)
+ucappxf(...)
 }
 \arguments{
+\item{...}{Further arguments to \code{fun}.}
+
 \item{val}{Array. Function values on a grid.}
 
 \item{intervals}{List of vectors of length two. Specifying the hypercube
@@ -18,8 +20,6 @@ extent in each dimension}
 \item{fun}{Function to be interpolated.}
 
 \item{dims}{Integer. Number of grid points in each dimension.}
-
-\item{...}{Further arguments to \code{fun}.}
 }
 \value{
 A \code{function(x)} defined on the hypercube, approximating the
@@ -54,6 +54,7 @@ approximation for some functions.
 }
 \examples{
 
+\dontrun{
 # Runge function
 f <- function(x) 1/(1+25*x^2)
 grid <- seq(-1,1,length.out=15)
@@ -63,5 +64,6 @@ uc <- Vectorize(ucappx(val))
 ch <- Vectorize(chebappxf(f,15))
 # test it at 10 random points
 t(replicate(10,{a<-runif(1,-1,1); c(arg=a, uc=uc(a), true=f(a), cheb=ch(a))}))
-
 }
+}
+\keyword{internal}

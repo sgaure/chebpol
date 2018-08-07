@@ -13,7 +13,7 @@
 \newcommand{\sign}{\operatorname{sgn}}
 %% \VignetteIndexEntry{Usage notes for package chebpol}
 %% \VignetteEngine{knitr::knitr}
-%% \VignetteDepends{cubature, lattice, plot3D}
+%% \VignetteDepends{plot3D}
 \setlength{\textwidth}{\paperwidth}
 \setlength{\textheight}{\paperheight}
 \addtolength{\textwidth}{-3cm}

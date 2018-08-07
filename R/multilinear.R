@@ -21,6 +21,7 @@
 #' given function.  The function yields values for arguments outside the
 #' hypercube as well, as a linear extension.
 #' @examples
+#' \dontrun{
 #' 
 #' ## evenly spaced grid-points
 #' su <- seq(0,1,length.out=10)
@@ -42,10 +43,12 @@
 #' a <- runif(2); ml2(a); f(a)
 #' # we also get an approximation outside of the domain, of disputable quality
 #' ml2(c(1,2)); f(c(1,2))
-#' 
+#' }
 #' @export
-mlappx <- function(val, grid, ...) {
-  x <- threads <- NULL; rm(x,threads) # avoid cran check warning 
+#' @keywords internal
+mlappx <- function(...) deprecated('mlappx',...)
+mlappx.real <- function(val, grid, ...) {
+  x <- threads <- smooth <- NULL; rm(x,threads,smooth) # avoid cran check warning 
   if(is.numeric(grid)) grid <- list(grid)
   if(any(sapply(grid,is.unsorted))) {
     if(!is.function(val)) stop('Grid points must be ordered in increasing order')

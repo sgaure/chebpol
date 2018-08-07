@@ -4,7 +4,6 @@
 #' points, and which fills in between with some reasonable values.
 #'
 #' @name interpolant
-#' @aliases chebyshev multilinear fh uniform general polyharmonic simplex stalker crbf
 #' @param x The argument of the function. A function of more then one variable takes a
 #' vector. \code{x} can also be a matrix of column vectors.
 #' @param threads The number of threads to use for evaluation. All  interpolants created by

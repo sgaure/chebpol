@@ -28,7 +28,8 @@
 #' given function.  The interpolant function uses the barycentric
 #' Floater-Hormann interpolation.
 #' @examples
-#' 
+#' \dontrun{
+#'  
 #' ## evenly spaced grid-points
 #' su <- seq(0,1,length.out=10)
 #' ## irregularly spaced grid-points
@@ -46,9 +47,12 @@
 #' # an equivalent would be fh2 <- fhappx(f,grid)
 #' 
 #' a <- runif(2); fh2(a); f(a)
-#' 
+#' }
 #' @export
-fhappx <- function(val,grid=NULL, d=1, ...) {
+#' @keywords internal
+fhappx <- function(...) deprecated('fhappx',...)
+
+fhappx.real <- function(val,grid=NULL, d=1, ...) {
   x <- threads <- NULL; rm(x,threads) # avoid warning about undefined vars
   if(is.null(grid)) 
     stop('Must specify grid')

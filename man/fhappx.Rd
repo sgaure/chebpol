@@ -4,9 +4,11 @@
 \alias{fhappx}
 \title{Floater-Hormann interpolation on a grid}
 \usage{
-fhappx(val, grid = NULL, d = 1, ...)
+fhappx(...)
 }
 \arguments{
+\item{...}{Further arguments to the function, if \code{is.function(val)}.}
+
 \item{val}{array or function. Function values on a grid, or the function
 itself. If it is the values, the \code{dim}-attribute must be appropriately
 set.}
@@ -15,8 +17,6 @@ set.}
 dimension.  These need not be Chebyshev-knots, nor evenly spaced.}
 
 \item{d}{integer. The degree of the blending polynomial.}
-
-\item{...}{Further arguments to the function, if \code{is.function(val)}.}
 }
 \value{
 A \code{function(x)} defined on the hypercube, approximating the
@@ -40,7 +40,8 @@ necessary.
 If \code{val} is a function it will be evaluated on the grid.
 }
 \examples{
-
+\dontrun{
+ 
 ## evenly spaced grid-points
 su <- seq(0,1,length.out=10)
 ## irregularly spaced grid-points
@@ -58,5 +59,6 @@ fh2 <- fhappx(evalongrid(f,grid=grid),grid=grid)
 # an equivalent would be fh2 <- fhappx(f,grid)
 
 a <- runif(2); fh2(a); f(a)
-
 }
+}
+\keyword{internal}

@@ -4,7 +4,8 @@
 \alias{chebeval}
 \title{Evaluate a Chebyshev interpolation in a point}
 \usage{
-chebeval(x, coef, intervals = NULL, threads = getOption("chebpol.threads"))
+chebeval(x, coef, intervals = NULL,
+  threads = getOption("chebpol.threads"))
 }
 \arguments{
 \item{x}{The point to evaluate.}
@@ -29,7 +30,7 @@ Given Chebyshev coefficients, evaluate the interpolation in a point.
 # make a function which is known to be unsuitable for Chebyshev approximation
 f <- function(x) sign(x)
 # make a standard Chebyshev interpolation
-ch <- Vectorize(chebappxf(f,50))
+ch <- ipol(f,dims=50,method='chebyshev')
 # then do a truncated interpolation
 val <- evalongrid(f,50)
 coef <- chebcoef(val)
@@ -38,7 +39,7 @@ coef[-(1:10)] <- 0
 # make a truncated approximation
 tch <- Vectorize(function(x) chebeval(x,coef))
 # make a lower degree also
-ch2 <- Vectorize(chebappxf(f,10))
+ch2 <- ipol(f,dims=10,method='chebyshev')
 # plot the functions
 \dontrun{
 s <- seq(-1,1,length.out=400)

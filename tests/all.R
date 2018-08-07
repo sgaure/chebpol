@@ -9,7 +9,7 @@ chebcoef(a)
 if(havefftw()) {
 # A long one-dimensional
 f <- function(x) ifelse(x==0,0,sin(1/x))
-ch <- chebappxf(f,dims=50000)
+ch <- ipol(f,dims=50000,method='chebyshev')
 cat('Long test:',ch(0.03),f(0.03),ch(0.031),f(0.031),'\n')
 }
 f <- function(x) exp(-sum(x^2))
@@ -41,7 +41,6 @@ su <- seq(0,1,length.out=10)
 s <- su^3
 ## create approximation on the irregularly spaced grid
 ch <- ipol(exp(s),grid=list(s), method='general')
-#ch <- Vectorize(chebappxg(exp(s),list(s)))
 ## test it:
 r <- runif(1); cat('true:',exp(r),'appx:',ch(r),'\n')
 
@@ -88,9 +87,11 @@ round(fivenum(phs(knots)-apply(knots,2,f)),6)
 # test it in a random point
 a <- runif(6,0,20)
 f(a); phs(a)
-phs <- polyh(f,knots,5,FALSE); nphs <- polyh(f,knots,5,TRUE)
+phs <- ipol(f,knots=knots,k=5,method='poly',normalize=FALSE)
+nphs <- ipol(f,knots=knots,k=5,method='poly',normalize=TRUE)
 phs(a); nphs(a)
-phs <- polyh(f,knots,-1,FALSE); nphs <- polyh(f,knots,-1,TRUE)
+phs <- ipol(f,knots=knots,k=-1,method='poly',normalize=FALSE)
+nphs <- ipol(f,knots=knots,k=-1,method='poly',normalize=TRUE)
 phs(a); nphs(a)
 
 

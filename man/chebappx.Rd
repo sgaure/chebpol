@@ -5,11 +5,13 @@
 \alias{chebappxf}
 \title{Chebyshev interpolation on a hypercube}
 \usage{
-chebappx(val, intervals = NULL)
+chebappx(...)
 
-chebappxf(fun, dims, intervals = NULL, ...)
+chebappxf(...)
 }
 \arguments{
+\item{...}{Further arguments to \code{fun}.}
+
 \item{val}{The function values on the Chebyshev grid. \code{val} should be
 an array with appropriate dimension attribute.}
 
@@ -19,8 +21,6 @@ dimension of the hypercube. If NULL, assume [-1,1] in each dimension.}
 \item{fun}{The function to be approximated.}
 
 \item{dims}{Integer. The number of Chebyshev points in each dimension.}
-
-\item{...}{Further arguments to \code{fun}.}
 }
 \value{
 A function defined on the hypercube. A Chebyshev approximation to
@@ -47,6 +47,7 @@ The approximation function may be evaluated outside the hypercube, but be
 aware that it may be highly erratic there, especially if of high degree.
 }
 \examples{
+\dontrun{
 
 f <- function(x) exp(-sum(x^2))
 ## we want 3 dimensions, i.e. something like
@@ -81,5 +82,6 @@ a <- c(runif(1,0,2),runif(1,0,1)); ch(a); f(a)
 f <- function(y) uniroot(function(x) y - x*exp(x), lower=-1,upper=3)$root
 W <- chebappxf(f,100,c(-exp(-1),3*exp(3)))
 W(10*pi)*exp(W(10*pi))/pi
-
 }
+}
+\keyword{internal}
