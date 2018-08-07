@@ -1,8 +1,9 @@
-#' Interpolation wrapper
+#' Create interpolating function.
 #' 
-#' A wrapper for all the functions in the package
+#' Create an interpolating function from given values. Several interpolation methods are
+#' supported.
 #' 
-#' \code{ipol} is just a wrapper around the other functions in \pkg{chebpol}.
+#' \code{ipol} is a wrapper around various interpolation methods in package \pkg{chebpol}.
 #' Which arguments to specify depends on the method. The interpolation methods are described
 #' in \code{vignette("chebpol",package="chebpol")}.
 #' 
@@ -31,7 +32,7 @@
 #' \code{nowarn} is accepted, it is used to suppress a warning in case the system can't
 #' be solved exactly and a least squares fallback method is used.
 #'
-#' The method \code{"simplexlinear"} needs the arguments \code{knots}. It creates a
+#' The method \code{"simplexlinear"} needs the argument \code{knots}. It creates a
 #' Delaunay triangulation from the knots, and does linear interpolation in each simplex
 #' by weighting the vertex values with the barycentric coordinates.
 #'

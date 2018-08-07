@@ -28,7 +28,7 @@
 #' @section Uniform grids:
 #' There are several options if your function must be evaluated in a uniform grid.
 #' There is the Floater-Hormann rational interpolation available with \code{\link{ipol}(...,method='fh')}.
-#' There is a a transformed Chebyshev variant \code{\link{ipol}(..., method='uniform')}.
+#' There is a transformed Chebyshev variant \code{\link{ipol}(..., method='uniform')}.
 #' @section Arbitrary grids:
 #' For grids which are not uniform, but still Cartesian products of one-dimensional grids,
 #' there is the Floater-Hormann interpolation \code{\link{ipol}(...,method='fh')}, and a transformed

@@ -11,7 +11,7 @@
 \newcommand{\NN}{\mathbb{N}}
 \newcommand{\figsize}{7cm}
 \newcommand{\sign}{\operatorname{sgn}}
-%% \VignetteIndexEntry{Usage notes for package chebpol}
+%% \VignetteIndexEntry{Description of the stalker spline}
 %% \VignetteEngine{knitr::knitr}
 %% \VignetteDepends{plot3D}
 \setlength{\textwidth}{\paperwidth}
@@ -473,7 +473,7 @@ grid <- list(x=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0),
 val <- matrix(runif(N*N,0,0.3),N)
 st <- ipol(val,grid=grid, method='stalker')
 sl <- ipol(val,grid=grid, method='simplex')
-st1.5s <- function(x) st(x,mindeg=1.5,smooth=0.5)
+st1.5s <- function(x) st(x,mindeg=1.5,smooth=1)
 ph <- ipol(val,grid=grid, method='polyharmonic',k=2)
 g <- list(x=seq(0,1, len=100), y=seq(0,1,len=100))
 par(mar=rep(0,4)); col <- 'green'
