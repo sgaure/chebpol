@@ -617,7 +617,8 @@ static SEXP R_mlippred(SEXP sgrid, SEXP values) {
   return resvec;
 }
 
-static double C_evalmlip(const int rank, double *x, double **grid, int *dims, double *values, int smooth) {
+static double C_evalmlip(const int rank, double *x, double **grid, int *dims, 
+			 double *values, double smooth) {
 
   double weight[rank];
   int valpos = 0;
@@ -645,6 +646,9 @@ static double C_evalmlip(const int rank, double *x, double **grid, int *dims, do
   }
 
   // loop over the corners of the box, sum values with weights
+  const double a3 = 0.5*(smooth - 1);
+  const double a1 = 1-a3;
+
   for(int i = 0; i < (1<<rank); i++) {
     // i represents a corner. bit=1 if upper corner, 0 if lower corner.
     // We should find its weight
@@ -654,18 +658,18 @@ static double C_evalmlip(const int rank, double *x, double **grid, int *dims, do
     double cw = 1;
     for(int g = 0; g < rank; g++) {
       if( (1<<g) & i) {
-	if(smooth) {
-	  double sw = sinpi(0.5*weight[g]);
-	  cw *= sw*sw;
+	if(smooth != 1.0) {
+	  double sw = 2*weight[g] - 1;
+	  cw *= 0.5*(1 + a1*sw + a3*sw*sw*sw);
 	} else {
 	  cw *= weight[g];
 	}
       } else {
-	if(smooth) {
-	  double sw = sinpi(0.5*(1-weight[g]));
-	  cw *= sw*sw;
+	if(smooth != 1.0) {
+	  double sw = 1-2*weight[g];
+	  cw *= 0.5*(1 + a1*sw + a3*sw*sw*sw);
 	} else {
-	  cw *= 1.0-weight[g];
+	  cw *= 1-weight[g];
 	}
 	vpos -= stride;
       }
@@ -683,7 +687,9 @@ static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads, SEXP Ssmo
   int dims[rank];
   int threads = INTEGER(AS_INTEGER(Rthreads))[0];
   double *grid[rank];
-  int smooth = isNull(Ssmooth) ? 0 : INTEGER(AS_INTEGER(Ssmooth))[0];
+  double smooth = isNull(Ssmooth) ? 0 : REAL(Ssmooth)[0];
+  smooth = 1-smooth;
+
   if(!IS_NUMERIC(values)) error("values must be numeric");
   if(!IS_NUMERIC(x)) error("argument x must be numeric");  
   if(isMatrix(x) ? (nrows(x) != rank) : (LENGTH(x) != rank))

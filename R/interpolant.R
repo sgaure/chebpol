@@ -13,9 +13,8 @@
 #' @param ... Other parameters. Currently used for simplex linear interpolants with the logical argument
 #' \code{epol} which makes the interpolant extrapolate to points outside the domain.
 #' The stalker spline has three such arguments: \code{mindeg} is the minimum degree, \code{maxdeg} is
-#' the maximum degree, and a logical \code{smooth}.
-#' The multilinear interpolant has a logical argument \code{smooth} for smoothing the corners by enforcing
-#' the derivative there to be 0.
+#' the maximum degree, and a numeric \code{smooth} between 0 and 1.
+#' The multilinear interpolant also has a numeric argument \code{smooth} for smoothing the corners.
 #' @return A numeric. If more than one point was evaluated, a vector.
 #' @examples
 #' grid <- list(x=seq(0,1,length.out=10), y=seq(0,1,length.out=10))

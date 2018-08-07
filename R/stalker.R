@@ -12,10 +12,12 @@ stalkerappx <- function(val, grid, ...) {
   val <- as.numeric(val)
   stalker <- .Call(C_makestalker, val, grid, getOption('chebpol.threads'))
   local(vectorfun({
-    .Call(C_evalstalker,x,stalker,mindeg,maxdeg,as.logical(smooth),threads)
+      if(is.na(smooth)) smooth <- 2-mindeg
+      .Call(C_evalstalker,x,stalker,as.numeric(mindeg),as.numeric(maxdeg),
+            as.numeric(smooth),threads)
   }, 
   length(grid), 
-  args=alist(x=,threads=getOption('chebpol.threads'),mindeg=1,maxdeg=2,smooth=FALSE),
+  args=alist(x=,threads=getOption('chebpol.threads'),mindeg=1,maxdeg=2,smooth=0),
   domain=lapply(grid,range)),
   list(stalker=stalker))
   

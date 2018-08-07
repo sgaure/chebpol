@@ -2,7 +2,7 @@
 
 static double evalstalker(const double *x, const int nrank, const int *rank, double **grid,
 			  const double *val, const double *b, const double *c, const double *d, 
-			  const double mindeg, const double maxdeg, const int smooth) {
+			  const double mindeg, const double maxdeg, const double smooth) {
   int strides[nrank];
   double nx[nrank];
   const double irank = 1.0/nrank;
@@ -17,6 +17,9 @@ static double evalstalker(const double *x, const int nrank, const int *rank, dou
     strides[r] = stride;
     stride *= rank[r];
   }
+  const double a3 = 0.5*(smooth - 1);
+  const double a1 = 1-a3;
+
   // Now, lowlow is the index of the lower, left corner 
   double Val = 0.0;
   for(int crn = 0; crn < (1<<nrank); crn++) {
@@ -41,9 +44,9 @@ static double evalstalker(const double *x, const int nrank, const int *rank, dou
       double e = d[idx];
       if(e < mindeg) e = mindeg;
       if(e > maxdeg) e = maxdeg;
-      if(smooth) {
-	double sw = sinpi(0.5*w);
-	ww *= sw*sw;
+      if(smooth != 1.0) {
+	double sw = 2*w - 1;
+	ww *= 0.5*(1 + a1*sw + a3*sw*sw*sw);
       } else {
 	ww *= w;
       }
@@ -85,8 +88,8 @@ SEXP R_evalstalker(SEXP Sx, SEXP stalker, SEXP Smindeg, SEXP Smaxdeg, SEXP Ssmoo
 				   LENGTH(Sgrid),nrank);
   double *grid[nrank];
 
-  int smooth = LOGICAL(Ssmooth)[0];
-  
+  double smooth = REAL(Ssmooth)[0];
+  smooth = 1-smooth;
   for(int i = 0; i < nrank; i++) grid[i] = REAL(VECTOR_ELT(Sgrid,i));
   SEXP ret = PROTECT(NEW_NUMERIC(N));
   double *out = REAL(ret);

@@ -307,23 +307,43 @@ evaluate a basis function around a knot \(x > x_0\), we use the
 normalized coordinate \(x' = (x-x_0)/(x_+-x_0)\), and on the left
 side we use \(x' = (x-x_0)/(x_0 - x_-)\).
 
-There is a basis function in every knot, so we glue the functions \(f_1\) and \(f_2\) together
-as a convex combination \(tf_1(x') + (1-t)f_2(x'-1)\) (\(x'-1\) is the normalized
-coordinate for \(f_2\), the basis function in the knot \(x_+\)). We can use a linear blender,
-\(t = 1 - x'\), but we may also introduce a \emph{blending function} \(t' =\beta(t)\) as long
-as \(\beta(0) = 0\) and \(\beta(1-t) = 1-\beta(t)\), and for smoothness \(\beta'(0) = \beta'(1) = 0\).
-The stalker interpolant returned by \code{ipol()} has a logical argument
-\code{smooth}. The default is \code{FALSE}
-which is \(\beta(t) = t\). If \code{TRUE} is specified, the blending function is
-\(\beta(t) = \sin^2(\pi t /2)\).
+There is a basis function in every knot, so we glue the functions
+\(f_1\) and \(f_2\) together as a convex combination \(tf_1(x') +
+(1-t)f_2(x'-1)\) (\(x'-1\) is the normalized coordinate for \(f_2\),
+the basis function in the knot \(x_+\)). We can use a linear blender,
+\(t = 1 - x'\), but we may also introduce a \emph{blending function}
+\(t' =\beta(t)\) as long as \(\beta(0) = 0\) and \(\beta(1-t) =
+1-\beta(t)\), and for smoothness \(\beta'(0) = \beta'(1) = 0\).  The
+stalker interpolant returned by \code{ipol()} has a numeric argument
+\code{smooth}. The default is \code{smooth=0} which is \(\beta(t) =
+t\). If a numeric \(s\) is specified, the blending function is
+\(\beta(t) = 0.5(1 + a(2t-1) + b(2t-1)^3)\), where \(a\) and \(b\) are
+chosen so that \(a+b=1\) and \(a+3b = 1-s\). I.e. for \(s=0\), we have
+\(\beta(t) = t\), and in general \(\beta(0) = 0\), \(\beta(1) = 1\),
+and \(\beta'(0) = \beta'(1) = 1-s\), as well as \(\beta(1-t) =
+1-\beta(t)\).
 
-If the sharp turns in flat areas is a problem, it is possible
-to enforce a minimum degree, e.g. let \(r = \max(1.2,|b/c|)\), no
-changes to \(a\), \(b\), and \(c\) are necessary. This avoids the
-non-differentiable case for \(|b|=|c|\) as well as the very
-sharp turns when \(|b|\) is close to \(|c|\) when two consecutive
-values are very close, but it will result in
-larger overshoot.
+A \code{smooth}-argument near 1 will smooth out corners, particular
+with multi-dimensional data, but at the cost of creating ``bubbles''
+between the grid points. This can be particularly annoying in regions
+which are close to linear monotonic, but not very visible with wobbly
+data.
+
+Intuitively, a \(\beta_s(t)\) with a large \(s\) ensures that near
+a knot, the function living there contributes disproportionally more. 
+The smoothing functions are sigmoid:
+<<fig.dim=c(4,4)>>=
+beta <- function(t) 0.5*(1+ (1+s/2)*(2*t-1) - s/2 * (2*t-1)^3)
+for(s in seq(0,1,len=10)) plot(beta,0,1,add=s>0)
+@ 
+
+If the sharp turns in flat areas is a problem, it is possible to
+enforce a minimum degree in the basis functions, e.g. let \(r =
+\max(1.2,|b/c|)\), no changes to \(a\), \(b\), and \(c\) are
+necessary. This avoids the non-differentiable case for \(|b|=|c|\) as
+well as the very sharp turns when \(|b|\) is close to \(|c|\) when two
+consecutive values are very close, but it will result in larger
+overshoot.
 
 \section{Examples}
 In this section we compare the stalker spline to the 
@@ -376,7 +396,7 @@ legend('topleft',legend=c('stalker','mono','natural','stalker 1.5'),
 @ 
 
 An interesting case is when the knots are pairwise constant. The stalker spline
-will in this case reduces to a linear interpolation. The knots below are not
+reduces to a linear interpolation. The knots below are not
 exactly pairwise constant, they differ by \(10^{-16}\). This is sufficient
 to make \code{"monoH.FC"} overshoot.
 
@@ -431,13 +451,14 @@ volc <- volcano[seq(1,nrow(volcano),3),seq(1,ncol(volcano),3)]/10 #low res volca
 grid <- list(x=as.numeric(seq_len(nrow(volc))), y=as.numeric(seq_len(ncol(volc))))
 ph <- ipol(volc, grid=grid, method='polyharmonic',k=2)
 st <- ipol(volc, grid=grid, method='stalker')
+stmod <- function(x) st(x,smooth=0.2)
 ml <- ipol(volc, grid=grid, method='multilinear')
 g <- list(x=seq(1,nrow(volc), len=100), y=seq(1,ncol(volc),len=100))
 par(mar=rep(0,4)); col <- 'green'
 light <- list(specular=0.2,ambient=0.0,diffuse=0.6)
 plot3D::persp3D(grid$x, grid$y, volc, colvar=NULL, lighting=light,
         theta=135, ltheta=90, lphi=40, col=col, axes=FALSE, bty='n',scale=FALSE)
-for(f in list(ml, st, ph)) {
+for(f in list(ml, stmod, ph)) {
 plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,
         theta=135, ltheta=90, lphi=40, col=col, axes=FALSE, bty='n', scale=FALSE)
 }
@@ -452,7 +473,7 @@ grid <- list(x=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0),
 val <- matrix(runif(N*N,0,0.3),N)
 st <- ipol(val,grid=grid, method='stalker')
 sl <- ipol(val,grid=grid, method='simplex')
-st1.5s <- function(x) st(x,mindeg=1.5,smooth=TRUE)
+st1.5s <- function(x) st(x,mindeg=1.5,smooth=0.5)
 ph <- ipol(val,grid=grid, method='polyharmonic',k=2)
 g <- list(x=seq(0,1, len=100), y=seq(0,1,len=100))
 par(mar=rep(0,4)); col <- 'green'

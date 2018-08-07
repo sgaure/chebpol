@@ -6,9 +6,7 @@
 #' the grid.  The value on the grid points will be exact, the value between the
 #' grid points is a convex combination of the values in the corners of the
 #' hypercube surrounding it. The interpolant has an argument \code{smooth} which
-#' defaults to \code{FALSE}. It can be set to \code{TRUE} to create smoothed corners by
-#' simplistically forcing the derivative to be zero in every corner, essentially like
-#' a stalker spline of degree 0.
+#' defaults to \code{0}. It can be set to a numeric between 0 and 1 to create smoothed corners.
 #' 
 #' If \code{val} is a function it will be evaluated on the grid.
 #' 
@@ -61,8 +59,8 @@ mlappx <- function(val, grid, ...) {
 #  if(adjust!=0) {
 #    val <- val + (val - .Call(C_predmlip,grid,as.numeric(val)))*adjust
 #  }
-  local(vectorfun(.Call(C_evalmlip,grid,val,x,threads,smooth), length(grid), 
-                  args=alist(x=,threads=getOption('chebpol.threads'),smooth=FALSE),
+  local(vectorfun(.Call(C_evalmlip,grid,val,x,threads,as.numeric(smooth)), length(grid), 
+                  args=alist(x=,threads=getOption('chebpol.threads'),smooth=0),
                   domain=lapply(grid,range)),
         list(grid=grid,val=val))
 }
