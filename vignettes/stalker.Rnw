@@ -451,15 +451,14 @@ volc <- volcano[seq(1,nrow(volcano),3),seq(1,ncol(volcano),3)]/10 #low res volca
 grid <- list(x=as.numeric(seq_len(nrow(volc))), y=as.numeric(seq_len(ncol(volc))))
 ph <- ipol(volc, grid=grid, method='polyharmonic',k=2)
 st <- ipol(volc, grid=grid, method='stalker')
-stmod <- function(x) st(x,smooth=0.2)
 ml <- ipol(volc, grid=grid, method='multilinear')
 g <- list(x=seq(1,nrow(volc), len=100), y=seq(1,ncol(volc),len=100))
 par(mar=rep(0,4)); col <- 'green'
 light <- list(specular=0.2,ambient=0.0,diffuse=0.6)
 plot3D::persp3D(grid$x, grid$y, volc, colvar=NULL, lighting=light,
         theta=135, ltheta=90, lphi=40, col=col, axes=FALSE, bty='n',scale=FALSE)
-for(f in list(ml, stmod, ph)) {
-plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,
+for(f in list(ml, st, ph)) {
+  plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,
         theta=135, ltheta=90, lphi=40, col=col, axes=FALSE, bty='n', scale=FALSE)
 }
 @ 
@@ -473,7 +472,7 @@ grid <- list(x=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0),
 val <- matrix(runif(N*N,0,0.3),N)
 st <- ipol(val,grid=grid, method='stalker')
 sl <- ipol(val,grid=grid, method='simplex')
-st1.5s <- function(x) st(x,mindeg=1.5,smooth=1)
+st1.5s <- function(x) st(x,mindeg=2,smooth=1)
 ph <- ipol(val,grid=grid, method='polyharmonic',k=2)
 g <- list(x=seq(0,1, len=100), y=seq(0,1,len=100))
 par(mar=rep(0,4)); col <- 'green'

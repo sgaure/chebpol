@@ -1,69 +1,109 @@
 #include "chebpol.h"
 
-static double evalstalker(const double *x, const int nrank, const int *rank, double **grid,
-			  const double *val, const double *b, const double *c, const double *d, 
-			  const double mindeg, const double maxdeg, const double smooth) {
-  int strides[nrank];
-  double nx[nrank];
-  const double irank = 1.0/nrank;
+double evalstalker(const double *x, const int nrank, const int *dims, 
+		 double **grid, const double *val,
+		 const double mindeg, const double maxdeg, const double smooth) {
+  if(nrank == 0) return val[0];
+  double *gr = grid[nrank-1];
+  const int N = dims[nrank-1];
+  const double xx = x[nrank-1];
   int mflag;
-  int lowlow = 0;
   int stride = 1;
-  for(int r = 0; r < nrank; r++) {
-    double *gr=grid[r];
-    const int i = findInterval(gr, rank[r], x[r], TRUE, TRUE, 1, &mflag)-1;
-    nx[r] = (x[r]-gr[i])/(gr[i+1]-gr[i]);
-    lowlow += i*stride;
-    strides[r] = stride;
-    stride *= rank[r];
-  }
+  for(int r = 0; r < nrank-1; r++) stride *= dims[r];
+  // Find the interval of the last coordinate
+  const int imin = findInterval(gr, N, xx,TRUE,TRUE,1,&mflag)-1;
+  // normalized coordinates
+  const double nx = (xx-gr[imin])/(gr[imin+1]-gr[imin]);
+  // smoothing coordinates
   const double a3 = 0.5*(smooth - 1);
   const double a1 = 1-a3;
 
-  // Now, lowlow is the index of the lower, left corner 
-  double Val = 0.0;
-  for(int crn = 0; crn < (1<<nrank); crn++) {
-    // c is a corner. 
-    int index = lowlow;
-    for(int dir = 0; dir < nrank; dir++) {
-      const int above = (1<<dir) & crn;
-      if(above) index += strides[dir];
-    }
-    // index is the index into the val-array, but the b,c,d arrays
-    // have nrank times as many, one for each direction
-    // There are nrank directions from it
-    // For each direction we find the value of the basis function
-    // How do we weigh the directions?
-    int idx = nrank*index;
-    double value = 0.0;
-    double ww = 1.0;
-    for(int r = 0; r < nrank; r++) {
-      const int above = (1<<r) & crn;
-      const double p = above ? nx[r]-1 : nx[r];
-      const double w = above ? nx[r] : 1-nx[r];
-      double e = d[idx];
-      if(e < mindeg) e = mindeg;
-      if(e > maxdeg) e = maxdeg;
-      if(smooth != 1.0) {
-	double sw = 2*w - 1;
-	ww *= 0.5*(1 + a1*sw + a3*sw*sw*sw);
-      } else {
-	ww *= w;
-      }
-      //      printf("x=%.2f, r=%d, a=%.2f, b=%.2f, c=%.2f, e=%.2f\n",x[r],r,val[index],b[idx],c[idx],e);
-      double v;
-      if(e == 2.0)
-	v = val[index] + b[idx]*p + c[idx]*p*p;
-      else if(e > 1.0)
-	v = val[index] + b[idx]*p + c[idx]*pow(fabs(p),e);
-      else
-	v = val[index] + b[idx]*p + c[idx]*fabs(p);
-      value += v;
-      idx++;
-    }
-    Val += value*ww;
+  // Now, find the function values on the two grid points on each side.
+  // i.e. imin, imin-1, and imin+1 and imin+2
+  // use these to create the stalker splines
+
+  // values of the lower dimensional spline
+  double vmin,vmin2,vplus,vplus2;
+  vmin = evalstalker(x,nrank-1,dims,grid,val+imin*stride,mindeg,maxdeg,smooth);
+  if(imin > 0)
+    vmin2 = evalstalker(x,nrank-1,dims,grid,val+(imin-1)*stride,mindeg,maxdeg,smooth);
+  vplus = evalstalker(x,nrank-1,dims,grid,val+(imin+1)*stride,mindeg,maxdeg,smooth);
+  if(imin < N-1)
+    vplus2 = evalstalker(x,nrank-1,dims,grid,val+(imin+2)*stride,mindeg,maxdeg,smooth);
+
+  // Find the coefficients of the bases
+  double bmin,cmin,dmin,bplus,cplus,dplus;
+  if(imin == 0) {
+    // linear left basis
+    bmin = vplus - vmin;
+    cmin = 0.0;
+    // ordinary right basis
+    bplus = 0.5*(vplus2-vmin);
+    cplus = 0.5*(vplus2+vmin) - vplus;
+  } else if(imin == N-2) {
+    // ordinary left basis
+    bmin = 0.5*(vplus-vmin2);
+    cmin = 0.5*(vplus+vmin2) - vmin;
+    // linear right basis
+    bplus = vplus - vmin;
+    cplus = 0.0;
+  } else {
+    // both ordinary
+    bmin = 0.5*(vplus-vmin2);
+    cmin = 0.5*(vplus+vmin2) - vmin;
+    bplus = 0.5*(vplus2-vmin);
+    cplus = 0.5*(vplus2+vmin) - vplus;
   }
-  return Val*irank;
+
+
+  // Find the degrees of the bases
+  double ac = fabs(cmin), ab = fabs(bmin);
+  if(ac != 0.0) {
+    if(ac <= ab && ab < 2.0*ac)
+      dmin = ab/ac;
+    else if(ab < ac && ac < 2.0*ab)
+      dmin = ac/ab;
+    else
+      dmin = 2.0;
+  }
+  if(dmin < mindeg) dmin = mindeg;
+  if(dmin > maxdeg) dmin = maxdeg;
+  ac = fabs(cplus); ab = fabs(bplus);
+  if(ac != 0.0) {
+    if(ac <= ab && ab < 2.0*ac)
+      dplus = ab/ac;
+    else if(ab < ac && ac < 2.0*ab)
+      dplus = ac/ab;
+    else
+      dplus = 2.0;
+  }
+  if(dplus < mindeg) dplus = mindeg;
+  if(dplus > maxdeg) dplus = maxdeg;
+
+  // evaluate the basis functions
+  double low,high;
+  if(dmin == 2.0) {
+    low = vmin + bmin*nx + cmin*nx*nx;
+  } else if(dmin > 1.0) {
+    low = vmin + bmin*nx + cmin*pow(fabs(nx),dmin);
+  } else {
+    low = vmin + bmin*nx + cmin*fabs(nx);
+  }
+  if(dplus == 2.0) {
+    high = vplus + bplus*(nx-1) + cplus*(nx-1)*(nx-1);
+  } else if(dplus > 1.0) {
+    high = vplus + bplus*(nx-1) + cplus*pow(fabs(nx-1),dplus);
+  } else {
+    high = vplus + bplus*(nx-1) + cplus*fabs(nx-1);
+  }
+
+  // combine the basis functions
+  double w = 1-nx;
+  if(smooth != 1.0) {
+    double sw = 2*w - 1;
+    w = 0.5*(1 + a1*sw + a3*sw*sw*sw);
+  } 
+  return w*low + (1-w)*high;
 }
 
 SEXP R_evalstalker(SEXP Sx, SEXP stalker, SEXP Smindeg, SEXP Smaxdeg, SEXP Ssmooth, SEXP Sthreads) {
@@ -95,7 +135,7 @@ SEXP R_evalstalker(SEXP Sx, SEXP stalker, SEXP Smindeg, SEXP Smaxdeg, SEXP Ssmoo
   double *out = REAL(ret);
 #pragma omp parallel for num_threads(threads) schedule(guided) if(N > 1 && threads > 1)
   for(int i = 0; i < N; i++)  {
-    out[i] = evalstalker(x+i*nrank, nrank, rank, grid, val, b, c, d, mindeg, maxdeg, smooth);
+    out[i] = evalstalker(x+i*nrank, nrank, rank, grid, val, mindeg,maxdeg,smooth);
   }
   UNPROTECT(1);
   return ret;
