@@ -9,12 +9,10 @@ stalkerappx <- function(val, grid, ...) {
   gl <- prod(sapply(grid,length))
   if(length(val) != gl)
     stop("length of values ",length(val)," do not match size of grid ",gl)
-  val <- as.numeric(val)
-  stalker <- .Call(C_makestalker, val, grid, getOption('chebpol.threads'))
+  stalker <- list(val=as.numeric(val), grid=grid)
   local(vectorfun({
-      if(is.na(smooth)) smooth <- 2-mindeg
       .Call(C_evalstalker,x,stalker,as.numeric(mindeg),as.numeric(maxdeg),
-            as.numeric(smooth),threads)
+            as.numeric(smooth),as.integer(threads))
   }, 
   length(grid), 
   args=alist(x=,threads=getOption('chebpol.threads'),mindeg=1,maxdeg=2,smooth=0),

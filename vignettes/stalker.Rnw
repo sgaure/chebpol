@@ -36,7 +36,8 @@ it attempts to honour monotonocity properties and local extreme points
 in the data, though not entirely. It is achieved by somewhat non-traditional
 means, by sacrificing analyticity, and in a corner case even differentiability.
 The name comes from the fact that it follows the data frighteningly close, 
-though it sometimes seems stupid with little foresight. The interpolation isn't
+though it sometimes seems stupid with little foresight. The 2d-version
+could as well be called \emph{wet paper spline}. The interpolation isn't
 a proper spline, since it is not a polynomial. We also obtain a limit in
 intuitive geometric terms on how large the overshoot can be. The stalker spline
 can be used when a little more smoothness than multilinear is required.
@@ -267,7 +268,7 @@ the graph may turn arbitrarily abruptly in the knots.
 We define the overshoot as 0 for monotonic knots, and as \(|v_0 - f(x_0)|\) where
 \(x_0\) is the critical point of the function: \(f'(x_0) = 0\).
 From equation~\eqref{deriv} we have by elementary calculus \(x_0 = -\sign(bc)|b/(rc)|^{1/(r-1)}\).  
-If \(|b| >= 2|c|\) then \(x \notin (-1,1)\), hence the min/max
+If \(|b| >= 2|c|\) then \(x_0 \notin (-1,1)\), hence the min/max
 occurs in an end point, in which case it is not an overshoot.  
 We look at the case \(|b| < r|c|\).
 
@@ -326,7 +327,7 @@ and \(\beta'(0) = \beta'(1) = 1-s\), as well as \(\beta(1-t) =
 A \code{smooth}-argument near 1 will smooth out corners, particular
 with multi-dimensional data, but at the cost of creating ``bubbles''
 between the grid points. This can be particularly annoying in regions
-which are close to linear monotonic, but not very visible with wobbly
+with constant curvature, but not very visible with wobbly
 data.
 
 Intuitively, a \(\beta_s(t)\) with a large \(s\) ensures that near
@@ -416,34 +417,14 @@ legend('topleft',legend=c('stalker','mono','natural','stalker 1.5'),
 @ 
 
 \section{Higher dimensions}
-The stalker spline in higher dimension is simplistic. It works on a grid.
-In each grid point, a stalker basis function is created.
-A point between the
-grid points is a combination of all the basis functions in the corners of the surrounding
-hypercube. I.e. the point is projected onto each border, the basis functions are evaluated
-there, and the values are blended ``in all directions'', i.e. with a weight which is the
-barycentric coordinate of point, i.e. the fraction of the hypervolume ``behind'' the point.
+The stalker spline in higher dimension \(N\) is simplistic. It works on a Cartesian grid.
+When evaluating the stalker in an \(x\) between grid points, the stalker is evaluated
+for the \(N-1\) first dimensions on two grid lines on each side of \(x\)
+in dimension \(N\). On these four points in dimension \(N\), two basis functions
+are found, evaluated and blended.  There is no guarantee that doing this
+with the dimensions in another order will yield exactly the same result.
 
-In the figure below, we consider the corner \((0,0)\).
-There are basis stalker functions along the x-dimension \(f_1(x)\), 
-and along the y-dimension \(f_2(y)\). 
-The point is in \((0.3, 0.5)\). The x-axis basis function is evaluated in 0.3, \(v_1=f_1(0.3)\),
-the y-axis function is evaluated in 0.5, \(v_2 = f_2(0.5)\). More or less arbitrary, we
-take the average  \(v=(v_1+v_2)/2\) of these basis functions.
-The barycentric coordinate of \((0.3, 0.5)\) relative to the corner \((0,0)\) is the area
-of the upper right rectangle \(0.7 \times 0.5 = 0.35\). The contribution from
-the \((0,0)\) corner is \(0.35v\), or if we use a blending function \(t\):
-\(t(0.7)t(0.5)v\).
-For the other corners there are other basis functions which contribute likewise.
-
-<<fig.dim=c(3,3),echo=FALSE>>=
-plot(c(0,1,1,0,0),c(0,0,1,1,0),typ='l',xlab='',ylab='',bty='n')
-points(0.3,0.5,pch=20)
-abline(h=0.5)
-abline(v=0.3)
-@ 
-
-Then we take a look at 2d-interpolation, first the Maungawhau volcano with exaggerated height.
+We take a look at 2d-interpolation, first the Maungawhau volcano with exaggerated height.
 
 <<volcano, fig.dim=c(4,4), fig.align='center', fig.pos='!ht', fig.cap='Maungawhau', out.width='.37\\linewidth', fig.ncol=2, fig.subcap=c('low resolution','multilinear','stalker','thin plate spline')>>=
 data(volcano)
@@ -463,22 +444,28 @@ for(f in list(ml, st, ph)) {
 }
 @ 
 
-Then we interpolate some random points. There is
-no advanced shading in \code{plot3D::persp3D}, so the \(100\times 100\) resolution can be seen if you zoom in.
-<<fig.dim=c(3.5,3.5), fig.pos='!h', fig.align='center',fig.cap='Random surface',out.width='.4\\linewidth',fig.ncol=2,fig.subcap=c('stalker','simplex', 'stalker 1.5 smooth','thin plate spline')>>=
-set.seed(42); N <- 6
+Then we interpolate some random points. Incidentally, there are some
+plane areas, and some torsion (most visible closest to the
+camera). Torsion where the tangent plane passes the horizontal plane
+can be a problem for the stalker spline, the degree in one dimension
+goes down to 1, creating striped artefacts in some regions. This is
+alleviated by using a larger minimum degree.  There is no advanced
+shading in \code{plot3D::persp3D}, so the \(100\times 100\) resolution
+can be seen if you zoom in.
+<<fig.dim=c(3.5,3.5), fig.pos='!h', fig.align='center',fig.cap='Random surface',out.width='.4\\linewidth',fig.ncol=2,fig.subcap=c('stalker','stalker max 1.2', 'stalker min 2','thin plate spline')>>=
+set.seed(42); N <- 8
 grid <- list(x=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0), 
              y=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0))
 val <- matrix(runif(N*N,0,0.3),N)
 st <- ipol(val,grid=grid, method='stalker')
-sl <- ipol(val,grid=grid, method='simplex')
-st1.5s <- function(x) st(x,mindeg=2,smooth=1)
+st1 <- function(x) st(x,maxdeg=1.2)
+st2 <- function(x) st(x,mindeg=2)
 ph <- ipol(val,grid=grid, method='polyharmonic',k=2)
 g <- list(x=seq(0,1, len=100), y=seq(0,1,len=100))
-par(mar=rep(0,4)); col <- 'green'
-for(f in list(st, sl, st1.5s, ph)) {
+par(mar=rep(0,4))
+for(f in list(st, st1, st2, ph)) {
   plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,
-         theta=135, ltheta=110, lphi=40, col=col, axes=FALSE, bty='n', scale=FALSE,zlim=c(0,1))
+         theta=135, ltheta=110, lphi=40, col='green', axes=FALSE, bty='n', scale=FALSE,zlim=c(0,1))
 }
 @ 
 
