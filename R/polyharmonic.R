@@ -120,12 +120,10 @@ polyh.real <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
     }
     w <- wv[1:N]
     v <- wv[(N+1):length(wv)]
-    rm(mat,rhs)
+    rm(mat,rhs,wv)
   }
   rm(A,B)
-  x <- threads <- NULL; rm(x,threads)
-  local(vectorfun(.Call(C_evalpolyh, normfun(x), knots, w, v, k, threads, NULL),
-            args=alist(x=, threads=getOption('chebpol.threads')),
-            arity=M,domain=data.frame(apply(knots,1,range))),
-        list(knots=knots,w=w,v=v,k=k,normfun=normfun))
+  vectorfun(function(x,threads=getOption('chebpol.threads')) .Call(C_evalpolyh, normfun(x), knots, w, v, k, threads, NULL),
+            arity=M,
+            domain=data.frame(apply(knots,1,range)))
 }

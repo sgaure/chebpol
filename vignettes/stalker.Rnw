@@ -35,6 +35,7 @@ It is designed to be almost shape preserving in the sense that
 it attempts to honour monotonocity properties and local extreme points
 in the data, though not entirely. It is achieved by somewhat non-traditional
 means, by sacrificing analyticity, and in a corner case even differentiability.
+That is, the derivative is not well behaved.
 The name comes from the fact that it follows the data frighteningly close, 
 though it sometimes seems stupid with little foresight. The 2d-version
 could as well be called \emph{wet paper spline}. The interpolation isn't
@@ -199,35 +200,22 @@ Here is a plot of some of the functions for the case \(v_-=0\), \(v_+=1\),
 with varying \(v_0\) (the black dots).
 
 <<echo=FALSE,fig.dim=c(6,6)>>=
-fun <- function(x,f0) {
-    a <- f0
-    b = 0.5
-    c = 0.5-a
-    if(abs(c) <= abs(b)) {
-        # monotonic function
-        pw <- if(2*abs(c) >= abs(b)) abs(b/c) else 2
-    } else {
-        pw <- abs(c/b)
-    }
-    if(pw > 2) pw <- 2
-    a + b*x + c*abs(x)^pw
-}
-
-s <- seq(-1,1,len=1000)
+s <- seq(-1,1,len=100)
 plot(range(s),c(-0.7,1.7),pch='',xlab='x',ylab='y')
-invisible(sapply(seq(-0.7,1.7,len=41), function(f0) {
-    val <- sapply(s, fun, f0=f0)
-    points(0,f0,pch=20)
-    lines(s,val,col='blue')
-}))
+v0 <- seq(-0.7,1.7,len=41)
+f0spline <- function(f0) { st <- ipol(c(0,f0,1),grid=c(-1,0,1),method='stalker'); st(s)}
+for(f0 in v0) {
+  points(0,f0,pch=20)
+  lines(s,f0spline(f0),col='blue')
+}
 # paint the exact quadratic in green, i.e. where 2c = b
 # f0=0.25
-lines(s,sapply(s,fun,f0=0.25),col='lightgreen',lwd=2)
-lines(s,sapply(s,fun,f0=0.75),col='lightgreen',lwd=2)
-lines(s,sapply(s,fun,f0=-0.5),col='darkgreen',lwd=2)
-lines(s,sapply(s,fun,f0=1.5),col='darkgreen',lwd=2)
-lines(s,sapply(s,fun,f0=0),col='red',lwd=2)
-lines(s,sapply(s,fun,f0=1),col='red',lwd=2)
+lines(s,f0spline(0.25),col='lightgreen',lwd=2)
+lines(s,f0spline(0.75),col='lightgreen',lwd=2)
+lines(s,f0spline(-0.5),col='darkgreen',lwd=2)
+lines(s,f0spline(1.5),col='darkgreen',lwd=2)
+lines(s,f0spline(0),col='red',lwd=2)
+lines(s,f0spline(1),col='red',lwd=2)
 clip(0,0.5,-2,2)
 abline(h=-0.7,lty=2)
 clip(-0.5/(2*(0.5+0.7)),0.5,-2,2)
@@ -236,13 +224,29 @@ clip(-2,2,-2,2)
 text(x=0.7,y=-0.63,'} overshoot',pos=1)
 @ 
 
-Functions either inside the light green or outside the dark green curves
-are quadratic. Functions inside the red parallellogram are monotonic.
-Every function except for the two red ones are differentiable.
-If we let \(|v_0|\) grow further, the function will stay quadratic, and
-the extreme point and the overshoot will converge to 0. If either \(v_-\)
-or \(v_+\) grows, \(|b/c|\) converges to 1, so we will converge
-to the non-differentiable case. 
+Functions either inside the light green or outside the dark green
+curves are quadratic. Functions inside the red parallellogram are
+monotonic.  Every function except for the two red ones are
+differentiable.  If we let \(|v_0|\) grow further, the function will
+stay quadratic, and the extreme point and the overshoot will converge
+to 0. If either \(v_-\) or \(v_+\) grows, \(|b/c|\) converges to 1, so
+we will converge to the non-differentiable case. However, there is a
+problem which becomes pressing when trying to use the stalker spline
+in two or more dimensions.  If, as in figure~\ref{fig:failure}, \(v_-\) moves down, the curve for
+\(x < 0\) moves down, but the curve for \(x>0\) moves up or down
+depending on whether the degree changes or not. This creates problems
+e.g.\ for surfaces with torsion, as we shall see later.
+
+<<failure, echo=FALSE,fig.dim=c(4,4), fig.align='center'>>=
+s <- seq(-0.5,0.5,len=100)
+plot(range(s),c(-1/3,0.5),pch='',xlab='x',ylab='y')
+fmspline <- function(fm) { st <- ipol(c(fm,0,1),grid=c(-1,0,1),method='stalker'); st(s)}
+lines(s,fmspline(1/3),col='red',lwd=2,lty=2)
+lines(s,fmspline(-1/3),col='red',lwd=2,lty=2)
+lines(s,fmspline(0.2),col='yellow',lwd=2)
+lines(s,fmspline(-0.2),col='green',lwd=2)
+lines(s,fmspline(-0.1),col='blue',lwd=2)
+@ 
 
 \section{Summary}
 To sum up, the function passing through \((-1,v_-)\), \((0,v_0)\) and
@@ -302,49 +306,22 @@ we get \(d_r/(v_- - v_0) =| r^{(1+r)/(1-r)} - r^{2/(1-r)} |/(r-1) \leq e^{-2} \a
 In short, the overshoot is always less than 14\% of the vertical distance from the lowest/highest knot
 to the next lowest/highest knot.
 
-\subsection{Blending}
-We always use normalized coordinates around a knot. When we
-evaluate a basis function around a knot \(x > x_0\), we use the
-normalized coordinate \(x' = (x-x_0)/(x_+-x_0)\), and on the left
-side we use \(x' = (x-x_0)/(x_0 - x_-)\).
+\subsection{Blending and degree limits}
+We always use normalized coordinates around a knot. If the grid is not uniform,
+we map it to a uniform grid with a monotonic spline from \code{splinefun(method="hyman")}.
 
 There is a basis function in every knot, so we glue the functions
 \(f_1\) and \(f_2\) together as a convex combination \(tf_1(x') +
 (1-t)f_2(x'-1)\) (\(x'-1\) is the normalized coordinate for \(f_2\),
-the basis function in the knot \(x_+\)). We can use a linear blender,
-\(t = 1 - x'\), but we may also introduce a \emph{blending function}
-\(t' =\beta(t)\) as long as \(\beta(0) = 0\) and \(\beta(1-t) =
-1-\beta(t)\), and for smoothness \(\beta'(0) = \beta'(1) = 0\).  The
-stalker interpolant returned by \code{ipol()} has a numeric argument
-\code{smooth}. The default is \code{smooth=0} which is \(\beta(t) =
-t\). If a numeric \(s\) is specified, the blending function is
-\(\beta(t) = 0.5(1 + a(2t-1) + b(2t-1)^3)\), where \(a\) and \(b\) are
-chosen so that \(a+b=1\) and \(a+3b = 1-s\). I.e. for \(s=0\), we have
-\(\beta(t) = t\), and in general \(\beta(0) = 0\), \(\beta(1) = 1\),
-and \(\beta'(0) = \beta'(1) = 1-s\), as well as \(\beta(1-t) =
-1-\beta(t)\).
+the basis function in the knot \(x_+\)). We use a linear blender,
+\(t = 1 - x'\).
 
-A \code{smooth}-argument near 1 will smooth out corners, particular
-with multi-dimensional data, but at the cost of creating ``bubbles''
-between the grid points. This can be particularly annoying in regions
-with constant curvature, but not very visible with wobbly
-data.
+The interpolant can be given \code{"mindeg"} and \code{"maxdeg"}, these
+can be vectors, one degree limit for each dimension. 
 
-Intuitively, a \(\beta_s(t)\) with a large \(s\) ensures that near
-a knot, the function living there contributes disproportionally more. 
-The smoothing functions are sigmoid:
-<<fig.dim=c(4,4)>>=
-beta <- function(t) 0.5*(1+ (1+s/2)*(2*t-1) - s/2 * (2*t-1)^3)
-for(s in seq(0,1,len=10)) plot(beta,0,1,add=s>0)
-@ 
-
-If the sharp turns in flat areas is a problem, it is possible to
-enforce a minimum degree in the basis functions, e.g. let \(r =
-\max(1.2,|b/c|)\), no changes to \(a\), \(b\), and \(c\) are
-necessary. This avoids the non-differentiable case for \(|b|=|c|\) as
-well as the very sharp turns when \(|b|\) is close to \(|c|\) when two
-consecutive values are very close, but it will result in larger
-overshoot.
+In more than one dimension, torsion can be a problem for stability. It can create
+striping artefacts. This can be alleviated by having constant degree (\code{maxdeg=mindeg}) 
+except possibly for the first dimension. We'll see an example later.
 
 \section{Examples}
 In this section we compare the stalker spline to the 
@@ -424,7 +401,8 @@ in dimension \(N\). On these four points in dimension \(N\), two basis functions
 are found, evaluated and blended.  There is no guarantee that doing this
 with the dimensions in another order will yield exactly the same result.
 
-We take a look at 2d-interpolation, first the Maungawhau volcano with exaggerated height.
+We take a look at 2d-interpolation, first the Maungawhau volcano with
+exaggerated height in figure~\ref{fig:volcano}.
 
 <<volcano, fig.dim=c(4,4), fig.align='center', fig.pos='!ht', fig.cap='Maungawhau', out.width='.37\\linewidth', fig.ncol=2, fig.subcap=c('low resolution','multilinear','stalker','thin plate spline')>>=
 data(volcano)
@@ -433,40 +411,94 @@ grid <- list(x=as.numeric(seq_len(nrow(volc))), y=as.numeric(seq_len(ncol(volc))
 ph <- ipol(volc, grid=grid, method='polyharmonic',k=2)
 st <- ipol(volc, grid=grid, method='stalker')
 ml <- ipol(volc, grid=grid, method='multilinear')
-g <- list(x=seq(1,nrow(volc), len=100), y=seq(1,ncol(volc),len=100))
+g <- list(x=seq(1,nrow(volc), len=71), y=seq(1,ncol(volc),len=71))
 par(mar=rep(0,4)); col <- 'green'
 light <- list(specular=0.2,ambient=0.0,diffuse=0.6)
 plot3D::persp3D(grid$x, grid$y, volc, colvar=NULL, lighting=light,
-        theta=135, ltheta=90, lphi=40, col=col, axes=FALSE, bty='n',scale=FALSE)
+        theta=45, ltheta=0, lphi=40, col=col, axes=FALSE, bty='n',scale=FALSE)
 for(f in list(ml, st, ph)) {
   plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,
-        theta=135, ltheta=90, lphi=40, col=col, axes=FALSE, bty='n', scale=FALSE)
+        theta=45, ltheta=0, lphi=40, col=col, axes=FALSE, bty='n', scale=FALSE)
 }
 @ 
 
-Then we interpolate some random points. Incidentally, there are some
+Then we interpolate some random points in figure~\ref{fig:random}. Incidentally, there are some
 plane areas, and some torsion (most visible closest to the
-camera). Torsion where the tangent plane passes the horizontal plane
-can be a problem for the stalker spline, the degree in one dimension
+camera). Torsion can be a problem for the stalker spline, the degree in one dimension
 goes down to 1, creating striped artefacts in some regions. This is
-alleviated by using a larger minimum degree.  There is no advanced
+alleviated by using a constant degree.  There is no advanced
 shading in \code{plot3D::persp3D}, so the \(100\times 100\) resolution
 can be seen if you zoom in.
-<<fig.dim=c(3.5,3.5), fig.pos='!h', fig.align='center',fig.cap='Random surface',out.width='.4\\linewidth',fig.ncol=2,fig.subcap=c('stalker','stalker max 1.2', 'stalker min 2','thin plate spline')>>=
+
+<<random, fig.dim=c(3.5,3.5), fig.pos='!h', fig.align='center',fig.cap='Random surface',out.width='.4\\linewidth',fig.ncol=2,fig.subcap=c('stalker', 'Floater-Hormann','stalker 1.5 constant','thin plate spline')>>=
 set.seed(42); N <- 8
 grid <- list(x=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0), 
              y=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0))
 val <- matrix(runif(N*N,0,0.3),N)
 st <- ipol(val,grid=grid, method='stalker')
-st1 <- function(x) st(x,maxdeg=1.2)
-st2 <- function(x) st(x,mindeg=2)
+fh <- ipol(val,grid=grid, method='fh',k=0)
+st1 <- function(x) st(x,mindeg=1.5,maxdeg=1.5)
 ph <- ipol(val,grid=grid, method='polyharmonic',k=2)
 g <- list(x=seq(0,1, len=100), y=seq(0,1,len=100))
 par(mar=rep(0,4))
-for(f in list(st, st1, st2, ph)) {
+for(f in list(st, fh, st1, ph)) {
   plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,
-         theta=135, ltheta=110, lphi=40, col='green', axes=FALSE, bty='n', scale=FALSE,zlim=c(0,1))
+         theta=60, ltheta=30, lphi=45, col='green', axes=FALSE, bty='n', scale=FALSE,zlim=c(0,1))
+  pts <- evalongridV(f,grid=grid)+0.00
+  plot3D::points3D(rep(grid$x,N),rep(grid$y,each=N),pts,add=TRUE,colvar=NULL,pch=20)
 }
+@ 
+
+The torsion problem can be seen near the right corner if you compare the 
+upper left panel to the constant degree stalker in the lower left panel.
+We can take a closer look at these portions of the surface in figure~\ref{fig:torsion}.
+
+<<torsion, fig.dim=c(5,5), out.width='\\linewidth', fig.cap='Torsion problem in the wet paper spline', fig.align='center'>>=
+g <- list(x=seq(grid$x[5],grid$x[8],length=50),y=seq(grid$y[5],grid$y[8],length=50))
+par(mar=rep(1,4))
+plot3D::persp3D(g$x, g$y, evalongridV(st,grid=g), colvar=NULL, lighting=light,
+       theta=80, ltheta=60, lphi=45, col='green', axes=TRUE)
+subgrid <- list(x=grid$x[5:8],y=grid$y[5:8])
+zval <- evalongridV(f,grid=subgrid)+0.005
+plot3D::points3D(rep(subgrid$x,4),rep(subgrid$y,each=4),zval,add=TRUE,colvar=NULL,pch=20)
+@ 
+
+What happens here is the following. The spline along the rightmost border (\(y=1\)) is monotonic.
+The spline next to it has a top, and at some point it crosses the level of the
+rightmost level. As we remember, a spline along the other dimension will then reduce
+its degree all the way down to piecewise linear. It is in this process the lowering of the degree
+on the right side causes reversal of the derivative between the grid points.
+We can see it clearly in figure~\ref{fig:tordet} if we plot the splines for the four \(y\) values, and the black one
+for a spline in between. The grey curve is the one with constant degree 2 in the \(y\) dimension.
+
+<<tordet, fig.cap='Torsion details', fig.align='center'>>=
+x <- seq(grid$x[[5]],grid$x[[8]],len=100)
+pts <- c(grid$y[5:8])
+pt <- mean(grid$y[6:7])
+col <- c('green','magenta','blue','red')
+plot(x,st(rbind(x,pt)),typ='l',ylim=c(0,0.3),ylab='z')
+lines(x,st(rbind(x,pt),mindeg=c(1,2),maxdeg=2), col='grey')
+points(grid$x,st(rbind(grid$x,pt)),pch=20)
+for(i in seq_along(pts)) {
+  v <- st(rbind(x,pts[i]))
+  lines(x,v,col=col[i],lty=2)
+  points(grid$x,st(rbind(grid$x,pts[i])),pch=20,col=col[i])
+}
+legend('topright',title='y=',
+    legend=round(c(pts[1:2],pt,pts[3:4]),3),
+    fill=c(col[1:2],'black',col[3:4]))
+@ 
+
+Note that the black curve is always between the blue and the magenta, but erratic
+wherever any of the coloured lines cross.
+
+In figure~\ref{fig:constant} is the same part of the surface with constant degree~2.
+
+<<constant, fig.dim=c(5,5), out.width='\\linewidth',fig.cap='Constant degree', fig.align='center'>>=
+par(mar=rep(1,4))
+plot3D::persp3D(g$x, g$y, evalongridV(st,grid=g,mindeg=2), colvar=NULL, lighting=light,
+       theta=80, ltheta=60, lphi=45, col='green', axes=TRUE)
+plot3D::points3D(rep(subgrid$x,4),rep(subgrid$y,each=4),zval,add=TRUE,colvar=NULL,pch=20)
 @ 
 
 \end{document}

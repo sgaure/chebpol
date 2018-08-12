@@ -254,11 +254,7 @@ static SEXP R_FH(SEXP inx, SEXP vals, SEXP grid, SEXP Sweights, SEXP Rthreads, S
   }
   double *xp = REAL(inx);
   const int numvec = isMatrix(inx) ? ncols(inx) : 1;
-#ifdef RETMAT
-  SEXP resvec = PROTECT(allocMatrix(REALSXP, numvec, 1));
-#else
   SEXP resvec = PROTECT(NEW_NUMERIC(numvec));
-#endif
   double *out = REAL(resvec);
 #pragma omp parallel for num_threads(threads) schedule(static) if (numvec > 1 && threads > 1)
   for(int i = 0; i < numvec; i++) {
@@ -266,6 +262,23 @@ static SEXP R_FH(SEXP inx, SEXP vals, SEXP grid, SEXP Sweights, SEXP Rthreads, S
   }
   UNPROTECT(1);
   return resvec;
+}
+
+R_INLINE static void fhweights(const int n, const double *grid, const int d, double *w, int threads) {
+#pragma omp parallel for schedule(static) num_threads(threads) if(threads > 1)
+  for(int k = 0; k <= n; k++) {
+    const int start = (k < d) ? 0 : k-d, end = (k < n-d) ? k : n-d;
+    double sum = 0.0;
+    for(int i = start; i <= end; i++) {
+      double prod = 1.0;
+      for(int j = i; j <= i+d; j++) {
+	if(j==k) continue;
+	prod *= grid[k]-grid[j];
+      }
+      sum += 1.0/fabs(prod);
+    }
+    w[k] = sum * ( ( k % 2 != d % 2) ? -1.0 : 1.0);
+  }
 }
 
 // Compute the weights for Floater-Hormann. Formula (18) of the FH-paper
@@ -289,27 +302,11 @@ static SEXP R_fhweights(SEXP Sgrid, SEXP Sd, SEXP Sthreads) {
 
   const int *dd = INTEGER(AS_INTEGER(Sd));
   int threads = INTEGER(AS_INTEGER(Sthreads))[0];
-
   for(int r = 0; r < rank; r++) {
-    const double *gr = grid[r];
-    double *w = wlist[r];
-    const int d = dd[r];
-    const int n = dims[r]-1;
-#pragma omp parallel for schedule(static) num_threads(threads) if(threads > 1)
-    for(int k = 0; k <= n; k++) {
-      const int start = (k < d) ? 0 : k-d, end = (k < n-d) ? k : n-d;
-      double sum = 0.0;
-      for(int i = start; i <= end; i++) {
-	double prod = 1.0;
-	for(int j = i; j <= i+d; j++) {
-	  if(j==k) continue;
-	  prod *= gr[k]-gr[j];
-	}
-	sum += 1.0/fabs(prod);
-      }
-      w[k] = sum * ( (abs(k-d) % 2 == 1) ? -1.0 : 1.0);
-    }
+    // The paper use index from 0 to n, i.e. n+1 knots in each dimension. Therefore dims[r]-1
+    fhweights(dims[r]-1, grid[r], dd[r], wlist[r],threads);
   }
+
   UNPROTECT(1);
   return ret;
 }
@@ -618,7 +615,7 @@ static SEXP R_mlippred(SEXP sgrid, SEXP values) {
 }
 
 static double C_evalmlip(const int rank, double *x, double **grid, int *dims, 
-			 double *values, double smooth) {
+			 double *values) {
 
   double weight[rank];
   int valpos = 0;
@@ -646,8 +643,6 @@ static double C_evalmlip(const int rank, double *x, double **grid, int *dims,
   }
 
   // loop over the corners of the box, sum values with weights
-  const double a3 = 0.5*(smooth - 1);
-  const double a1 = 1-a3;
 
   for(int i = 0; i < (1<<rank); i++) {
     // i represents a corner. bit=1 if upper corner, 0 if lower corner.
@@ -658,19 +653,9 @@ static double C_evalmlip(const int rank, double *x, double **grid, int *dims,
     double cw = 1;
     for(int g = 0; g < rank; g++) {
       if( (1<<g) & i) {
-	if(smooth != 1.0) {
-	  double sw = 2*weight[g] - 1;
-	  cw *= 0.5*(1 + a1*sw + a3*sw*sw*sw);
-	} else {
-	  cw *= weight[g];
-	}
+	cw *= weight[g];
       } else {
-	if(smooth != 1.0) {
-	  double sw = 1-2*weight[g];
-	  cw *= 0.5*(1 + a1*sw + a3*sw*sw*sw);
-	} else {
-	  cw *= 1-weight[g];
-	}
+	cw *= 1-weight[g];
 	vpos -= stride;
       }
       stride *= dims[g];
@@ -681,14 +666,12 @@ static double C_evalmlip(const int rank, double *x, double **grid, int *dims,
 }
 
 /* Then a multilinear approximation */
-static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads, SEXP Ssmooth) {
+static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads) {
   const int rank = LENGTH(sgrid);
   int gridsize = 1;
   int dims[rank];
   int threads = INTEGER(AS_INTEGER(Rthreads))[0];
   double *grid[rank];
-  double smooth = isNull(Ssmooth) ? 0 : REAL(Ssmooth)[0];
-  smooth = 1-smooth;
 
   if(!IS_NUMERIC(values)) error("values must be numeric");
   if(!IS_NUMERIC(x)) error("argument x must be numeric");  
@@ -715,7 +698,7 @@ static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads, SEXP Ssmo
   double *out = REAL(resvec);
 #pragma omp parallel for num_threads(threads) schedule(static) if (numvec > 1 && threads > 1)
   for(int i = 0; i < numvec; i++) {
-    out[i] = C_evalmlip(rank,xp+i*rank,grid,dims,REAL(values),smooth);
+    out[i] = C_evalmlip(rank,xp+i*rank,grid,dims,REAL(values));
   }
   UNPROTECT(1);
   return resvec;

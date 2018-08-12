@@ -25,14 +25,13 @@
 #' @keywords internal
 slappx <- function(...) deprecated('slappx',...)
 slappx.real <- function(val, knots, ...) {
-  x <- threads <- epol <- smooth <- NULL; rm(x,threads,epol,smooth)
   if(is.function(val)) val <- apply(knots,2,val)
   dtri <- t(geometry::delaunayn(t(knots),options="Qt Pp"))
   # For fast evaluation: For each simplex, we precompute the LU-factorization
   # needed for transforming to barycentric coordinates. These are used for finding the right simplex.
   adata <- .Call(C_analyzesimplex, dtri, knots, getOption('chebpol.threads'))
-  local(vectorfun(.Call(C_evalsl, x, knots, dtri, adata, val, epol, threads, NULL),
-                  arity=nrow(knots), args=alist(x=, threads=getOption('chebpol.threads'), epol=FALSE)),
-        list(val=val, knots=knots, dtri=dtri, adata=adata))
+  vectorfun(function(x,threads=getOption('chebpol.threads'), epol=FALSE) {
+    .Call(C_evalsl, x, knots, dtri, adata, val, epol, threads, NULL)},
+    arity=nrow(knots))
 }
 

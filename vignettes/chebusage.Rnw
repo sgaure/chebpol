@@ -157,14 +157,14 @@ set.seed(46)
 f1 <- function(x) 1.5/log(5+sin(pi/2*(x[1]^2-2*x[2]^2)))
 ch1 <- ipol(f1, dims=c(9,9), method='cheb')
 igrid <- list(x=seq(-1,1,len=9), y=seq(-1,1,len=9))
-ml1 <- ipol(f1, grid=igrid, method='multilinear')
+st1 <- ipol(f1, grid=igrid, method='stalker')
 fh1 <- ipol(f1, grid=igrid, method='fh', k=3)
 y <- x <- seq(-1,1,len=200)
 testset <- expand.grid(list(x=x,y=y))
 data <- cbind(testset,fun= apply(testset,1,f1), cheb=ch1(t(testset)), 
-              m.lin=ml1(t(testset)), F.H.=fh1(t(testset)))
+              stalker=st1(t(testset)), F.H.=fh1(t(testset)))
 
-lattice::levelplot(m.lin+F.H.+fun+cheb ~ x+y, data=data, cuts=10,
+lattice::levelplot(stalker+F.H.+fun+cheb ~ x+y, data=data, cuts=10,
           col.regions=grey.colors(11,0.1,0.9), layout=c(2,2), 
           main='Level plots of function and interpolations')
 @ 
@@ -190,7 +190,7 @@ set.seed(43)
 
 <<fig.align='center', fig.width=7, fig.height=7>>=
 f2 <- function(x) 1.2/min(log(3.1 + sin(0.7+1.8*pi*(x+0.39*x[1]^2-x[2]^2))^2))
-ph1 <- ipol(f1, knots=matrix(runif(100,-1,1),2), method='polyharmonic', k=3)
+ph1 <- ipol(f1, knots=matrix(runif(200,-1,1),2), method='polyharmonic', k=2)
 ph2 <- ipol(f2, knots=matrix(runif(4000,-1,1),2), method='polyharmonic', k=3)
 data <- cbind(testset,fun1= apply(testset,1,f1), poly1=ph1(t(testset)), 
               fun2=apply(testset,1,f2), poly2=ph2(t(testset)))

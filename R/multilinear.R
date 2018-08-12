@@ -48,7 +48,6 @@
 #' @keywords internal
 mlappx <- function(...) deprecated('mlappx',...)
 mlappx.real <- function(val, grid, ...) {
-  x <- threads <- smooth <- NULL; rm(x,threads,smooth) # avoid cran check warning 
   if(is.numeric(grid)) grid <- list(grid)
   if(any(sapply(grid,is.unsorted))) {
     if(!is.function(val)) stop('Grid points must be ordered in increasing order')
@@ -62,8 +61,7 @@ mlappx.real <- function(val, grid, ...) {
 #  if(adjust!=0) {
 #    val <- val + (val - .Call(C_predmlip,grid,as.numeric(val)))*adjust
 #  }
-  local(vectorfun(.Call(C_evalmlip,grid,val,x,threads,as.numeric(smooth)), length(grid), 
-                  args=alist(x=,threads=getOption('chebpol.threads'),smooth=0),
-                  domain=lapply(grid,range)),
-        list(grid=grid,val=val))
+  vectorfun(function(x,threads=getOption('chebpol.threads')) .Call(C_evalmlip,grid,val,x,threads),
+            arity=length(grid), 
+            domain=lapply(grid,range))
 }

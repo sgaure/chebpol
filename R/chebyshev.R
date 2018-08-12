@@ -208,13 +208,11 @@ chebappx.real <- function(val,intervals=NULL) {
   if(is.numeric(intervals) && length(intervals) == 2) intervals <- list(intervals)
   cf <- chebcoef(val)
 
-  x <- threads <- NULL; rm(x,threads) # avoid cran check warning 
   if(is.null(intervals)) {
     # it's [-1,1] intervals, so drop transformation
-    fun <- local(vectorfun(.Call(C_evalcheb,cf,x,threads,NULL), K,
-                           args=alist(x=,threads=getOption('chebpol.threads')),
-                           domain=lapply(rep(-1,K),c,1)),
-                 list(cf=cf))
+    fun <- vectorfun(function(x,threads=getOption('chebpol.threads')) .Call(C_evalcheb,cf,x,threads,NULL),
+                     arity=K,
+                     domain=lapply(rep(-1,K),c,1))
     rm(val)
   } else {
     # it's intervals, create mapping into [-1,1]
@@ -226,14 +224,12 @@ chebappx.real <- function(val,intervals=NULL) {
     mid <- sapply(intervals,function(x) mean(x))
     imap <- compiler::cmpfun(function(x) (x-mid)*ispan)
 
-    fun <- local(vectorfun(.Call(C_evalcheb,cf,imap(x), threads, NULL), K,
-                           args=alist(x=,threads=getOption('chebpol.threads')),
-                           domain=intervals),
-                 list(cf=cf,imap=imap))
-                     
+    fun <- vectorfun(function(x,threads=getOption('chebpol.threads')) .Call(C_evalcheb,cf,imap(x), threads, NULL),
+                     arity=K,
+                     domain=intervals)
     rm(val)
   }
-  fun
+  compiler::cmpfun(fun)
 }
 
 #' @rdname chebappx
@@ -338,7 +334,6 @@ chebappxg.real <- function(val,grid=NULL,mapdim=NULL) {
   # grid is a list of grid points. val is the values as in expand.grid(grid)
   # if grid is null it is assumed to be a chebyshev grid. The dimensions
   # must be present in val
-  x <- threads <- NULL; rm(x,threads) # avoid cran check warning 
   if(is.null(grid)) return(chebappx.real(val))
   if(is.null(dim(val))) dim(val) <- length(val)
   if(!is.list(grid) && length(grid) == length(val)) grid <- list(grid)
@@ -358,10 +353,9 @@ chebappxg.real <- function(val,grid=NULL,mapdim=NULL) {
     apply(x,2,function(x) mapply(function(gm,x) gm(x),gridmaps,x))
   }
   ch <- chebappx.real(val)
-  local(vectorfun(ch(gridmap(x),threads), length(grid), 
-                  args=alist(x=,threads=getOption('chebpol.threads')),
-                  domain=intervals),
-        list(gridmap=gridmap,ch=ch))
+  compiler::cmpfun(vectorfun(function(x,threads=getOption('chebpol.threads')) ch(gridmap(x),threads), 
+                             arity=length(grid), 
+                             domain=intervals))
 }
 
 #' @rdname chebappxg

@@ -56,7 +56,6 @@ ugm <- function(x,n) sin(0.5*pi*x*(1-n)/n)
 #' @keywords internal
 ucappx <- function(...) deprecated('ucappx',...)
 ucappx.real <- function(val, intervals=NULL) {
-  x <- threads <- NULL; rm(x,threads) # avoid cran check warning 
   if(is.null(dim(val))) dim(val) <- length(val)
   dims <- dim(val)
   ch <- chebappx.real(val)
@@ -71,10 +70,10 @@ ucappx.real <- function(val, intervals=NULL) {
   gm <- compiler::cmpfun(function(x) {
     if(is.matrix(x)) apply(x,2,gridmap) else gridmap(x)
   })
-  local(vectorfun(ch(gm(x), threads), length(dims), 
-                  args=alist(x=,threads=getOption('chebpol.threads')),
-                  domain=if(is.null(intervals)) lapply(rep(-1,length(dim(val))),c,1) else intervals),
-        list(gm=gm,ch=ch))
+  vectorfun(function(x, threads=getOption('chebpol.threads')) ch(gm(x), threads), 
+            arity=length(dims), 
+            domain=if(is.null(intervals)) lapply(rep(-1,length(dim(val))),c,1) else intervals)
+
 }
 
 #' @rdname ucappx

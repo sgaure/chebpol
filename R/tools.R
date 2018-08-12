@@ -1,11 +1,8 @@
 
-vectorfun <- function(e,arity,args=alist(x=),domain=NULL) {
-  fun <- function() {}
-  formals(fun) <- args
-  body(fun) <- substitute(e)
-  environment(fun) <- parent.frame()
+vectorfun <- function(fun,arity,domain=NULL) {
   force(arity)
-  f <- local(function(x) {
+  fun <- compiler::cmpfun(fun)
+  f <- function(x) {
     mc <- match.call(expand.dots=TRUE)
     mc[[1L]] <- quote(list)
     arglist <- eval.parent(mc)
@@ -22,8 +19,8 @@ vectorfun <- function(e,arity,args=alist(x=),domain=NULL) {
       do.call(fun,arglist)
     } else
       stop(sprintf('Function should take %d arguments, you supplied a vector of length %d',arity,length(x)))
-  }, list(fun=compiler::cmpfun(fun)))
-  formals(f) <- args
+  }
+  formals(f) <- formals(fun)
   structure(compiler::cmpfun(f),arity=arity,domain=as.data.frame(domain),
             chebpol.version=utils::packageVersion('chebpol'))
 }
