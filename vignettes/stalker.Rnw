@@ -203,7 +203,7 @@ with varying \(v_0\) (the black dots).
 s <- seq(-1,1,len=100)
 plot(range(s),c(-0.7,1.7),pch='',xlab='x',ylab='y')
 v0 <- seq(-0.7,1.7,len=41)
-f0spline <- function(f0) { st <- ipol(c(0,f0,1),grid=c(-1,0,1),method='stalker'); st(s)}
+f0spline <- function(f0) { st <- ipol(c(0,f0,1),grid=c(-1,0,1),k=NA,method='stalker'); st(s)}
 for(f0 in v0) {
   points(0,f0,pch=20)
   lines(s,f0spline(f0),col='blue')
@@ -240,7 +240,7 @@ e.g.\ for surfaces with torsion, as we shall see later.
 <<failure, echo=FALSE,fig.dim=c(4,4), fig.align='center'>>=
 s <- seq(-0.5,0.5,len=100)
 plot(range(s),c(-1/3,0.5),pch='',xlab='x',ylab='y')
-fmspline <- function(fm) { st <- ipol(c(fm,0,1),grid=c(-1,0,1),method='stalker'); st(s)}
+fmspline <- function(fm) { st <- ipol(c(fm,0,1),grid=c(-1,0,1),k=NA,method='stalker'); st(s)}
 lines(s,fmspline(1/3),col='red',lwd=2,lty=2)
 lines(s,fmspline(-1/3),col='red',lwd=2,lty=2)
 lines(s,fmspline(0.2),col='yellow',lwd=2)
@@ -308,16 +308,18 @@ to the next lowest/highest knot.
 
 \subsection{Blending and degree limits}
 We always use normalized coordinates around a knot. If the grid is not uniform,
-we map it to a uniform grid with a monotonic spline from \code{splinefun(method="hyman")}.
+the computation of a dynamic degree involves solving a non-linear equation, instead
+we map the grid to a uniform grid with a rational function \(x\mapsto\frac{\lambda x}{1+\gamma x}\).
 
 There is a basis function in every knot, so we glue the functions
 \(f_1\) and \(f_2\) together as a convex combination \(tf_1(x') +
 (1-t)f_2(x'-1)\) (\(x'-1\) is the normalized coordinate for \(f_2\),
 the basis function in the knot \(x_+\)). We use a linear blender,
-\(t = 1 - x'\).
+\(t = 1 - x'\).  Alternatively we could use a sigmoid blender like
+\(t\in [0,1/2] \mapsto exp(2-1/x)/2\) and \(t\in (1/2,1] \mapsto 1-exp(2-1/(1-x))/2.\)
 
-The interpolant can be given \code{"mindeg"} and \code{"maxdeg"}, these
-can be vectors, one degree limit for each dimension. 
+The interpolant can be given \code{"degree"}, these
+can be vectors, a fixed degree for each dimension. 
 
 In more than one dimension, torsion can be a problem for stability. It can create
 striping artefacts. This can be alleviated by having constant degree (\code{maxdeg=mindeg}) 
@@ -334,12 +336,12 @@ pts <- pts/max(pts)
 plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
 ns <- splinefun(pts,val,method='natural')
 ms <- splinefun(pts,val,method='mono')
-st <- ipol(val,grid=pts,method='stalker')
+st <- ipol(val,grid=pts,method='stalker',k=NA)
 s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
 lines(s,ms(s),col='green')
 lines(s, st(s), col='magenta')
-lines(s, st(s,mindeg=1.5),col='red')
+lines(s, st(s,degree=1.5),col='red')
 legend('topright',legend=c('stalker','mono','natural','stalker 1.5'),
        fill=c('magenta','green','blue','red'))
 @ 
@@ -363,12 +365,12 @@ val <- sort(val)
 plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
 ns <- splinefun(pts,val,method='natural')
 ms <- splinefun(pts,val,method='mono')
-st <- ipol(val,grid=pts, method='stalker')
+st <- ipol(val,grid=pts, method='stalker', k=NA)
 s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
 lines(s,ms(s),col='green')
 lines(s, st(s), col='magenta')
-lines(s, st(s,mindeg=1.5), col='red')
+lines(s, st(s,deg=1.5), col='red')
 legend('topleft',legend=c('stalker','mono','natural','stalker 1.5'),
        fill=c('magenta','green','blue','red'))
 @ 
@@ -383,12 +385,12 @@ val <- rep(runif(N/2),each=2) + c(0,1e-16)
 plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
 ns <- splinefun(pts,val,method='natural')
 ms <- splinefun(pts,val,method='mono')
-st <- ipol(val,grid=pts, method='stalker')
+st <- ipol(val,grid=pts, method='stalker',k=NA)
 s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
 lines(s,ms(s),col='green')
 lines(s, st(s), col='magenta')
-lines(s, st(s,mindeg=1.5), col='red')
+lines(s, st(s,deg=1.5), col='red')
 legend('topleft',legend=c('stalker','mono','natural','stalker 1.5'),
        fill=c('magenta','green','blue','red'))
 @ 
@@ -409,7 +411,7 @@ data(volcano)
 volc <- volcano[seq(1,nrow(volcano),3),seq(1,ncol(volcano),3)]/10 #low res volcano
 grid <- list(x=as.numeric(seq_len(nrow(volc))), y=as.numeric(seq_len(ncol(volc))))
 ph <- ipol(volc, grid=grid, method='polyharmonic',k=2)
-st <- ipol(volc, grid=grid, method='stalker')
+st <- ipol(volc, grid=grid, method='stalker',k=NA)
 ml <- ipol(volc, grid=grid, method='multilinear')
 g <- list(x=seq(1,nrow(volc), len=71), y=seq(1,ncol(volc),len=71))
 par(mar=rep(0,4)); col <- 'green'
@@ -435,9 +437,9 @@ set.seed(42); N <- 8
 grid <- list(x=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0), 
              y=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0))
 val <- matrix(runif(N*N,0,0.3),N)
-st <- ipol(val,grid=grid, method='stalker')
+st <- ipol(val,grid=grid, method='stalker',k=NA)
 fh <- ipol(val,grid=grid, method='fh',k=0)
-st1 <- function(x) st(x,mindeg=1.5,maxdeg=1.5)
+st1 <- function(x) st(x,deg=1.5)
 ph <- ipol(val,grid=grid, method='polyharmonic',k=2)
 g <- list(x=seq(0,1, len=100), y=seq(0,1,len=100))
 par(mar=rep(0,4))
@@ -454,7 +456,7 @@ upper left panel to the constant degree stalker in the lower left panel.
 We can take a closer look at these portions of the surface in figure~\ref{fig:torsion}.
 
 <<torsion, fig.dim=c(5,5), out.width='\\linewidth', fig.cap='Torsion problem in the wet paper spline', fig.align='center'>>=
-g <- list(x=seq(grid$x[5],grid$x[8],length=50),y=seq(grid$y[5],grid$y[8],length=50))
+g <- list(x=seq(grid$x[5],grid$x[8],length=100),y=seq(grid$y[5],grid$y[8],length=100))
 par(mar=rep(1,4))
 plot3D::persp3D(g$x, g$y, evalongridV(st,grid=g), colvar=NULL, lighting=light,
        theta=80, ltheta=60, lphi=45, col='green', axes=TRUE)
@@ -477,7 +479,7 @@ pts <- c(grid$y[5:8])
 pt <- mean(grid$y[6:7])
 col <- c('green','magenta','blue','red')
 plot(x,st(rbind(x,pt)),typ='l',ylim=c(0,0.3),ylab='z')
-lines(x,st(rbind(x,pt),mindeg=c(1,2),maxdeg=2), col='grey')
+lines(x,st(rbind(x,pt),deg=c(1.5,2)), col='grey')
 points(grid$x,st(rbind(grid$x,pt)),pch=20)
 for(i in seq_along(pts)) {
   v <- st(rbind(x,pts[i]))
@@ -496,7 +498,7 @@ In figure~\ref{fig:constant} is the same part of the surface with constant degre
 
 <<constant, fig.dim=c(5,5), out.width='\\linewidth',fig.cap='Constant degree', fig.align='center'>>=
 par(mar=rep(1,4))
-plot3D::persp3D(g$x, g$y, evalongridV(st,grid=g,mindeg=2), colvar=NULL, lighting=light,
+plot3D::persp3D(g$x, g$y, evalongridV(st,grid=g,degree=2), colvar=NULL, lighting=light,
        theta=80, ltheta=60, lphi=45, col='green', axes=TRUE)
 plot3D::points3D(rep(subgrid$x,4),rep(subgrid$y,each=4),zval,add=TRUE,colvar=NULL,pch=20)
 @ 

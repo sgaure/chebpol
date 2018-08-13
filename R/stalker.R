@@ -1,4 +1,14 @@
-stalkerappx <- function(val, grid, ...) {
+# Precompute some values used in the stalker evaluation
+stalkercontext <- function(dmin,dplus,r) {
+  rank <- seq_along(dmin)
+  powmin <- lapply(rank, function(i) dmin[[i]]^r[[i]])
+  powplus <- lapply(rank, function(i) dplus[[i]]^r[[i]])
+  det <- lapply(rank, function(i) {
+    1/(dmin[[i]]*powplus[[i]] + dplus[[i]]*powmin[[i]])
+  })
+  list(det=det,pmin=powmin,pplus=powplus)
+}
+stalkerappx <- function(val, grid, r=2, ...) {
   if(is.numeric(grid)) grid <- list(grid)
   if(any(sapply(grid,is.unsorted))) {
     if(!is.function(val)) stop('Grid points must be ordered in increasing order')
@@ -9,31 +19,20 @@ stalkerappx <- function(val, grid, ...) {
   if(length(val) != gl)
     stop("length of values ",length(val)," do not match size of grid ",gl)
 
+  r <- rep(as.numeric(r),length.out=length(grid))
   # are any of the dimensions non-uniform?
+  dmin <- lapply(grid, function(gr) c(NaN,diff(gr)))
+  dplus <- lapply(dmin, function(dd) c(dd[-1],NaN))
+  val <- as.numeric(val)
+  stalker <- c(list(val=val, grid=grid), stalkercontext(dmin,dplus,r))
 
-
-  ## unimap <- identity
-  ## if(any(abs(unlist(lapply(grid,diff,differences=2L))) > 1e-12)) {
-  ##   # create monotonic maps into a uniform grid
-  ##   unimaps <- lapply(grid, function(gr) {
-  ##     if(all(abs(diff(gr,differences=2L) < 1e-12))) return(identity)
-  ##     return(splinefun(gr,seq_along(gr), method='hyman'))
-  ##   })
-  ##   grid <- lapply(seq_along(grid), function(i) unimaps[[i]](grid[[i]]));
-  ##   unimap <- function(x) {
-  ##     if(!is.matrix(x)) x <- matrix(x,length(grid))
-  ##     t(sapply(seq_along(grid), function(i) sapply(x[i,],unimaps[[i]])))
-  ##   }
-  ## } 
-
-  stalker <- list(val=as.numeric(val), grid=grid)
-  vectorfun(function(x,threads=getOption('chebpol.threads'),mindeg=1,maxdeg=2) {
-    mindeg <- rep(mindeg,length.out=length(grid))
-    maxdeg <- rep(maxdeg,length.out=length(grid))
-    .Call(C_evalstalker,x,stalker,as.numeric(mindeg),as.numeric(maxdeg),
-          as.integer(threads))
+  vectorfun(function(x,threads=getOption('chebpol.threads'),degree=r) {
+    degree <- rep(as.numeric(degree),length.out=length(grid))
+    if(!identical(degree,r))
+        stalker <- c(list(val=val, grid=grid), stalkercontext(dmin,dplus,degree))
+    .Call(C_evalstalker,x,stalker,degree, as.integer(threads))
   }, 
-  length(grid), 
+  arity=length(grid), 
   domain=lapply(grid,range))
   
 }

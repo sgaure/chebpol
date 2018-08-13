@@ -181,7 +181,8 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
            if(!is.list(grid)) grid <- list(grid)
            if(unsortedgrid(grid)) stop('grid must be distinct ordered values')
            grid <- lapply(grid,as.numeric)
-           return(stalkerappx(val,grid))
+           if(is.null(k)) k = 2
+           return(stalkerappx(val,grid,r=k))
          },
          crbf={
            if(is.null(knots)) stop('Must specify knots for radial basis functions.')
