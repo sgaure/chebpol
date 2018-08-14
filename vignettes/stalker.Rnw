@@ -30,18 +30,21 @@
 \begin{document}
 \setkeys{Gin}{width=0.6\textwidth }
 \begin{abstract}
-The idea behind the stalker spline in package \pkg{chebpol} is outlined.
-It is designed to be almost shape preserving in the sense that
-it attempts to honour monotonocity properties and local extreme points
-in the data, though not entirely. It is achieved by somewhat non-traditional
-means, by sacrificing analyticity, and in a corner case even differentiability.
-That is, the derivative is not well behaved.
-The name comes from the fact that it follows the data frighteningly close, 
-though it sometimes seems stupid with little foresight. The 2d-version
-could as well be called \emph{wet paper spline}. The interpolation isn't
-a proper spline, since it is not a polynomial. We also obtain a limit in
-intuitive geometric terms on how large the overshoot can be. The stalker spline
-can be used when a little more smoothness than multilinear is required.
+  The idea behind the stalker spline in package \pkg{chebpol} is
+  outlined.  It is designed to be almost shape preserving in the sense
+  that it attempts to honour monotonocity properties and local extreme
+  points in the data, though not entirely. There is no fancy theory
+  behind, but it served a purpose for the author, and here it is. The
+  near monotonicity is achieved by somewhat non-traditional means, by
+  sacrificing analyticity, and in a corner case even
+  differentiability.  That is, the derivative is not well behaved.
+  The name comes from the fact that it follows the data frighteningly
+  close, though it sometimes seems stupid with little foresight. The
+  2d-version could as well be called \emph{wet paper spline}. The
+  interpolation isn't a proper spline, since it is not a
+  polynomial. We also obtain a limit in intuitive geometric terms on
+  how large the overshoot can be. The stalker spline can be used when
+  a little more smoothness than multilinear is required.
 \end{abstract}
 \maketitle
 \section{Introduction}
@@ -234,21 +237,32 @@ we will converge to the non-differentiable case. However, there is a
 problem which becomes pressing when trying to use the stalker spline
 in two or more dimensions.  If, as in figure~\ref{fig:failure}, \(v_-\) moves down, the curve for
 \(x < 0\) moves down, but the curve for \(x>0\) moves up or down
-depending on whether the degree changes or not. This creates problems
-e.g.\ for surfaces with torsion, as we shall see later.
+depending on whether the degree changes or not. The solid lines are quadratic.
+the dashed lines are for non-monotonic points, but with lowered degree \(r=|c/b|\).
+The dotted lines are monotonic with lowered degree \(r=|b/c|\).
+For \(x < 0\) the red is above the blue for all types. We see that the
+quadratic lines cross in zero. The dotted lines to not cross, but touch in zero.
+The dashed lines touch in zero, but cross elsewhere.
+This behavious creates problems e.g.\ for surfaces with torsion, as we shall see later.
 
-<<failure, echo=FALSE,fig.dim=c(4,4), fig.align='center'>>=
-s <- seq(-0.5,0.5,len=100)
-plot(range(s),c(-1/3,0.5),pch='',xlab='x',ylab='y')
+<<failure, echo=FALSE,fig.dim=c(4,4), fig.align='center',fig.cap='Crossing lines'>>=
+s <- seq(-0.5,0.2,len=100)
+plot(range(s),c(-0.07,0.2),pch='',xlab='x',ylab='y')
 fmspline <- function(fm) { st <- ipol(c(fm,0,1),grid=c(-1,0,1),k=NA,method='stalker'); st(s)}
-lines(s,fmspline(1/3),col='red',lwd=2,lty=2)
-lines(s,fmspline(-1/3),col='red',lwd=2,lty=2)
-lines(s,fmspline(0.2),col='yellow',lwd=2)
-lines(s,fmspline(-0.2),col='green',lwd=2)
-lines(s,fmspline(-0.1),col='blue',lwd=2)
+#lines(s,fmspline(1/3),col='red',lwd=2,lty=4)
+#lines(s,fmspline(-1/3),col='red',lwd=2,lty=4)
+lines(s,fmspline(1),col='red')
+lines(s,fmspline(0.8),col='blue')
+lines(s,fmspline(0.2),col='red',lty=2)
+lines(s,fmspline(0.1),col='blue',lty=2)
+lines(s,fmspline(-0.1),col='red',lty=3,lwd=2)
+lines(s,fmspline(-0.2),col='blue',lty=3,lwd=2)
+lines(s,fmspline(-0.8),col='red')
+lines(s,fmspline(-1),col='blue')
+legend('topleft',legend=c('r=2','r=|b/c|','r=|c/b|'),lty=c(1,3,2))
 @ 
 
-\section{Summary}
+\section{Overshoot and blending}
 To sum up, the function passing through \((-1,v_-)\), \((0,v_0)\) and
 \((1,v_+)\) is 
 \begin{equation}
@@ -309,26 +323,45 @@ to the next lowest/highest knot.
 \subsection{Blending and degree limits}
 We always use normalized coordinates around a knot. If the grid is not uniform,
 the computation of a dynamic degree involves solving a non-linear equation, instead
-we map the grid to a uniform grid with a rational function \(x\mapsto\frac{\lambda x}{1+\gamma x}\).
+we map the domain of each basis function to a uniform grid with a rational 
+function \(x\mapsto\frac{\lambda x}{1+\gamma x}\).
+Alternatively, the entire grid can be mapped to a uniform with a \code{splinefun(method='hyman')}, this
+can be selected by the argument \code{hyman=TRUE} to \code{ipol} at spline creation time.
 
 There is a basis function in every knot, so we glue the functions
 \(f_1\) and \(f_2\) together as a convex combination \(tf_1(x') +
 (1-t)f_2(x'-1)\) (\(x'-1\) is the normalized coordinate for \(f_2\),
 the basis function in the knot \(x_+\)). We use a linear blender,
 \(t = 1 - x'\).  Alternatively we could use a sigmoid blender like
-\(t\in [0,1/2] \mapsto exp(2-1/x)/2\) and \(t\in (1/2,1] \mapsto 1-exp(2-1/(1-x))/2.\)
+\(t\in [0,1/2] \mapsto \exp(2-1/x)/2\) and \(t\in (1/2,1] \mapsto 1-\exp(2-1/(1-x))/2.\)
+A cubic blender is also available. 
+These can be selected by the argument \\code{blend="linear"}, \code{blend="sigmoid"}, or
+\code{blend="cubic"} to the
+stalker interpolant. 
+The three blending functions are shown in figure~\ref{fig:blending}.
 
-The interpolant can be given \code{"degree"}, these
-can be vectors, a fixed degree for each dimension. 
+<<blending, fig.dim=c(4,4),fig.cap='Blending functions'>>=
+sigmoid <- function(t) ifelse(t<0.5, 0.5*exp(2-1/t), 1-0.5*exp(2-1/(1-t)))
+cubic <- function(t) -2*t^3 + 3*t^2
+linear <- function(t) t
+s <- seq(0,1,length=100)
+plot(s,sigmoid(s),typ='l',ylab='y')
+lines(s,linear(s), col='blue')
+lines(s,cubic(s), col='green')
+legend('topleft',legend=c('sigmoid','linear','cubic'),fill=c('black','blue','green'))
+@ 
+
+The interpolant can be given a \code{"degree"} argument, this
+can be a vector, a fixed degree for each dimension. 
 
 In more than one dimension, torsion can be a problem for stability. It can create
-striping artefacts. This can be alleviated by having constant degree (\code{maxdeg=mindeg}) 
+striping artefacts. This can be alleviated by having constant degree (different from \code{NA}),
 except possibly for the first dimension. We'll see an example later.
 
 \section{Examples}
 In this section we compare the stalker spline to the 
 \code{"natural"} and \code{"monoH.FC"} spline from \code{stats::splinefun}.
-We also illustrate a stalker spline with minimum degree 1.5.
+We also illustrate a stalker spline with constant degree 1.5.
 
 <<echo=FALSE,fig.dim=c(4,4)>>=
 pts <- pts-min(pts)
@@ -396,7 +429,8 @@ legend('topleft',legend=c('stalker','mono','natural','stalker 1.5'),
 @ 
 
 \section{Higher dimensions}
-The stalker spline in higher dimension \(N\) is simplistic. It works on a Cartesian grid.
+The stalker spline in higher dimension \(N\) is simplistic and problematic, and is
+likely to change. It works on a Cartesian grid.
 When evaluating the stalker in an \(x\) between grid points, the stalker is evaluated
 for the \(N-1\) first dimensions on two grid lines on each side of \(x\)
 in dimension \(N\). On these four points in dimension \(N\), two basis functions
@@ -432,18 +466,18 @@ alleviated by using a constant degree.  There is no advanced
 shading in \code{plot3D::persp3D}, so the \(100\times 100\) resolution
 can be seen if you zoom in.
 
-<<random, fig.dim=c(3.5,3.5), fig.pos='!h', fig.align='center',fig.cap='Random surface',out.width='.4\\linewidth',fig.ncol=2,fig.subcap=c('stalker', 'Floater-Hormann','stalker 1.5 constant','thin plate spline')>>=
+<<random, fig.dim=c(3.5,3.5), fig.pos='!h', fig.align='center',fig.cap='Random surface',out.width='.4\\linewidth',fig.ncol=2,fig.subcap=c('stalker', 'thin plate spline','stalker degree 1.5','hyman uniformization')>>=
 set.seed(42); N <- 8
 grid <- list(x=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0), 
              y=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0))
 val <- matrix(runif(N*N,0,0.3),N)
 st <- ipol(val,grid=grid, method='stalker',k=NA)
-fh <- ipol(val,grid=grid, method='fh',k=0)
-st1 <- function(x) st(x,deg=1.5)
-ph <- ipol(val,grid=grid, method='polyharmonic',k=2)
+ph <- ipol(val,grid=grid, method='polyharmonic', k=2)
+st15 <- function(x) st(x,deg=1.5)
+sthyman <- ipol(val,grid=grid,method='stalker',k=1.5,hyman=TRUE)
 g <- list(x=seq(0,1, len=100), y=seq(0,1,len=100))
 par(mar=rep(0,4))
-for(f in list(st, fh, st1, ph)) {
+for(f in list(st, ph, st15, sthyman)) {
   plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,
          theta=60, ltheta=30, lphi=45, col='green', axes=FALSE, bty='n', scale=FALSE,zlim=c(0,1))
   pts <- evalongridV(f,grid=grid)+0.00
@@ -502,5 +536,28 @@ plot3D::persp3D(g$x, g$y, evalongridV(st,grid=g,degree=2), colvar=NULL, lighting
        theta=80, ltheta=60, lphi=45, col='green', axes=TRUE)
 plot3D::points3D(rep(subgrid$x,4),rep(subgrid$y,each=4),zval,add=TRUE,colvar=NULL,pch=20)
 @ 
+
+\section{Summary}
+The stalker spline is created and used with
+<<eval=FALSE>>=
+st <- ipol(val,grid=grid,method='stalker',k=1.5,hyman=FALSE)
+st(x,degree=1.2,blend='linear')
+@ 
+where \(k\) is the degree. \code{k} can be a vector, one degree for each
+dimension. Specifying \code{k=NA} makes the spline adjust the
+degree locally as described above. This should be used with care for multidimensional
+data. For non-uniform grids, one may specify \code{hyman=TRUE}, this will map the
+grid points monotonically to a uniform grid. Otherwise, a local rational map is used
+for the same purpose on each series of three points. As time allows, the author will
+at some time in the future instead solve the non-linear equation to do non-uniform grids
+properly.
+
+The spline is created with a default degree, be it \code{NA} or a numeric between 1 and 2.
+It is possible at evaluation time to use a different degree, this incurs a time penalty.
+Ordinarily, basis functions are combined linearly. I.e.\ when we approach a grid point more and
+more of the basis function living there is weighted in. This can be changed at evaluation
+time, it can be done ``faster'' with
+a sigmoid map, i.e. so that near a grid point, the neighbouring basis functions are not used at all.
+Use \code{blend="sigmoid"} or \code{blend="cubic"} to choose between two such sigmoid maps.
 
 \end{document}

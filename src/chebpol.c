@@ -935,7 +935,7 @@ R_CallMethodDef callMethods[] = {
   {"evalrbf", (DL_FUNC) &R_evalrbf, 3},
   {"evalpolyh", (DL_FUNC) &R_evalpolyh, 7},
   {"evalsl", (DL_FUNC) &R_evalsl, 8},
-  {"evalstalker", (DL_FUNC) &R_evalstalker, 6},
+  {"evalstalker", (DL_FUNC) &R_evalstalker, 5},
   {"analyzesimplex", (DL_FUNC) &R_analyzesimplex, 3},
   {"havealglib", (DL_FUNC) &R_havealglib, 0},
   {NULL, NULL, 0}

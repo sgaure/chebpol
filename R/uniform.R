@@ -60,16 +60,16 @@ ucappx.real <- function(val, intervals=NULL) {
   dims <- dim(val)
   ch <- chebappx.real(val)
   if(is.null(intervals)) {
-    gridmap <- compiler::cmpfun(function(x) mapply(function(xi,d) ugm(xi,d),x,dims))
+    gridmap <- function(x) mapply(function(xi,d) ugm(xi,d),x,dims)
   } else {
     # precompute interval mid points and inverse lengths
     md <- lapply(intervals,mean)
     ispan <- lapply(intervals, function(i) 2/diff(i))
-    gridmap <- compiler::cmpfun(function(x) mapply(function(xi,mid,is,d) ugm(is*(xi-mid),d),x,md,ispan,dims))
+    gridmap <- function(x) mapply(function(xi,mid,is,d) ugm(is*(xi-mid),d),x,md,ispan,dims)
   }
-  gm <- compiler::cmpfun(function(x) {
+  gm <- function(x) {
     if(is.matrix(x)) apply(x,2,gridmap) else gridmap(x)
-  })
+  }
   vectorfun(function(x, threads=getOption('chebpol.threads')) ch(gm(x), threads), 
             arity=length(dims), 
             domain=if(is.null(intervals)) lapply(rep(-1,length(dim(val))),c,1) else intervals)

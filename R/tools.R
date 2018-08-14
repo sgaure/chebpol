@@ -1,7 +1,6 @@
 
 vectorfun <- function(fun,arity,domain=NULL) {
   force(arity)
-  fun <- compiler::cmpfun(fun)
   f <- function(x) {
     mc <- match.call(expand.dots=TRUE)
     mc[[1L]] <- quote(list)
@@ -21,7 +20,7 @@ vectorfun <- function(fun,arity,domain=NULL) {
       stop(sprintf('Function should take %d arguments, you supplied a vector of length %d',arity,length(x)))
   }
   formals(f) <- formals(fun)
-  structure(compiler::cmpfun(f),arity=arity,domain=as.data.frame(domain),
+  structure(f,arity=arity,domain=as.data.frame(domain),
             chebpol.version=utils::packageVersion('chebpol'))
 }
 

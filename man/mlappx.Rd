@@ -29,8 +29,7 @@ Multilinear interpolation on an arbitrary Cartesian product.
 A call \code{fun <- mlappx(val,grid)} creates a multilinear interpolant on
 the grid.  The value on the grid points will be exact, the value between the
 grid points is a convex combination of the values in the corners of the
-hypercube surrounding it. The interpolant has an argument \code{smooth} which
-defaults to \code{0}. It can be set to a numeric between 0 and 1 to create smoothed corners.
+hypercube surrounding it.
 
 If \code{val} is a function it will be evaluated on the grid.
 }

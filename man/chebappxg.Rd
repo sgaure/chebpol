@@ -36,7 +36,7 @@ A call \code{fun <- chebappxg(val,grid)} does the following.  A Chebyshev
 interpolation \code{ch} for \code{val} is created, on the [-1,1] hypercube.
 For each dimension a grid-map function \code{gm} is created which maps the
 grid-points monotonically into Chebyshev knots. For this, the function
-\code{\link{splinefun}} with \code{method='monoH.FC'} is used.  When
+\code{\link{splinefun}} with \code{method='hyman'} is used.  When
 \code{fun(x)} is called, it translates to \code{ch(gm(x))}.  For uniform
 grids, the function \code{\link{ucappx}} will produce a faster interpolation
 in that a closed form \code{gm} is used.

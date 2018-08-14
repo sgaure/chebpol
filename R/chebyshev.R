@@ -222,14 +222,14 @@ chebappx.real <- function(val,intervals=NULL) {
                length(intervals),' ',length(dim(val)))
     ispan <- sapply(intervals,function(x) 2/diff(x))
     mid <- sapply(intervals,function(x) mean(x))
-    imap <- compiler::cmpfun(function(x) (x-mid)*ispan)
+    imap <- function(x) (x-mid)*ispan
 
     fun <- vectorfun(function(x,threads=getOption('chebpol.threads')) .Call(C_evalcheb,cf,imap(x), threads, NULL),
                      arity=K,
                      domain=intervals)
     rm(val)
   }
-  compiler::cmpfun(fun)
+  fun
 }
 
 #' @rdname chebappx
@@ -273,7 +273,7 @@ chebappxf.real <- function(fun,dims,intervals=NULL,...) {
 #' interpolation \code{ch} for \code{val} is created, on the [-1,1] hypercube.
 #' For each dimension a grid-map function \code{gm} is created which maps the
 #' grid-points monotonically into Chebyshev knots. For this, the function
-#' \code{\link{splinefun}} with \code{method='monoH.FC'} is used.  When
+#' \code{\link{splinefun}} with \code{method='hyman'} is used.  When
 #' \code{fun(x)} is called, it translates to \code{ch(gm(x))}.  For uniform
 #' grids, the function \code{\link{ucappx}} will produce a faster interpolation
 #' in that a closed form \code{gm} is used.
@@ -345,17 +345,17 @@ chebappxg.real <- function(val,grid=NULL,mapdim=NULL) {
 
 
   intervals <- lapply(grid,range)
-  # create monotone splines with splinefun, method monoH.FC
-  gridmaps <- mapply(stats::splinefun, grid, chebknots(dim(val)), MoreArgs=list(method='monoH.FC'))
+  # create monotone splines with splinefun, method hyman
+  gridmaps <- mapply(stats::splinefun, grid, chebknots(dim(val)), MoreArgs=list(method='hyman'))
 #  gridmaps <- mapply(polyh, chebknots(dim(val)), grid, MoreArgs=list(k=1))
   gridmap <- function(x) {
     if(!is.matrix(x)) return(mapply(function(gm,x) gm(x),gridmaps,x))
     apply(x,2,function(x) mapply(function(gm,x) gm(x),gridmaps,x))
   }
   ch <- chebappx.real(val)
-  compiler::cmpfun(vectorfun(function(x,threads=getOption('chebpol.threads')) ch(gridmap(x),threads), 
-                             arity=length(grid), 
-                             domain=intervals))
+  vectorfun(function(x,threads=getOption('chebpol.threads')) ch(gridmap(x),threads), 
+            arity=length(grid), 
+            domain=intervals)
 }
 
 #' @rdname chebappxg

@@ -182,7 +182,11 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
            if(unsortedgrid(grid)) stop('grid must be distinct ordered values')
            grid <- lapply(grid,as.numeric)
            if(is.null(k)) k = 2
-           return(stalkerappx(val,grid,r=k))
+           hyman <- args[['hyman']]
+           if(is.null(hyman)) hyman <- FALSE
+           newarg <- args[-match('hyman',names(args),nomatch=0)]
+           return(do.call(stalkerappx,c(list(val,grid,r=k,hyman=hyman),newarg)))
+#           return(stalkerappx(val,grid,r=k,hyman=hyman))
          },
          crbf={
            if(is.null(knots)) stop('Must specify knots for radial basis functions.')

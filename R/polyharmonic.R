@@ -86,9 +86,9 @@ polyh.real <- function(val, knots, k=2, normalize=NA, nowarn=FALSE, ...) {
   }
 
   # trickery to get it in place
-  phi <- compiler::cmpfun(function(x) {
+  phi <- function(x) {
     eval.parent(as.call(list(quote(.Call), C_phifunc, substitute(x), k, getOption('chebpol.threads'))))
-  })
+  }
 
   #A <- phi(apply(knots,2, function(ck) colSums((ck-knots)^2)))
   # one day I will look into a faster solver, 

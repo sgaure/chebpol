@@ -8,15 +8,17 @@ static R_INLINE double stalk1(double x, double vmin, double vplus,double dmin,
   //  double b = (vplus*pow(dmin,r) - vmin*pow(dplus,r))*iD;
   //  double c = (vplus*dmin + vmin*dplus)*iD;
   if(!isnan(r)) {
+    // use precomputed degree
     b = (vplus*powmin - vmin*powplus)*iD;
     c = (vplus*dmin + vmin*dplus)*iD;
     return b*x + c*pow(fabs(x),r);
   } else {
-
+    // Compute r for this basis function
     // This works when dplus==dmin, otherwise we must solve an equation for r:
     // vmin*dplus^r - vplus*dmin^r = \pm r(vmin*dplus + vplus*dmin)
     // or (dplus^r - \pm r*dplus)/(dmin^r + \pm r*dmin) = vplus/vmin
     // Instead we map the interval [-dmin,0,dplus] -> [-1,0,1] with a rational function
+    // this destroys extrapolation
     x = (dmin+dplus)*x/(2*dplus*dmin + (dplus-dmin)*x);
     //    x /= x>=0 ? dplus : dmin;
     b = 0.5*(vplus-vmin);
@@ -45,7 +47,7 @@ static R_INLINE double stalk1(double x, double vmin, double vplus,double dmin,
 }
 
 double evalstalker(const double *x, const int nrank, const int *dims, 
-		   double **grid, const double *val,
+		   double **grid, const double *val, int blend,
 		   const double *degree, double **det, double **pmin, double **pplus) {
   if(nrank == 0) return val[0];
   const int newrank = nrank-1;
@@ -68,11 +70,11 @@ double evalstalker(const double *x, const int nrank, const int *dims,
   double v1=NA_REAL,v2,v3,v4=NA_REAL;
   if(newrank > 0) {
     if(imin > 0)
-      v1 = evalstalker(x,newrank,dims,grid,val+(imin-1)*stride,degree,det,pmin,pplus);
-    v2 = evalstalker(x,newrank,dims,grid,val+imin*stride,degree,det,pmin,pplus);
-    v3 = evalstalker(x,newrank,dims,grid,val+(imin+1)*stride,degree,det,pmin,pplus);
+      v1 = evalstalker(x,newrank,dims,grid,val+(imin-1)*stride,blend,degree,det,pmin,pplus);
+    v2 = evalstalker(x,newrank,dims,grid,val+imin*stride,blend,degree,det,pmin,pplus);
+    v3 = evalstalker(x,newrank,dims,grid,val+(imin+1)*stride,blend,degree,det,pmin,pplus);
     if(imin < N-2)
-      v4 = evalstalker(x,newrank,dims,grid,val+(imin+2)*stride,degree,det,pmin,pplus);
+      v4 = evalstalker(x,newrank,dims,grid,val+(imin+2)*stride,blend,degree,det,pmin,pplus);
   } else {    
     // save a recursion step
     if(imin > 0) v1 = val[(imin-1)*stride];
@@ -101,17 +103,23 @@ double evalstalker(const double *x, const int nrank, const int *dims,
   double w = 1-nx;
   if(imin == 0) w = 0;  // no basis in the end points
   if(imin == N-2) w = 1;
-  // This ensures linear extrapolation:
-  if(w < 0) w = 0.0;
-  if(w > 1) w = 1.0;
 
   if(w == 0) return high;
   if(w == 1) return low;
-  w = w<0.5 ? 0.5*exp(2-1/w) : (1-0.5*exp(2-1/(1-w)));  // smooth sigmoid blending
+  switch(blend) {
+  case 1:
+    w = w<0.5 ? 0.5*exp(2-1/w) : 1-0.5*exp(2-1/(1-w));  // smooth sigmoid blending
+    break;
+  case 2:
+    w = w<0.5 ? 0.5*exp(4-1/(w*w)) : 1-0.5*exp(4-1/((1-w)*(1-w)));  // parodic sigmoid blending
+    break;
+  case 3:
+    w = (-2*w + 3)*w*w;
+  }    
   return w*low + (1-w)*high;
 }
 
-SEXP R_evalstalker(SEXP Sx, SEXP stalker, SEXP Sdegree, SEXP Sthreads) {
+SEXP R_evalstalker(SEXP Sx, SEXP stalker, SEXP Sdegree, SEXP Sblend, SEXP Sthreads) {
   const double *x = REAL(Sx);
   const int K = nrows(Sx);
   const int N = ncols(Sx);
@@ -121,6 +129,7 @@ SEXP R_evalstalker(SEXP Sx, SEXP stalker, SEXP Sdegree, SEXP Sthreads) {
   SEXP Sdet = VECTOR_ELT(stalker,2);
   SEXP Spmin = VECTOR_ELT(stalker,3);
   SEXP Spplus = VECTOR_ELT(stalker,4);
+  int blend = INTEGER(AS_INTEGER(Sblend))[0];
   const int nrank = LENGTH(Sgrid);
   if(K != nrank) error("Rank of input(%d) does not match rank of spline",N,nrank);
 
@@ -152,7 +161,7 @@ SEXP R_evalstalker(SEXP Sx, SEXP stalker, SEXP Sdegree, SEXP Sthreads) {
   double *out = REAL(ret);
 #pragma omp parallel for num_threads(threads) schedule(guided) if(N > 1 && threads > 1)
   for(int i = 0; i < N; i++)  {
-    out[i] = evalstalker(x+i*nrank, nrank, dims, grid, val, degree, det, pmin, pplus);
+    out[i] = evalstalker(x+i*nrank, nrank, dims, grid, val, blend, degree, det, pmin, pplus);
   }
   UNPROTECT(1);
   return ret;
