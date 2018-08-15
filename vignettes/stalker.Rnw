@@ -209,16 +209,16 @@ v0 <- seq(-0.7,1.7,len=41)
 f0spline <- function(f0) { st <- ipol(c(0,f0,1),grid=c(-1,0,1),k=NA,method='stalker'); st(s)}
 for(f0 in v0) {
   points(0,f0,pch=20)
-  lines(s,f0spline(f0),col='blue')
+  col <- if( (f0 < 0.75 && f0 > 0.25) || (f0 > 1.5 || f0 < -0.5) ) 
+           'darkblue' 
+         else if(f0 < 1 && f0 > 0)
+           'blue'
+         else
+           'lightblue'
+  lines(s,f0spline(f0),col=col)
 }
 # paint the exact quadratic in green, i.e. where 2c = b
 # f0=0.25
-lines(s,f0spline(0.25),col='lightgreen',lwd=2)
-lines(s,f0spline(0.75),col='lightgreen',lwd=2)
-lines(s,f0spline(-0.5),col='darkgreen',lwd=2)
-lines(s,f0spline(1.5),col='darkgreen',lwd=2)
-lines(s,f0spline(0),col='red',lwd=2)
-lines(s,f0spline(1),col='red',lwd=2)
 clip(0,0.5,-2,2)
 abline(h=-0.7,lty=2)
 clip(-0.5/(2*(0.5+0.7)),0.5,-2,2)

@@ -20,7 +20,6 @@ static R_INLINE double stalk1(double x, double vmin, double vplus,double dmin,
     // Instead we map the interval [-dmin,0,dplus] -> [-1,0,1] with a rational function
     // this destroys extrapolation
     x = (dmin+dplus)*x/(2*dplus*dmin + (dplus-dmin)*x);
-    //    x /= x>=0 ? dplus : dmin;
     b = 0.5*(vplus-vmin);
     c = 0.5*(vplus+vmin);
     
@@ -28,12 +27,16 @@ static R_INLINE double stalk1(double x, double vmin, double vplus,double dmin,
     
     // Find the degree. For uniform grids in normalized coordinates, this is quite easy
     double ac = fabs(c), ab = fabs(b);
-    if(ac <= ab && ab < 2.0*ac) {
-      r = ab/ac;
-    } else if(ab < ac && ac < 2.0*ab) {
-      r = ac/ab;
+    if(sign(vplus*vmin) <= 0) {
+      // monotonic
+      r = (ab < 2.0*ac) ? ab/ac : 2.0;
     } else {
-      r = 2.0;
+      // non-monotonic
+      if(ac < 2.0*ab) {
+	r = ac/ab;
+      } else {
+	r = 2.0;
+      }
     }
 
     if(r == 2.0) {
