@@ -49,6 +49,10 @@ AS_IF([test "x$use_fftw" = "xyes"], [
                     [AC_MSG_WARN([FFTW not found. Compiling with matrix method])])
 ])
 
+PKG_CHECK_MODULES([GSL], gsl, [have_fftw=yes],
+			 [AC_MSG_WARN([GSL not found])])
+AC_SUBST(GSL_CFLAGS)
+AC_SUBST(GSL_LIBS)
 
 AS_IF([test "x$have_fftw" = "xyes" ], [
  # figure out if it works

@@ -1,5 +1,83 @@
 #include "chebpol.h"
 
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_roots.h>
+
+typedef struct {double dmin, dplus, vmin, vplus; int pos;} rblock;
+static double rfun(double r, void *P) {
+  rblock *p = (rblock*) P;
+  const double dmin=p->dmin, dplus=p->dplus, vmin=p->vmin, vplus=p->vplus;
+  int pos=p->pos;
+  if(pos) 
+    return vmin*pow(dplus,r) - vplus*pow(dmin,r) - r*pow(dplus,r-1)*(vmin*dplus+vplus*dmin);
+  else
+    return vmin*pow(dplus,r) - vplus*pow(dmin,r) + r*pow(dmin,r-1)*(vmin*dplus+vplus*dmin);
+}
+
+#if 0
+static double rfun_deriv(double r, void *P) {
+  rblock *p = (rblock*) P;
+  const double dmin=p->dmin, dplus=p->dplus, vmin=p->vmin, vplus=p->vplus;
+  int pos=p->pos;
+  printf("rfun_deriv: %.2f %.2f %.2f %.2f %d %.2f\n",dmin,dplus,vmin,vplus,pos,r);
+  if(pos) 
+    return vmin*r*pow(dplus,r-1) - vplus*r*pow(dmin,r-1) - r*(r-1)*pow(dplus,r-2)*(vmin*dplus+vplus*dmin);
+  else
+    return vmin*r*pow(dplus,r-1) - vplus*r*pow(dmin,r-1) + r*(r-1)*pow(dmin,r-2)*(vmin*dplus+vplus*dmin);
+}
+
+static void rfun_fdf(double r, void *P, double *y, double *dy) {
+  rblock *p = (rblock*) P;
+  const double dmin=p->dmin, dplus=p->dplus, vmin=p->vmin, vplus=p->vplus;
+  int pos=p->pos;
+  printf("rfun_fdf: %.2f %.2f %.2f %.2f %d %.2f\n",dmin,dplus,vmin,vplus,pos,r);
+  if(pos) {
+    *y = vmin*pow(dplus,r) - vplus*pow(dmin,r) - r*pow(dplus,r-1)*(vmin*dplus+vplus*dmin);
+    *dy = vmin*r*pow(dplus,r-1) - vplus*r*pow(dmin,r-1) - r*(r-1)*pow(dplus,r-2)*(vmin*dplus+vplus*dmin);
+  } else {
+    *y = vmin*pow(dplus,r) - vplus*pow(dmin,r) + r*pow(dmin,r-1)*(vmin*dplus+vplus*dmin);
+    *dy = vmin*r*pow(dplus,r-1) - vplus*r*pow(dmin,r-1) + r*(r-1)*pow(dmin,r-2)*(vmin*dplus+vplus*dmin);
+  }
+}
+#endif
+
+static R_INLINE double findmonor(double dmin,double dplus, double vmin, double vplus) {
+  double D2 = (vmin*dplus*dplus - vplus*dmin*dmin)/(vplus*dmin+dplus*vmin);
+  double r;
+  if(D2 > 2*dplus || D2 < -2*dmin) {
+    r = 2.0;
+  } else {
+    // Find the largest r which keeps it monotonic, i.e. derivative 0 in one
+    // of the end points
+    rblock rb = {dmin,dplus,vmin,vplus,0};
+    const gsl_root_fsolver_type *T;
+    gsl_root_fsolver *s;
+    gsl_function F;
+    int status;
+    F.function = &rfun;
+    F.params = &rb;
+    T = gsl_root_fsolver_brent;
+    s = gsl_root_fsolver_alloc(T);
+    rb.pos = 1;
+    double t1 = rfun(1,&rb), t2 = rfun(2,&rb);
+    if(sign(t1*t2) > 0) rb.pos = 0;
+    gsl_root_fsolver_set(s, &F, 1, 2);
+    int iter = 0;
+    do {
+      iter++;
+      status = gsl_root_fsolver_iterate(s);
+      r = gsl_root_fsolver_root(s);
+      double lo = gsl_root_fsolver_x_lower(s);
+      double hi = gsl_root_fsolver_x_upper(s);
+      status = gsl_root_test_interval(lo,hi,0,1e-8);
+    } while(status == GSL_CONTINUE || iter > 50);
+    if(status != GSL_SUCCESS) printf("No convergence\n");
+    gsl_root_fsolver_free(s);
+  }
+  return r;
+}
+
 // Stalker spline with uniform grid, normalized coordinates
 static R_INLINE double stalk1(double x, double vmin, double vplus,double dmin,
 			      double dplus,double r, double iD,double powmin,double powplus) {
@@ -14,37 +92,51 @@ static R_INLINE double stalk1(double x, double vmin, double vplus,double dmin,
     return b*x + c*pow(fabs(x),r);
   } else {
     // Compute r for this basis function
-    // This works when dplus==dmin, otherwise we must solve an equation for r:
-    // vmin*dplus^r - vplus*dmin^r = \pm r(vmin*dplus + vplus*dmin)
-    // or (dplus^r - \pm r*dplus)/(dmin^r + \pm r*dmin) = vplus/vmin
-    // Instead we map the interval [-dmin,0,dplus] -> [-1,0,1] with a rational function
-    // this destroys extrapolation
-    x = (dmin+dplus)*x/(2*dplus*dmin + (dplus-dmin)*x);
-    b = 0.5*(vplus-vmin);
-    c = 0.5*(vplus+vmin);
+    if(fabs(dplus-dmin) < 1e3*DOUBLE_EPS*dmin) {
+      // Uniform grid
+      // This works when dplus==dmin, otherwise we must solve an equation for r.
+      x /= dplus;
+      b = 0.5*(vplus-vmin);
+      c = 0.5*(vplus+vmin);
     
-    if(c == 0.0) return b*x;
-    
-    // Find the degree. For uniform grids in normalized coordinates, this is quite easy
-    double ac = fabs(c), ab = fabs(b);
-    if(sign(vplus*vmin) <= 0) {
-      // monotonic
-      r = (ab < 2.0*ac) ? ab/ac : 2.0;
-    } else {
-      // non-monotonic
-      if(ac < 2.0*ab) {
-	r = ac/ab;
+      if(c == 0.0) return b*x;
+      
+      // Find the degree. For uniform grids in normalized coordinates, this is quite easy
+      double ac = fabs(c), ab = fabs(b);
+      if(sign(vplus*vmin) <= 0) {
+	// monotonic
+	r = (ab < 2.0*ac) ? ab/ac : 2.0;
       } else {
-	r = 2.0;
+	// non-monotonic
+	// pretend sign change of vplus for computation of r, that is, interchange |b| and |c|
+	r = (ac < 2.0*ab) ? ac/ab : 2.0;
       }
-    }
-
-    if(r == 2.0) {
-      return b*x + c*x*x;
-    } else if(r != 1.0) {
-      return b*x + c*pow(fabs(x),r);
+      
+      if(r == 2.0) {
+	return b*x + c*x*x;
+      } else if(r != 1.0) {
+	return b*x + c*pow(fabs(x),r);
+      } else {
+	return b*x + c*fabs(x);
+      }
     } else {
-      return b*x + c*fabs(x);
+      // We must solve for r:
+      double b,c;
+      if(sign(vmin*vplus) < 0) {
+	// monotonic
+	r = findmonor(dmin,dplus,vmin,vplus);
+      } else {
+	// non-monotonic, should we keep f'(0) = 0? No, won't work.
+	// We can use r=2, but if we just precisely is non-monotonic
+	// we should use a smaller r to avoid overshoot. But which?
+	// Keep it in some way "symmetric" with the monotonic case?  How?
+	// Change sign on one of the values, compute the r which
+	// fits these monotonic points.
+	r = findmonor(dmin,dplus,-vmin,vplus);
+      }
+      c = (dplus*vmin + dmin*vplus)/(pow(dmin,r)*dplus + pow(dplus,r)*dmin);
+      b = (vplus - c*pow(dplus,r))/dplus;
+      return b*x + c*pow(fabs(x),r);
     }
   }
 }

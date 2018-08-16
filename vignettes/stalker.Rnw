@@ -321,12 +321,8 @@ In short, the overshoot is always less than 14\% of the vertical distance from t
 to the next lowest/highest knot.
 
 \subsection{Blending and degree limits}
-We always use normalized coordinates around a knot. If the grid is not uniform,
-the computation of a dynamic degree involves solving a non-linear equation, instead
-we map the domain of each basis function to a uniform grid with a rational 
-function \(x\mapsto\frac{\lambda x}{1+\gamma x}\).
-Alternatively, the entire grid can be mapped to a uniform with a \code{splinefun(method='hyman')}, this
-can be selected by the argument \code{hyman=TRUE} to \code{ipol} at spline creation time.
+If the grid is not uniform,
+the computation of a dynamic degree involves solving a non-linear equation.
 
 There is a basis function in every knot, so we glue the functions
 \(f_1\) and \(f_2\) together as a convex combination \(tf_1(x') +
@@ -466,18 +462,18 @@ alleviated by using a constant degree.  There is no advanced
 shading in \code{plot3D::persp3D}, so the \(100\times 100\) resolution
 can be seen if you zoom in.
 
-<<random, fig.dim=c(3.5,3.5), fig.pos='!h', fig.align='center',fig.cap='Random surface',out.width='.4\\linewidth',fig.ncol=2,fig.subcap=c('stalker', 'thin plate spline','stalker degree 1.5','hyman uniformization')>>=
+<<random, fig.dim=c(3.5,3.5), fig.pos='!h', fig.align='center',fig.cap='Random surface',out.width='.4\\linewidth',fig.ncol=2,fig.subcap=c('stalker', 'thin plate spline','stalker degree 1.5','Floater-Hormann')>>=
 set.seed(42); N <- 8
 grid <- list(x=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0), 
              y=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0))
 val <- matrix(runif(N*N,0,0.3),N)
 st <- ipol(val,grid=grid, method='stalker',k=NA)
 ph <- ipol(val,grid=grid, method='polyharmonic', k=2)
+fh <- ipol(val,grid=grid, method='fh', k=0)
 st15 <- function(x) st(x,deg=1.5)
-sthyman <- ipol(val,grid=grid,method='stalker',k=1.5,hyman=TRUE)
 g <- list(x=seq(0,1, len=100), y=seq(0,1,len=100))
 par(mar=rep(0,4))
-for(f in list(st, ph, st15, sthyman)) {
+for(f in list(st, ph, st15, fh)) {
   plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,
          theta=60, ltheta=30, lphi=45, col='green', axes=FALSE, bty='n', scale=FALSE,zlim=c(0,1))
   pts <- evalongridV(f,grid=grid)+0.00
@@ -530,7 +526,7 @@ wherever any of the coloured lines cross.
 
 In figure~\ref{fig:constant} is the same part of the surface with constant degree~2.
 
-<<constant, fig.dim=c(5,5), out.width='\\linewidth',fig.cap='Constant degree', fig.align='center'>>=
+<<constant, fig.dim=c(5,5), out.width='\\linewidth',fig.cap='Constant degree 2', fig.align='center'>>=
 par(mar=rep(1,4))
 plot3D::persp3D(g$x, g$y, evalongridV(st,grid=g,degree=2), colvar=NULL, lighting=light,
        theta=80, ltheta=60, lphi=45, col='green', axes=TRUE)
@@ -540,17 +536,14 @@ plot3D::points3D(rep(subgrid$x,4),rep(subgrid$y,each=4),zval,add=TRUE,colvar=NUL
 \section{Summary}
 The stalker spline is created and used with
 <<eval=FALSE>>=
-st <- ipol(val,grid=grid,method='stalker',k=1.5,hyman=FALSE)
+st <- ipol(val,grid=grid,method='stalker',k=1.5)
 st(x,degree=1.2,blend='linear')
 @ 
 where \(k\) is the degree. \code{k} can be a vector, one degree for each
 dimension. Specifying \code{k=NA} makes the spline adjust the
 degree locally as described above. This should be used with care for multidimensional
-data. For non-uniform grids, one may specify \code{hyman=TRUE}, this will map the
-grid points monotonically to a uniform grid. Otherwise, a local rational map is used
-for the same purpose on each series of three points. As time allows, the author will
-at some time in the future instead solve the non-linear equation to do non-uniform grids
-properly.
+data. Evaluation on a non-uniform grid currently involves solving a non-linear equation
+numerically, so this is slower than on a uniform grid.
 
 The spline is created with a default degree, be it \code{NA} or a numeric between 1 and 2.
 It is possible at evaluation time to use a different degree, this incurs a time penalty.
