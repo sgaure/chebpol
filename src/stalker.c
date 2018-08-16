@@ -78,6 +78,44 @@ static R_INLINE double findmonor(double dmin,double dplus, double vmin, double v
   return r;
 }
 
+// hyperbolic stalker
+static R_INLINE double stalkhyp(double x, double vmin, double vplus,double dmin, double dplus) {
+  //  double iD = 1.0/(dmin*pow(dplus,r) + pow(dmin,r)*dplus);
+  //  double b = (vplus*pow(dmin,r) - vmin*pow(dplus,r))*iD;
+  //  double c = (vplus*dmin + vmin*dplus)*iD;
+  if(fabs(x - dplus) < 1e3*DOUBLE_EPS*dplus) return vplus;
+  if(fabs(x + dmin) < 1e3*DOUBLE_EPS*dmin) return vmin;
+  // hyperbolic function
+  // a+bx-a/(cx+1)
+  if(fabs(vplus*dmin + vmin*dplus) < 1e3*DOUBLE_EPS*dmin*dplus) return x*(vplus-vmin)/(dplus+dmin); //linear
+  if(sign(vplus*vmin) < 0) {
+    //monotonic
+    double a,c;
+    if(fabs(vmin-vplus) < 1e3*DOUBLE_EPS) return 0;
+    c = (vmin*dplus + vplus*dmin)/(dmin*dplus*(vmin-vplus));
+    a = vplus + vplus/(c*dplus);
+    return a - a/(1+c*x);
+  } else {
+    // non-monotonic
+    double D = dplus*dplus*vmin - dmin*dmin*vplus;
+    
+    if(fabs(D) < 1e3*DOUBLE_EPS) {
+      double a;
+      // if c==0, it's a parabola y = a*x^2
+      // we have (0,0), (-dmin,vmin), and (dplus,vplus)
+      // vmin = a*dmin^2
+      // vplus = a*dplus^2
+      a = vmin/(dmin*dmin);
+      return a*x*x;
+    }
+    double c = D/(dmin*dplus*(dmin*vplus+dplus*vmin));
+    double a,b;
+    b = vplus*(1+c*dplus)/(c*dplus*dplus);
+    a = -b/c;
+    return a + b*x - a/(1+c*x);
+  }
+}
+
 // Stalker spline with uniform grid, normalized coordinates
 static R_INLINE double stalk1(double x, double vmin, double vplus,double dmin,
 			      double dplus,double r, double iD,double powmin,double powplus) {
@@ -85,6 +123,7 @@ static R_INLINE double stalk1(double x, double vmin, double vplus,double dmin,
   //  double iD = 1.0/(dmin*pow(dplus,r) + pow(dmin,r)*dplus);
   //  double b = (vplus*pow(dmin,r) - vmin*pow(dplus,r))*iD;
   //  double c = (vplus*dmin + vmin*dplus)*iD;
+  if(r == 0) return stalkhyp(x,vmin,vplus,dmin,dplus);
   if(!isnan(r)) {
     // use precomputed degree
     b = (vplus*powmin - vmin*powplus)*iD;

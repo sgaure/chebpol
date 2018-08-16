@@ -540,7 +540,9 @@ st <- ipol(val,grid=grid,method='stalker',k=1.5)
 st(x,degree=1.2,blend='linear')
 @ 
 where \(k\) is the degree. \code{k} can be a vector, one degree for each
-dimension. Specifying \code{k=NA} makes the spline adjust the
+dimension. Incidentally, it is possible to specify any constant degree, though negative ones
+creates creased surfaces. Degree 0 is treated specially, with hyperbolic basis functions.
+Specifying \code{k=NA} makes the spline adjust the
 degree locally as described above. This should be used with care for multidimensional
 data. Evaluation on a non-uniform grid currently involves solving a non-linear equation
 numerically, so this is slower than on a uniform grid.
