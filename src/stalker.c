@@ -16,6 +16,7 @@ static double rfun(double r, void *P) {
 }
 
 #if 0
+//Could be faster, but it runs astray
 static double rfun_deriv(double r, void *P) {
   rblock *p = (rblock*) P;
   const double dmin=p->dmin, dplus=p->dplus, vmin=p->vmin, vplus=p->vplus;
@@ -235,8 +236,11 @@ double evalstalker(const double *x, const int nrank, const int *dims,
   */
   // combine the basis functions
   double w = 1-nx;
-  if(imin == 0) w = 0;  // no basis in the end points
-  if(imin == N-2) w = 1;
+  // linear in end points
+  if(imin == 0) low = v2 + nx*(v3-v2);
+  if(imin == N-2) high = v2 + nx*(v3-v2);
+  //  if(imin == 0) w = 0;  // no basis in the end points
+  //  if(imin == N-2) w = 1;
 
   if(w == 0) return high;
   if(w == 1) return low;
@@ -290,7 +294,7 @@ SEXP R_evalstalker(SEXP Sx, SEXP stalker, SEXP Sdegree, SEXP Sblend, SEXP Sthrea
   for(int i = 0; i < nrank; i++) pmin[i] = REAL(VECTOR_ELT(Spmin,i));
   double *pplus[nrank];
   for(int i = 0; i < nrank; i++) pplus[i] = REAL(VECTOR_ELT(Spplus,i));
-
+  gsl_error_handler_t *gslh = gsl_set_error_handler_off();
   SEXP ret = PROTECT(NEW_NUMERIC(N));
   double *out = REAL(ret);
 #pragma omp parallel for num_threads(threads) schedule(guided) if(N > 1 && threads > 1)
@@ -298,5 +302,6 @@ SEXP R_evalstalker(SEXP Sx, SEXP stalker, SEXP Sdegree, SEXP Sblend, SEXP Sthrea
     out[i] = evalstalker(x+i*nrank, nrank, dims, grid, val, blend, degree, det, pmin, pplus);
   }
   UNPROTECT(1);
+  gsl_set_error_handler(gslh);
   return ret;
 }
