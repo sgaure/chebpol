@@ -1,5 +1,5 @@
 
-R version 3.4.4 (2018-03-15) -- "Someone to Lean On"
+R Under development (unstable) (2018-08-19 r75170) -- "Unsuffered Consequences"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -106,7 +106,7 @@ $z
 > ch <- ipol(exp(s),grid=list(s), method='general')
 > ## test it:
 > r <- runif(1); cat('true:',exp(r),'appx:',ch(r),'\n')
-true: 1.414461 appx: 1.422548 
+true: 1.414461 appx: 1.418184 
 > 
 > #multivariate chebappxg
 > su <- seq(0,1,length.out=11)
@@ -117,13 +117,13 @@ true: 1.414461 appx: 1.422548
 > ch <- ipol(fv,grid=grid,method='general')
 > s <- runif(3)
 > cat('true:',f(s),'appx:',ch(s),'\n')
-true: 0.4602206 appx: 0.461231 
+true: 0.4602206 appx: 0.460965 
 > 
 > # multi linear
 > s <- runif(3)
 > lip <- ipol(fv,grid=grid,method='multi')
 > cat('true',f(s), 'appx:', ch(s), 'lip:',lip(s),'\n')
-true 0.3503825 appx: 0.3504539 lip: 0.349812 
+true 0.3503825 appx: 0.3501301 lip: 0.349812 
 > 
 > # test dct transform
 > a <- array(rnorm(24),c(2,3,4))
@@ -225,4 +225,4 @@ In (function (val, knots, k = 2, normalize = NA, nowarn = FALSE,  :
 > 
 > proc.time()
    user  system elapsed 
-  3.014   1.305   2.116 
+  5.437   0.234   1.639 

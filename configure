@@ -589,6 +589,7 @@ FFTW
 EXTRA
 HAVE_FFTW
 OPENMP_CFLAGS
+HAVE_GSL
 GSL_LIBS
 GSL_CFLAGS
 FFTW_LIBS
@@ -2969,8 +2970,10 @@ else
 	GSL_LIBS=$pkg_cv_GSL_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	have_fftw=yes
+	$as_echo "#define HAVE_GSL 1" >>confdefs.h
+
 fi
+
 
 
 

@@ -31,7 +31,8 @@
 \setkeys{Gin}{width=0.6\textwidth }
 \begin{abstract}
   The idea behind the stalker spline in package \pkg{chebpol} is
-  outlined.  It is designed to be almost shape preserving in the sense
+  outlined.  It is designed as a one-dimensional interpolation to be almost 
+  shape preserving in the sense
   that it attempts to honour monotonocity properties and local extreme
   points in the data, though not entirely. There is no fancy theory
   behind, but it served a purpose for the author, and here it is. The
@@ -40,7 +41,7 @@
   differentiability.  That is, the derivative is not well behaved.
   The name comes from the fact that it follows the data frighteningly
   close, though it sometimes seems stupid with little foresight. The
-  2d-version could as well be called \emph{wet paper spline}. The
+  2d-version could as well be called \emph{wet paper spline}.  The
   interpolation isn't a proper spline, since it is not a
   polynomial. We also obtain a limit in intuitive geometric terms on
   how large the overshoot can be. The stalker spline can be used when
@@ -124,10 +125,15 @@ The idea behind the stalker spline is to reduce the overshoot, this is
 achieved by ensuring that if the knots \(i-1, i\) and \(i+1\) are
 monotonic (either increasing or decreasing), then the function
 \(f_i(x)\) will also be monotonic.  Other splines, like the Fritsch-Carlson spline in
-\code{splinefun(...,method='monoH.FC')} also does something similar.
+\code{splinefun(...,method='monoH.FC')} also does something similar, though with proper
+polynomial spline.
 We achieve this by non-traditionally using a
 fractional degree, i.e. a function of the form \(a + bx + c|x|^r\),
-with \(1\leq r \leq 2\).
+with \(1\leq r \leq 2\).  Alternatively, we use a hyperbolic function
+\(a+ bx + \frac{c}{1+dx}\).  In this note we call these functions defined by
+three points and a monotonicity constraint, \emph{basis functions}. They
+are not basis functions in the sense used in the spline literature; they are
+not glued together by scalar weights, but by linear functions.
 
 \section{The stalker spline}
 To simplify, we consider a basis function \(f(x)\) on the
@@ -156,8 +162,7 @@ c &= \frac12 (v_+ + v_-) - v_0.\\
 \end{equation}
 
 These coefficients will work with any \(r\). Typically we will pick
-\(r = 2\), but
-as we have seen, this may destroy monotonicity.
+\(r = 2\), but this may destroy monotonicity.
 The three knots are monotonic (either increasing or decreasing)
 whenever \(|c| < |b|\). This can be seen from equation~\eqref{cdef}.
 Monotonicity occurs when \(v_+ - v_0 = b+c\) has the same sign 
@@ -176,6 +181,9 @@ specifically, if \(r=2\) results in non-monotonicity, i.e.\ if
 \(|b| < 2|c|\), we pick the largest \(r\) which will make \(f(x)\)
 monotonic. That is, \(r = |b/c| < 2\), this will relegate the
 critical point to one of the end points.
+
+The same exercise with a non-uniform grid results in a non-linear
+equation in \(r\) which is solved numerically by \pkg{chebpol}.
 
 There are some special cases.  What if \(c=0\)? This
 only happens when the knots are collinear, i.e. on a straight line,
@@ -199,16 +207,25 @@ arbitrarily) set
 \(r = |c/b|\) whenever \(|c/2| < |b| < |c|\), i.e. we gradually creep
 back to \(r=2\).
 
-Here is a plot of some of the functions for the case \(v_-=0\), \(v_+=1\),
+In figure~\ref{fig:basis} is a plot of some of the functions for the case \(v_-=0\), \(v_+=1\),
 with varying \(v_0\) (the black dots).
 
-<<echo=FALSE,fig.dim=c(6,6)>>=
+<<basis,echo=FALSE,fig.dim=c(7,5), fig.align='center', fig.cap='"Basis functions"'>>=
 s <- seq(-1,1,len=100)
 plot(range(s),c(-0.7,1.7),pch='',xlab='x',ylab='y')
 v0 <- seq(-0.7,1.7,len=41)
-f0spline <- function(f0) { st <- ipol(c(0,f0,1),grid=c(-1,0,1),k=NA,method='stalker'); st(s)}
+f0spline <- function(f0) {
+  b <- 0.5
+  c <- 0.5*(1-2*f0)
+  if(b < 2*abs(c) && abs(c) < b)
+    r <- abs(b/c)
+  else if (abs(c) < 2*b && abs(b) < abs(c))
+    r <- abs(c/b)
+  else
+    r <- 2
+  f0 + b*s + c*abs(s)^r
+}
 for(f0 in v0) {
-  points(0,f0,pch=20)
   col <- if( (f0 < 0.75 && f0 > 0.25) || (f0 > 1.5 || f0 < -0.5) ) 
            'darkblue' 
          else if(f0 < 1 && f0 > 0)
@@ -216,9 +233,9 @@ for(f0 in v0) {
          else
            'lightblue'
   lines(s,f0spline(f0),col=col)
+  points(0,f0,pch=20)
 }
-# paint the exact quadratic in green, i.e. where 2c = b
-# f0=0.25
+# illustrate overshoot
 clip(0,0.5,-2,2)
 abline(h=-0.7,lty=2)
 clip(-0.5/(2*(0.5+0.7)),0.5,-2,2)
@@ -227,40 +244,62 @@ clip(-2,2,-2,2)
 text(x=0.7,y=-0.63,'} overshoot',pos=1)
 @ 
 
-Functions either inside the light green or outside the dark green
-curves are quadratic. Functions inside the red parallellogram are
-monotonic.  Every function except for the two red ones are
+The dark blue curves are quadratic. The blue curves are monotonic, but with lowered
+degree. The light blue curves are non-monotonic with lowered degree.
+Every function except for the two obvious ones are
 differentiable.  If we let \(|v_0|\) grow further, the function will
 stay quadratic, and the extreme point and the overshoot will converge
-to 0. If either \(v_-\) or \(v_+\) grows, \(|b/c|\) converges to 1, so
+to 0. Ideally, the non-monotonic curves should have an extreme point in \(x=0\), i.e.\
+no overshoot, but that is impossible with this function form.
+
+If either \(v_-\) or \(v_+\) grows, \(|b/c|\) converges to 1, so
 we will converge to the non-differentiable case. However, there is a
 problem which becomes pressing when trying to use the stalker spline
-in two or more dimensions.  If, as in figure~\ref{fig:failure}, \(v_-\) moves down, the curve for
+in two or more dimensions.  If, as in figure~\ref{fig:failure}, \(v_-\) moves, the curve for
 \(x < 0\) moves down, but the curve for \(x>0\) moves up or down
-depending on whether the degree changes or not. The solid lines are quadratic.
-the dashed lines are for non-monotonic points, but with lowered degree \(r=|c/b|\).
-The dotted lines are monotonic with lowered degree \(r=|b/c|\).
-For \(x < 0\) the red is above the blue for all types. We see that the
-quadratic lines cross in zero. The dotted lines to not cross, but touch in zero.
-The dashed lines touch in zero, but cross elsewhere.
-This behavious creates problems e.g.\ for surfaces with torsion, as we shall see later.
+depending on whether the degree changes or not. 
+This behaviour creates problems e.g.\ for surfaces with torsion, as we shall see later.
 
-<<failure, echo=FALSE,fig.dim=c(4,4), fig.align='center',fig.cap='Crossing lines'>>=
-s <- seq(-0.5,0.2,len=100)
-plot(range(s),c(-0.07,0.2),pch='',xlab='x',ylab='y')
-fmspline <- function(fm) { st <- ipol(c(fm,0,1),grid=c(-1,0,1),k=NA,method='stalker'); st(s)}
-#lines(s,fmspline(1/3),col='red',lwd=2,lty=4)
-#lines(s,fmspline(-1/3),col='red',lwd=2,lty=4)
-lines(s,fmspline(1),col='red')
-lines(s,fmspline(0.8),col='blue')
-lines(s,fmspline(0.2),col='red',lty=2)
-lines(s,fmspline(0.1),col='blue',lty=2)
-lines(s,fmspline(-0.1),col='red',lty=3,lwd=2)
-lines(s,fmspline(-0.2),col='blue',lty=3,lwd=2)
-lines(s,fmspline(-0.8),col='red')
-lines(s,fmspline(-1),col='blue')
-legend('topleft',legend=c('r=2','r=|b/c|','r=|c/b|'),lty=c(1,3,2))
+<<failure,echo=FALSE,fig.dim=c(7,5), fig.align='center', fig.cap='"Basis functions"'>>=
+s <- seq(-1,1,len=100)
+vseq <- seq(-1,1,len=41)
+rr <- m <- v <- list()
+for(i in seq_along(vseq)) {
+  #  double iD = 1.0/(dmin*pow(dplus,r) + pow(dmin,r)*dplus);
+  #  double b = (vplus*pow(dmin,r) - vmin*pow(dplus,r))*iD;
+  #  double c = (vplus*dmin + vmin*dplus)*iD;
+  b <- 0.5*(1-vseq[[i]])
+  c <- 0.5*(1+vseq[[i]])
+  if(b < 2*abs(c) && abs(c) <= b)
+    r <- abs(b/c)
+  else if (abs(c) < 2*b && abs(b) < abs(c))
+    r <- abs(c/b)
+  else
+    r <- 2
+
+  rr[[i]] <- r
+  m[[i]] <- abs(c) <= b
+  v[[i]] <- b*s + c*abs(s)^r
+}
+plot(range(s),do.call(range,c(v,list(finite=TRUE))),pch='',xlab='x',ylab='y')
+for(i in seq_along(v)) {
+  cl <- if(identical(rr[[i]],2)) 'darkblue' else if(isTRUE(m[[i]])) 'blue' else 'lightblue'
+  lines(s,v[[i]],col=cl)
+}
+points(rep(-1,length(vseq)),vseq,pch=20)
 @ 
+
+The stalker spline also contains hyperbolic functions of the type
+\(a + bx +d\frac{1}{1+cx}\) which are guaranteed to honour both monotonicity
+and local extrema, but like the varying degree stalker it does not generalize well
+to higher dimensions, more or less because ``monotonic'' isn't such a simple concept there. 
+Again we have four parameters and three points. For monotonic
+points we use monotonocity as a fourth constraint, or more precisely we let \(b=0\). 
+For non-monotonic points, we use
+that the middle point should be a local extremum. Thus, the hyperbolic stalker respects
+both monotonicity and local extrema, but still at the cost of non-differentiability
+in the case of completely flat regions. In another special case, it reduces to a parabola.
+The hyperbolic stalker is specified in chebpol as a stalker with zero degree.
 
 \section{Overshoot and blending}
 To sum up, the function passing through \((-1,v_-)\), \((0,v_0)\) and
@@ -320,9 +359,31 @@ we get \(d_r/(v_- - v_0) =| r^{(1+r)/(1-r)} - r^{2/(1-r)} |/(r-1) \leq e^{-2} \a
 In short, the overshoot is always less than 14\% of the vertical distance from the lowest/highest knot
 to the next lowest/highest knot.
 
+With \(f(0) = 0\), the hyperbolic stalker is 
+\begin{equation}
+f(x) = a + bx -\frac{a}{1+cx}.
+\end{equation}
+When the points are monotonic, i.e. \(\sign(v_-) \neq \sign(v_+)\)
+the coefficients \(a,b\) and \(c\) are computed as
+\begin{equation}
+  \begin{aligned}
+    a &= \frac{2v_-v_+}{v_- + v_+}\\
+    b &= 0\\
+    c &= \frac{v_- + v_+}{v_- - v_+}\\
+  \end{aligned}
+\end{equation}
+For non-monotonic triples, we have
+\begin{equation}
+  \begin{aligned}
+    a &= -2v_-v_+\frac{v_-+v_+}{(v_- - v_+)^2}\\
+    b &= 2\frac{v_-v_+}{v_- - v_+}\\
+    c &= \frac{v_- - v_+}{v_- + v_+}\\
+  \end{aligned}
+\end{equation}
+
 \subsection{Blending and degree limits}
 If the grid is not uniform,
-the computation of a dynamic degree involves solving a non-linear equation.
+the computation of a dynamic degree involves solving a non-linear equation numerically.
 
 There is a basis function in every knot, so we glue the functions
 \(f_1\) and \(f_2\) together as a convex combination \(tf_1(x') +
@@ -357,9 +418,9 @@ except possibly for the first dimension. We'll see an example later.
 \section{Examples}
 In this section we compare the stalker spline to the 
 \code{"natural"} and \code{"monoH.FC"} spline from \code{stats::splinefun}.
-We also illustrate a stalker spline with constant degree 1.5.
+We also illustrate the hyperbolic stalker spline.
 
-<<echo=FALSE,fig.dim=c(4,4)>>=
+<<echo=FALSE,fig.dim=c(6,4)>>=
 pts <- pts-min(pts)
 pts <- pts/max(pts)
 plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
@@ -370,8 +431,8 @@ s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
 lines(s,ms(s),col='green')
 lines(s, st(s), col='magenta')
-lines(s, st(s,degree=1.5),col='red')
-legend('topright',legend=c('stalker','mono','natural','stalker 1.5'),
+lines(s, st(s,degree=0),col='red')
+legend('topright',legend=c('stalker','mono','natural','hyperbolic'),
        fill=c('magenta','green','blue','red'))
 @ 
 
@@ -389,7 +450,7 @@ knots are monotonic, the Fritsch-Carlson spline is superb, it ensures monotonici
 and differentiability. The stalker spline does not in case there are completely
 flat regions, then differentiability is abandoned.
 
-<<fig.dim=c(4,4),echo=FALSE>>=
+<<fig.dim=c(6,4),echo=FALSE>>=
 val <- sort(val)
 plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
 ns <- splinefun(pts,val,method='natural')
@@ -399,8 +460,8 @@ s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
 lines(s,ms(s),col='green')
 lines(s, st(s), col='magenta')
-lines(s, st(s,deg=1.5), col='red')
-legend('topleft',legend=c('stalker','mono','natural','stalker 1.5'),
+lines(s, st(s,deg=0), col='red')
+legend('topleft',legend=c('stalker','mono','natural','hyperbolic'),
        fill=c('magenta','green','blue','red'))
 @ 
 
@@ -409,7 +470,7 @@ reduces to a linear interpolation. The knots below are not
 exactly pairwise constant, they differ by \(10^{-16}\). This is sufficient
 to make \code{"monoH.FC"} overshoot.
 
-<<fig.dim=c(4,4),echo=FALSE>>=
+<<fig.dim=c(6,4),echo=FALSE>>=
 val <- rep(runif(N/2),each=2) + c(0,1e-16)
 plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
 ns <- splinefun(pts,val,method='natural')
@@ -419,22 +480,25 @@ s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
 lines(s,ms(s),col='green')
 lines(s, st(s), col='magenta')
-lines(s, st(s,deg=1.5), col='red')
-legend('topleft',legend=c('stalker','mono','natural','stalker 1.5'),
+lines(s, st(s,deg=0), col='red')
+legend('topleft',legend=c('stalker','mono','natural','hyperbolic'),
        fill=c('magenta','green','blue','red'))
 @ 
 
 \section{Higher dimensions}
-The stalker spline in higher dimension \(N\) is simplistic and problematic, and is
-likely to change. It works on a Cartesian grid.
+The stalker spline in higher dimension \(N\) is simplistic and problematic.
+It works on a Cartesian grid.
 When evaluating the stalker in an \(x\) between grid points, the stalker is evaluated
 for the \(N-1\) first dimensions on two grid lines on each side of \(x\)
 in dimension \(N\). On these four points in dimension \(N\), two basis functions
 are found, evaluated and blended.  There is no guarantee that doing this
 with the dimensions in another order will yield exactly the same result.
 
+Everything comes at a price, the price for the stalker spline is that it does not
+work very well in higher dimensions. The variable degree causes creasing artefacts.
+
 We take a look at 2d-interpolation, first the Maungawhau volcano with
-exaggerated height in figure~\ref{fig:volcano}.
+exaggerated height in figure~\ref{fig:volcano}. It is quite nice with the stalker interpolation.
 
 <<volcano, fig.dim=c(4,4), fig.align='center', fig.pos='!ht', fig.cap='Maungawhau', out.width='.37\\linewidth', fig.ncol=2, fig.subcap=c('low resolution','multilinear','stalker','thin plate spline')>>=
 data(volcano)
@@ -455,14 +519,15 @@ for(f in list(ml, st, ph)) {
 @ 
 
 Then we interpolate some random points in figure~\ref{fig:random}. Incidentally, there are some
-plane areas, and some torsion (most visible closest to the
-camera). Torsion can be a problem for the stalker spline, the degree in one dimension
+plane areas, and some torsion. Torsion is a problem for the stalker spline, the degree in one dimension
 goes down to 1, creating striped artefacts in some regions. This is
-alleviated by using a constant degree.  There is no advanced
+alleviated by using a constant degree.  The hyperbolic stalker is remarkably faithful
+to the points, but it also suffers from artefacts in certain areas where it is ill-conditioned.
+There is no advanced
 shading in \code{plot3D::persp3D}, so the \(100\times 100\) resolution
 can be seen if you zoom in.
 
-<<random, fig.dim=c(3.5,3.5), fig.pos='!h', fig.align='center',fig.cap='Random surface',out.width='.4\\linewidth',fig.ncol=2,fig.subcap=c('stalker', 'thin plate spline','stalker degree 1.5','Floater-Hormann')>>=
+<<random, fig.dim=c(3.5,3.5), fig.pos='!ht', fig.align='center',fig.cap='Random surface',out.width='.4\\linewidth',fig.ncol=2,fig.subcap=c('stalker', 'thin plate spline','hyperbolic stalker','Floater-Hormann')>>=
 set.seed(42); N <- 8
 grid <- list(x=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0), 
              y=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0))
@@ -470,10 +535,10 @@ val <- matrix(runif(N*N,0,0.3),N)
 st <- ipol(val,grid=grid, method='stalker',k=NA)
 ph <- ipol(val,grid=grid, method='polyharmonic', k=2)
 fh <- ipol(val,grid=grid, method='fh', k=0)
-st15 <- function(x) st(x,deg=1.5)
-g <- list(x=seq(0,1, len=100), y=seq(0,1,len=100))
+sthyp <- function(x) st(x,deg=0)
+g <- list(x=seq(0,1, len=70), y=seq(0,1,len=70))
 par(mar=rep(0,4))
-for(f in list(st, ph, st15, fh)) {
+for(f in list(st, ph, sthyp, fh)) {
   plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,
          theta=60, ltheta=30, lphi=45, col='green', axes=FALSE, bty='n', scale=FALSE,zlim=c(0,1))
   pts <- evalongridV(f,grid=grid)+0.00
@@ -481,15 +546,15 @@ for(f in list(st, ph, st15, fh)) {
 }
 @ 
 
-The torsion problem can be seen near the right corner if you compare the 
-upper left panel to the constant degree stalker in the lower left panel.
+The torsion problem can be seen near the right corner.
 We can take a closer look at these portions of the surface in figure~\ref{fig:torsion}.
+The striped artefacts are regions where the degree changes.
 
 <<torsion, fig.dim=c(5,5), out.width='\\linewidth', fig.cap='Torsion problem in the wet paper spline', fig.align='center'>>=
 g <- list(x=seq(grid$x[5],grid$x[8],length=100),y=seq(grid$y[5],grid$y[8],length=100))
 par(mar=rep(1,4))
 plot3D::persp3D(g$x, g$y, evalongridV(st,grid=g), colvar=NULL, lighting=light,
-       theta=80, ltheta=60, lphi=45, col='green', axes=TRUE)
+       theta=120, ltheta=100, lphi=45, col='green', axes=TRUE)
 subgrid <- list(x=grid$x[5:8],y=grid$y[5:8])
 zval <- evalongridV(f,grid=subgrid)+0.005
 plot3D::points3D(rep(subgrid$x,4),rep(subgrid$y,each=4),zval,add=TRUE,colvar=NULL,pch=20)
@@ -524,12 +589,13 @@ legend('topright',title='y=',
 Note that the black curve is always between the blue and the magenta, but erratic
 wherever any of the coloured lines cross.
 
-In figure~\ref{fig:constant} is the same part of the surface with constant degree~2.
+In figure~\ref{fig:constant} is the same part of the surface with hyperbolic stalker
+in the first dimension, and constant degree 1.5 in the second.
 
-<<constant, fig.dim=c(5,5), out.width='\\linewidth',fig.cap='Constant degree 2', fig.align='center'>>=
+<<constant, fig.dim=c(5,5), out.width='\\linewidth',fig.cap='Constant degree 1.5', fig.align='center'>>=
 par(mar=rep(1,4))
-plot3D::persp3D(g$x, g$y, evalongridV(st,grid=g,degree=2), colvar=NULL, lighting=light,
-       theta=80, ltheta=60, lphi=45, col='green', axes=TRUE)
+plot3D::persp3D(g$x, g$y, evalongridV(st,grid=g,degree=c(0,1.5)), colvar=NULL, lighting=light,
+       theta=120, ltheta=100, lphi=45, col='green', axes=TRUE)
 plot3D::points3D(rep(subgrid$x,4),rep(subgrid$y,each=4),zval,add=TRUE,colvar=NULL,pch=20)
 @ 
 
@@ -540,12 +606,14 @@ st <- ipol(val,grid=grid,method='stalker',k=1.5)
 st(x,degree=1.2,blend='linear')
 @ 
 where \(k\) is the degree. \code{k} can be a vector, one degree for each
-dimension. Incidentally, it is possible to specify any constant degree, though negative ones
-creates creased surfaces. Degree 0 is treated specially, with hyperbolic basis functions.
+dimension. It is possible to specify any nonzero degree.
+A degree of zero is treated specially, with hyperbolic functions \(a+bx+\frac{c}{1+dx}\).
 Specifying \code{k=NA} makes the spline adjust the
-degree locally as described above. The varying degree stalker do not tensor very well,
-so it should be used with care for multidimensional
-data. Evaluation on a non-uniform grid currently involves solving a non-linear equation
+degree locally as described above. The hyperbolic and varying degree stalker do not generalize
+very well to two or more dimensions,
+so for multidimenional data varying degree or hyperbolic stalker is strongly discouraged, except
+possibly in the first dimension.
+Evaluation on a non-uniform grid currently involves solving a non-linear equation
 numerically, so this is slower than on a uniform grid.
 
 The spline is created with a default degree, be it \code{NA} or a numeric between 1 and 2.

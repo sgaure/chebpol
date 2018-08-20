@@ -7,8 +7,10 @@
 #include <R_ext/Lapack.h>
 #include <R_ext/Applic.h>
 #include <R_ext/Visibility.h>
+#include "config.h"
 
 SEXP R_makerbf(SEXP, SEXP, SEXP, SEXP);
 SEXP R_evalrbf(SEXP, SEXP, SEXP);
 SEXP R_evalstalker(SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP R_havealglib();
+SEXP havegsl();

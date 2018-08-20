@@ -1,4 +1,3 @@
-#include "config.h"
 #include "chebpol.h"
 #define UNUSED(x) (void)(x)
 #ifdef HAVE_FFTW
@@ -925,7 +924,7 @@ R_CallMethodDef callMethods[] = {
   {"chebcoef", (DL_FUNC) &R_chebcoef, 3},
   {"FH", (DL_FUNC) &R_FH, 6},
   {"FHweights", (DL_FUNC) &R_fhweights, 3},
-  {"evalmlip", (DL_FUNC) &R_evalmlip, 5},
+  {"evalmlip", (DL_FUNC) &R_evalmlip, 4},
   {"predmlip", (DL_FUNC) &R_mlippred, 2},
   {"evalongrid", (DL_FUNC) &R_evalongrid, 2},
   {"havefftw", (DL_FUNC) &R_havefftw, 0},
@@ -938,6 +937,7 @@ R_CallMethodDef callMethods[] = {
   {"evalstalker", (DL_FUNC) &R_evalstalker, 5},
   {"analyzesimplex", (DL_FUNC) &R_analyzesimplex, 3},
   {"havealglib", (DL_FUNC) &R_havealglib, 0},
+  {"havegsl", (DL_FUNC) &havegsl, 0},  
   {NULL, NULL, 0}
 };
 
