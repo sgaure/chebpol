@@ -184,7 +184,7 @@ cat('arg:',tp,'true:', f(tp), 'ch:', ch(tp), 'uc:',uc(tp),'\n')
 In some applications not even uniformly spaced grids are feasible.  In this case
 we do something similar as in the uniformly spaced case.
 We have grid-points \(\{y_i\}_{i=1..n}\) in ascending or descending order.
-We then use \code{splinefun} in package \pkg{stats} with \code{method='monoH.FC'} 
+We then use \code{splinefun} in package \pkg{stats} with \code{method='hyman'} 
 to create a monotone function \(g\) from the grid-points
 \(\{y_i\}_{i=1..n}\) to the Chebyshev knots \(\{x_i^n\}_{i=1..n}\). Otherwise, the same
 method as for uniform grids are used.
@@ -211,7 +211,7 @@ not need to see any polynomial. Given function values \(f_i = f(x_i)\) in some p
 where the \(w_i\)'s are weights. It so happens that if the points \(x_i\) are 
 \(x_i = \cos(i\pi/N)\), the Chebyshev points of the second kind, 
 the weights have alternating signs, with absolute values \(|w_0| = |w_N| = 1\), 
-and \(|w_i| = 2\) for \(0 < i < N\).  See e.g.\ \cite{BT04}. In \cite{FH07} another
+and \(|w_i| = 2\) for \(0 < i < N\).  See e.g.\ \cite{BT04}. In \cite[eq.~18]{FH07} another
 set of weights which corresponds to certain blending polynomials in rational interpolants
 are found. This is used in method \code{"fh"}. Here is an example with a Runge function.
 

@@ -146,9 +146,11 @@ Cartesian grid into a Chebyshev grid by means of a monotonic spline in
 each dimension.  The multilinear and Floater-Hormann methods also
 work on arbitrary Cartesian grids.
 
-To illustrate how this works, here is a quite nice function on \([-1,1]^2\) and level plots
-of it and the \(9 \times 9\) Chebyshev interpolation, and the multilinear and Floater-Hormann methods on
-a uniform \(9 \times 9\) grid.
+To illustrate how this works, here is a quite nice function on
+\([-1,1]^2\) and level plots of it and the \(9 \times 9\) Chebyshev
+interpolation, a homegrown ``stalker'' spline (described in a
+vignette) and the Floater-Hormann methods on a uniform \(9 \times 9\)
+grid.
 
 <<echo=FALSE>>=
 set.seed(46)
@@ -169,27 +171,28 @@ lattice::levelplot(stalker+F.H.+fun+cheb ~ x+y, data=data, cuts=10,
           main='Level plots of function and interpolations')
 @ 
 
-It is not so easy to see in a picture, but the multilinear interpolant is not differentiable
-in the grid points, it is piecewise linear. The other interpolants are typically twice continuously
-differentiable.
+It is not so easy to see in this picture, but the stalker interpolant
+is not generally twice differentiable in the grid points. The other
+interpolants are typically twice continuously differentiable.
 
-There is one interpolation method we have not mentioned yet. If the
+There are two interpolation methods we have not mentioned yet. If the
 data are scattered in two or more dimensions, none of the methods
 above will work. They need a Cartesian product grid. The \pkg{chebpol}
-package contains one method for scattered data also, the polyharmonic
-spline (see \cite{HL12}). It is parametric with an integer
-\(k\in\NN\). For free we also throw in a Gaussian radial basis
-function interpolation for negative \(k \in \RN^-\).
-Here we create two functions and plot level plots of them and their polyharmonic
-interpolations. One of the functions is quite smooth, the other is quite wobbly and
-requires a lot of scattered points.
+package contains two methods for scattered data also, the most
+versatile being the polyharmonic spline (see \cite{HL12}). It is
+parametric with an integer \(k\in\NN\). For free we also throw in a
+Gaussian radial basis function interpolation for negative \(k \in
+\RN^-\).  Here we create two functions and plot level plots of them
+and their polyharmonic interpolations. One of the functions is quite
+smooth, the other is quite wobbly and requires a lot of scattered
+points.
 
 <<poly,echo=FALSE>>=
 set.seed(43)
 @ 
 
 <<fig.align='center', fig.width=7, fig.height=7>>=
-f2 <- function(x) 1.2/min(log(3.1 + sin(0.7+1.8*pi*(x+0.39*x[1]^2-x[2]^2))^2))
+f2 <- function(x) 1.2/mean(log(3.1 + sin(0.7+1.8*pi*(x+0.39*x[1]^2-x[2]^2))^2))
 ph1 <- ipol(f1, knots=matrix(runif(200,-1,1),2), method='polyharmonic', k=2)
 ph2 <- ipol(f2, knots=matrix(runif(4000,-1,1),2), method='polyharmonic', k=3)
 data <- cbind(testset,fun1= apply(testset,1,f1), poly1=ph1(t(testset)), 
@@ -208,13 +211,14 @@ linear system, where \(K\) is the number of knots. It helps a lot to use a tuned
 parallel BLAS with R, such as Intel's MKL.
 
 In Figure \ref{fig:volcano} are various interpolated 3d-pictures of the Maungawhau volcano
-(Mt.\ Eden, Auckland, New Zealand).
+(Mt.\ Eden, Auckland, New Zealand). We illustrate the other method which works on scattered data,
+it is piecewise linear on triangles (more generally on simplices).
 
 <<volcano, fig.align='center', fig.pos='!ht', fig.cap='Volcanoes', out.width='.37\\linewidth', fig.ncol=2, fig.subcap=c('low resolution','polyharmonic','Floater-Hormann','simplex')>>=
 data(volcano)
 volc <- volcano[seq(1,nrow(volcano),3),seq(1,ncol(volcano),3)]/10 #low res volcano
 grid <- list(x=as.numeric(seq_len(nrow(volc))), y=as.numeric(seq_len(ncol(volc))))
-fh <- ipol(volc, grid=grid, method='fh')
+fh <- ipol(volc, grid=grid, method='fh', k=0)
 knots <- t(expand.grid(grid))
 sl <- ipol(volc, knots=knots, method='simplex')
 ph <- ipol(volc, knots=knots, method='poly')
@@ -281,7 +285,7 @@ interpolants. \pkg{chebpol} uses the FFT from the software package
 FFTW, if it was available during compilation.  Otherwise a slower
 matrix method is used. Creation with FFT typically takes of the order
 \(O(n^r\log n)\). The evaluation of Chebyshev interpolants is not
-particularly fast, \pkg{chebpol} uses the Clenshaw-Curtis algorithm,
+particularly fast, \pkg{chebpol} uses the Clenshaw algorithm,
 which is a variant of Horner's method for evaluating polynomials. It typically
 goes in time \(n\) for each dimension, but they must be combined,
 so \(O(n^r)\).

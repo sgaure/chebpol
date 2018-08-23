@@ -130,7 +130,7 @@ polynomial spline.
 We achieve this by non-traditionally using a
 fractional degree, i.e. a function of the form \(a + bx + c|x|^r\),
 with \(1\leq r \leq 2\).  Alternatively, we use a hyperbolic function
-\(a+ bx + \frac{c}{1+dx}\).  In this note we call these functions defined by
+\(a+ bx + \frac{d}{1+cx}\).  In this note we call these functions defined by
 three points and a monotonicity constraint, \emph{basis functions}. They
 are not basis functions in the sense used in the spline literature; they are
 not glued together by scalar weights, but by linear functions.
@@ -244,13 +244,14 @@ clip(-2,2,-2,2)
 text(x=0.7,y=-0.63,'} overshoot',pos=1)
 @ 
 
-The dark blue curves are quadratic. The blue curves are monotonic, but with lowered
-degree. The light blue curves are non-monotonic with lowered degree.
-Every function except for the two obvious ones are
-differentiable.  If we let \(|v_0|\) grow further, the function will
-stay quadratic, and the extreme point and the overshoot will converge
-to 0. Ideally, the non-monotonic curves should have an extreme point in \(x=0\), i.e.\
-no overshoot, but that is impossible with this function form.
+The dark blue curves are quadratic. The blue curves are monotonic, but
+with lowered degree. The light blue curves are non-monotonic with
+lowered degree.  Every function except for the two obvious ones are
+continuously differentiable, but not twice differentiable in \(0\).
+If we let \(|v_0|\) grow further, the function will stay quadratic,
+and the extreme point and the overshoot will converge to 0. Ideally,
+the non-monotonic curves should have an extreme point in \(x=0\),
+i.e.\ no overshoot, but that is impossible with this function form.
 
 If either \(v_-\) or \(v_+\) grows, \(|b/c|\) converges to 1, so
 we will converge to the non-differentiable case. However, there is a
@@ -290,7 +291,7 @@ points(rep(-1,length(vseq)),vseq,pch=20)
 @ 
 
 The stalker spline also contains hyperbolic functions of the type
-\(a + bx +d\frac{1}{1+cx}\) which are guaranteed to honour both monotonicity
+\(a + bx +\frac{d}{1+cx}\) which are guaranteed to honour both monotonicity
 and local extrema, but like the varying degree stalker it does not generalize well
 to higher dimensions, more or less because ``monotonic'' isn't such a simple concept there. 
 Again we have four parameters and three points. For monotonic
@@ -318,8 +319,8 @@ r = \begin{cases}
 \end{equation}
 
 It is clear that \(1 \leq r \leq 2\).
-The functions with \(1 < r < 2\) are everywhere
-differentiable, but the second derivative is unbounded near 0, so
+The functions with \(1 < r \leq 2\) are everywhere
+differentiable, but for \(r < 2\) the second derivative is unbounded near 0, so
 the graph may turn arbitrarily abruptly in the knots.
 
 We define the overshoot as 0 for monotonic knots, and as \(|v_0 - f(x_0)|\) where
@@ -350,11 +351,11 @@ so \(d_r  \leq |b|/8\).
 
 We can prove more. If we have \(|b| < |c|\) it means that \(v_0\) is the smallest
 or the largest of the three knots. To simplify we assume that \(v_0 < v_- < v_+\), i.e. that
-\(0 < b < c < 2b\). We are below the red area in the above diagram, the situation is symmetric above.
+\(0 < b < c < 2b\). The situation is symmetric with the direction reversed.
 We have that \(c-b = v_- - v_0\), the amount that
 the middle knot is below the next lowest knot. We also have \(c-b = b(r-1)\).
 If we compute the overshoot as a fraction of this ``knot overshoot'': \(d_r/(c-b) = d_r/(b(r-1))\), again
-we get \(d_r/(v_- - v_0) =| r^{(1+r)/(1-r)} - r^{2/(1-r)} |/(r-1) \leq e^{-2} \approx 0.135\). (check w/maple.)
+we get \(d_r/(v_- - v_0) =| r^{(1+r)/(1-r)} - r^{2/(1-r)} |/(r-1) \leq e^{-2} \approx 0.135\). 
 
 In short, the overshoot is always less than 14\% of the vertical distance from the lowest/highest knot
 to the next lowest/highest knot.
@@ -381,18 +382,15 @@ For non-monotonic triples, we have
   \end{aligned}
 \end{equation}
 
-\subsection{Blending and degree limits}
-If the grid is not uniform,
-the computation of a dynamic degree involves solving a non-linear equation numerically.
-
+\subsection{Blending and degree}
 There is a basis function in every knot, so we glue the functions
-\(f_1\) and \(f_2\) together as a convex combination \(tf_1(x') +
-(1-t)f_2(x'-1)\) (\(x'-1\) is the normalized coordinate for \(f_2\),
+\(f_1\) and \(f_2\) together as a convex combination \(tf_1(x) +
+(1-t)f_2(x-1)\) (\(x-1\) is the normalized coordinate for \(f_2\),
 the basis function in the knot \(x_+\)). We use a linear blender,
-\(t = 1 - x'\).  Alternatively we could use a sigmoid blender like
-\(t\in [0,1/2] \mapsto \exp(2-1/x)/2\) and \(t\in (1/2,1] \mapsto 1-\exp(2-1/(1-x))/2.\)
+\(t = 1 - x\).  Alternatively we could modify the \(t\) with a sigmoid blender like
+\(t\in [0,1/2] \mapsto \exp(2-1/t)/2\) and \(t\in (1/2,1] \mapsto 1-\exp(2-1/(1-t))/2.\)
 A cubic blender is also available. 
-These can be selected by the argument \\code{blend="linear"}, \code{blend="sigmoid"}, or
+These can be selected by the argument \code{blend="linear"}, \code{blend="sigmoid"}, or
 \code{blend="cubic"} to the
 stalker interpolant. 
 The three blending functions are shown in figure~\ref{fig:blending}.
@@ -418,7 +416,11 @@ except possibly for the first dimension. We'll see an example later.
 \section{Examples}
 In this section we compare the stalker spline to the 
 \code{"natural"} and \code{"monoH.FC"} spline from \code{stats::splinefun}.
-We also illustrate the hyperbolic stalker spline.
+We also illustrate the hyperbolic stalker spline with a cubic blender. With
+the hyperbolic stalker, the linear blender is not able to smooth out the pole
+in the flat case, whereas the cubic is. The sigmoid blender will smooth out any 
+non-essential singularity, but the resulting curve may not be very pleasant. Plotting
+the derivative of these interpolants is not for the faint-hearted.
 
 <<echo=FALSE,fig.dim=c(6,4)>>=
 pts <- pts-min(pts)
@@ -431,7 +433,7 @@ s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
 lines(s,ms(s),col='green')
 lines(s, st(s), col='magenta')
-lines(s, st(s,degree=0),col='red')
+lines(s, st(s,degree=0,blend='cub'),col='red')
 legend('topright',legend=c('stalker','mono','natural','hyperbolic'),
        fill=c('magenta','green','blue','red'))
 @ 
@@ -460,7 +462,7 @@ s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
 lines(s,ms(s),col='green')
 lines(s, st(s), col='magenta')
-lines(s, st(s,deg=0), col='red')
+lines(s, st(s,deg=0,blend='cub'), col='red')
 legend('topleft',legend=c('stalker','mono','natural','hyperbolic'),
        fill=c('magenta','green','blue','red'))
 @ 
@@ -480,7 +482,7 @@ s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
 lines(s,ms(s),col='green')
 lines(s, st(s), col='magenta')
-lines(s, st(s,deg=0), col='red')
+lines(s, st(s,deg=0,blend='cub'), col='red')
 legend('topleft',legend=c('stalker','mono','natural','hyperbolic'),
        fill=c('magenta','green','blue','red'))
 @ 
@@ -535,7 +537,7 @@ val <- matrix(runif(N*N,0,0.3),N)
 st <- ipol(val,grid=grid, method='stalker',k=NA)
 ph <- ipol(val,grid=grid, method='polyharmonic', k=2)
 fh <- ipol(val,grid=grid, method='fh', k=0)
-sthyp <- function(x) st(x,deg=0)
+sthyp <- function(x) st(x,deg=0,blend='cubic')
 g <- list(x=seq(0,1, len=70), y=seq(0,1,len=70))
 par(mar=rep(0,4))
 for(f in list(st, ph, sthyp, fh)) {
@@ -606,8 +608,9 @@ st <- ipol(val,grid=grid,method='stalker',k=1.5)
 st(x,degree=1.2,blend='linear')
 @ 
 where \(k\) is the degree. \code{k} can be a vector, one degree for each
-dimension. It is possible to specify any nonzero degree.
-A degree of zero is treated specially, with hyperbolic functions \(a+bx+\frac{c}{1+dx}\).
+dimension. It is possible to specify any nonzero degree, though I see no use for
+degrees less than 1 other than for artful displays.
+A degree of zero is treated specially, with hyperbolic functions \(a+bx+\frac{d}{1+cx}\).
 Specifying \code{k=NA} makes the spline adjust the
 degree locally as described above. The hyperbolic and varying degree stalker do not generalize
 very well to two or more dimensions,

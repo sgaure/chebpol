@@ -7,7 +7,7 @@ Authors@R: person("Simen", "Gaure", email="Simen.Gaure@frisch.uio.no", role=c("a
 Copyright: 2013-2018, Simen Gaure
 Imports: compiler, stats, geometry
 Suggests: lattice, knitr, cubature, plot3D
-SystemRequirements: fftw3 (>= 3.1.2)
+SystemRequirements: fftw3 (>= 3.1.2), gsl
 Description: Contains methods for creating multivariate
   interpolations of functions on a hypercube. If available through fftw3, the DCT-II/FFT
   is used to compute coefficients for a Chebyshev interpolation.

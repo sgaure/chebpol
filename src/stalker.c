@@ -430,7 +430,7 @@ SEXP R_evalstalker(SEXP Sx, SEXP stalker, SEXP Sdegree, SEXP Sblend, SEXP Sthrea
     pcomp[i].uniform = LOGICAL(Suniform)[i];
 #ifndef HAVE_GSL
     if(!pcomp[i].uniform && isnan(degree[i]))
-      error('Non-uniform grid in dimension %d not supported without GSL. Recompile with GSL.',i+1);
+      error("Non-uniform grid in dimension %d not supported without GSL. Recompile with GSL.",i+1);
 #endif
   }
 #ifdef HAVE_GSL
