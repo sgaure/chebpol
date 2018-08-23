@@ -40,8 +40,8 @@
   sacrificing analyticity, and in a corner case even
   differentiability.  That is, the derivative is not well behaved.
   The name comes from the fact that it follows the data frighteningly
-  close, though it sometimes seems stupid with little foresight. The
-  2d-version could as well be called \emph{wet paper spline}.  The
+  close, though it sometimes seems stupid with little foresight. \pkg{chebpol}
+  contains higher dimensional versions too, but they could as well be called \emph{wet paper spline}.  The
   interpolation isn't a proper spline, since it is not a
   polynomial. We also obtain a limit in intuitive geometric terms on
   how large the overshoot can be. The stalker spline can be used when

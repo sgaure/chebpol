@@ -1,5 +1,5 @@
 
-R version 3.4.4 (2018-03-15) -- "Someone to Lean On"
+R Under development (unstable) (2018-08-22 r75176) -- "Unsuffered Consequences"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -23,6 +23,7 @@ Type 'q()' to quit R.
 > library('chebpol')
 > 
 > base::assign(".oldSearch", base::search(), pos = 'CheckExEnv')
+> base::assign(".old_wd", base::getwd(), pos = 'CheckExEnv')
 > cleanEx()
 > nameEx("chebappx")
 > ### * chebappx
@@ -431,7 +432,7 @@ fh   0.2501152 0.4132112 1.751460 0.001677869 0.1709544
 > flush(stderr()); flush(stdout())
 > 
 > ### Name: ipol
-> ### Title: Interpolation wrapper
+> ### Title: Create interpolating function.
 > ### Aliases: ipol
 > 
 > ### ** Examples
@@ -486,6 +487,7 @@ fh   1.189234 0.6568705 1.552155 1.0086296 0.5315642 1.444985 0.7868997
 cheb 1.170537 0.6568743 1.552185 0.9664563 0.5314819 1.441953 0.7867967
 poly 1.170018 0.6573040 1.552691 0.9648213 0.5316708 1.440624 0.7859224
 sl   1.169379 0.6583101 1.551590 0.9607525 0.5309636 1.442886 0.7873733
+crbf 1.172243 0.6636280 1.546904 0.9577260 0.5307419 1.435105 0.6335464
 > 
 > 
 > 
@@ -611,9 +613,10 @@ sl   1.169379 0.6583101 1.551590 0.9607525 0.5309636 1.442886 0.7873733
 > 
 > ### * <FOOTER>
 > ###
+> cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  1.088 0.226 0.998 0 0 
+Time elapsed:  2.538 0.036 0.931 0 0 
 > grDevices::dev.off()
 null device 
           1 
