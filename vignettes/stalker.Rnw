@@ -382,7 +382,7 @@ For non-monotonic triples, we have
   \end{aligned}
 \end{equation}
 
-\subsection{Blending and degree}
+\section{Blending and degree}
 There is a basis function in every knot, so we glue the functions
 \(f_1\) and \(f_2\) together as a convex combination \(tf_1(x) +
 (1-t)f_2(x-1)\) (\(x-1\) is the normalized coordinate for \(f_2\),
@@ -412,6 +412,188 @@ can be a vector, a fixed degree for each dimension.
 In more than one dimension, torsion can be a problem for stability. It can create
 striping artefacts. This can be alleviated by having constant degree (different from \code{NA}),
 except possibly for the first dimension. We'll see an example later.
+
+
+\section{Multidimensional hyperbolic stalker}
+We now consider the generalization to higher dimensions, specifically \(\RN^n\).
+We have a Cartesian product grid, and in every grid point there
+should live a function. We will try to honor monotonicity and extreme points \emph{along
+the axes}. We consider the function living in the point \((0,\ldots,0)\). 
+The grids may be different in each dimension, but we call the three grid
+points along dimension \(i\): \(k_i^-\), \(0\), and \(k_i^+\). That is, we have
+\(k_i^- < 0 < k_i^+\). The corresponding function
+values (with all arguments in other dimensions equal to 0) are \(v_i^-\),\(0\), and \(v_i^+\).
+
+The function form we take to interpolate is (with \(x=(x_1,x_2,\ldots,x_n)\))
+\begin{equation}\label{funcform}
+f(x) = a + \sum_{i=1}^n b_i x_i + \sum_{i=1}^n \frac{d_i}{1+c_ix_i}
+\end{equation}
+We will drop the \(n\) from the sums, as this simplifies the formulas.
+The function value \(f(0) = 0\) gives us an equation
+\begin{equation}\label{zeroval}
+a + \sum_i d_i = 0.
+\end{equation}
+For each \(i\) we also have equations for the two other grid points \(k_i^-\) and \(k_i^+\),
+\begin{equation}
+  \begin{aligned}
+    v_i^+ &=a + b_i k_i^+ + \frac{d_i}{1+c_i k_i^+} + \sum_{j\neq i} d_j,\\
+    v_i^- &=a + b_i k_i^- + \frac{d_i}{1+c_i k_i^-} + \sum_{j\neq i} d_j.\\
+  \end{aligned}
+\end{equation}
+
+We introduce the simplifying notation \(D_i = \sum_{j\neq i} d_j\), and multiply the
+equations by the denominator occuring in them to obtain:
+\begin{equation}
+  \begin{aligned}
+    v_i^++ v_i^+ c_i k_i^+ &= a + ac_i k_i^+ +  b_i k_i^+ + b_i k_i^+ c_i k_i^+ +d_i+ D_i + c_i k_i^+ D_i,\\
+    v_i^-+ v_i^- c_i k_i^- &= a + ac_i k_i^- +  b_i k_i^- + b_i k_i^- c_i k_i^- +d_i+ D_i + c_i k_i^- D_i.\\
+  \end{aligned}
+\end{equation}
+Noting that \(a + d_i + D_i = 0\), we can simplify further.
+\begin{equation}
+  \begin{aligned}
+    v_i^++ v_i^+ c_i k_i^+ &= ac_i k_i^+ +  b_i k_i^+ + b_i k_i^+ c_i k_i^+  + c_i k_i^+ D_i,\\
+    v_i^-+ v_i^- c_i k_i^- &= ac_i k_i^- +  b_i k_i^- + b_i k_i^- c_i k_i^-  + c_i k_i^- D_i.\\
+  \end{aligned}
+\end{equation}
+These can be simplified further by the same equation in the form \(c_i k_i^+ (a + D_i) = -c_i k_i^+ d_i\):
+\begin{equation}\label{dimequations}
+  \begin{aligned}
+    v_i^++ v_i^+ c_i k_i^+ &= b_i k_i^+ + b_i k_i^+ c_i k_i^+  -c_i k_i^+ d_i,\\
+    v_i^-+ v_i^- c_i k_i^- &= b_i k_i^- + b_i k_i^- c_i k_i^-  -c_i k_i^- d_i.\\
+  \end{aligned}
+\end{equation}
+
+\subsection{Monotonicity}
+We now look at monotonocity. Given the three values \(v_i^-,0\), and \(v_i^+\), they are either monotonic
+or \(0\) is a local extremum. If they are monotonic we must ensure that our function is monotonic as
+well, i.e. that the derivative along this dimension is different from zero.  We have the
+derivative along dimension \(i\):
+\begin{equation}
+  f_i(x) = b_i - \frac{c_i d_i}{(1+c_i x_i)^2}.
+\end{equation}
+One way to ensure it is nonzero is to choose \(b_i=0\).
+This is what we do for monotonic points.
+The equations~\eqref{dimequations} then simplify to:
+\begin{equation}
+  \begin{aligned}
+    v_i^++ v_i^+ c_i k_i^+ &=  -c_i k_i^+ d_i,\\
+    v_i^-+ v_i^- c_i k_i^- &=  -c_i k_i^- d_i.\\
+  \end{aligned}
+\end{equation}
+These can be solved for \(c_i\) and \(d_i\) to yield,
+\begin{equation}\label{monopars}
+  \begin{aligned}
+    b_i &= 0,\\
+    c_i &= -\frac{k_i^- v_i^+ - k_i^+ v_i^-}{k_i^-  k_i^+ (v_i^+ - v_i^-)},\\
+    d_i &= -\frac{v_i^+ v_i^- (k_i^- - k_i^+)}{k_i^- v_i^+ - k_i^+ v_i^-}.\\
+  \end{aligned}
+\end{equation}
+
+\subsection{Non-monotonicity}
+When the three points are non-monotonic, the middle one is an extreme point, i.e.
+\(f_i(0) = 0\). This yields the equation,
+\begin{equation}
+  b_i = c_i d_i.
+\end{equation}
+Inserting this in equations~\eqref{dimequations} yields,
+\begin{equation}
+  \begin{aligned}
+    v_i^++ v_i^+ c_i k_i^+ &= c_i d_i k_i^+ + c_i d_i k_i^+ c_i k_i^+  -c_i k_i^+ d_i,\\
+    v_i^-+ v_i^- c_i k_i^- &= c_i d_i k_i^- + c_i d_i k_i^- c_i k_i^-  -c_i k_i^- d_i.\\
+  \end{aligned}
+\end{equation}
+These immediately simplifies to,
+\begin{equation}
+  \begin{aligned}
+    v_i^++ v_i^+ c_i k_i^+ &= c_i d_i k_i^+ c_i k_i^+,\\
+    v_i^-+ v_i^- c_i k_i^- &= c_i d_i k_i^- c_i k_i^-.\\
+  \end{aligned}
+\end{equation}
+The solution is,
+\begin{equation}\label{nmonopars}
+  \begin{aligned}
+    b_i &= \frac{v_i^+ v_i^- (k_i^--k_i^+)}{(k_i^-)^2 v_i^+-(k_i^+)^2 v_i^-},\\
+    c_i &= -\frac{(k_i^-)^2 v_i^+-(k_i^+)^2 v_i^-}{k_i^- k_i^+ (k_i^- v_i^+-k_i^+ v_i^-)},\\
+    d_i &= -\frac{(k_i^- v_i^+-k_i^+ v_i^-) k_i^- v_i^+ v_i^- k_i^+ (k_i^--k_i^+)}{((k_i^-)^2 v_i^+-(k_i^+)^2 v_i^-)^2}\\
+  \end{aligned}
+\end{equation}
+So, both for monotonic and non-monotonic triples we can find the constants
+\(b_i,c_i\) and \(d_i\) from equations~\eqref{monopars} and~\eqref{nmonopars}.
+From equation~\eqref{zeroval} we can then find \(a\),
+and we have all the parameters in the definition of the function \(f\) in equation~\eqref{funcform}.
+
+We can try this out on a simple example, on a grid \((-1,0,1)\) in two dimensions,
+i.e. \(k_i^- = -1\) and \(k_i^+ = 1\).
+We let \(w_1 = 1/2, v_1 = 1, w_2=-2, v_2 = 1\). I.e. non-monotonic in the
+first dimension, monotonic in the second. We get the parameters:
+\(b_1 = -2, c_1 = -1/3, d_1 = 6, b_2=0, c_2=1/3, d_2=-4, a=-2\). An illustration
+of the function can be found in figure~\ref{fig:2dhyp}.
+
+<<2dhyp,fig.dim=c(4,4),fig.cap='Hyperbolic 2d function',echo=FALSE>>=
+a <- -2
+b.1 <- -2; c.1 <- -1/3; d.1 <- 6
+b.2 <- 0; c.2 <- 1/3; d.2 <- -4
+
+f <- function(x) a + b.1*x[1] + b.2*x[2] + d.1/(1+c.1*x[1]) + d.2/(1+c.2*x[2])
+g <- list(x=seq(-1,1,len=50), y=seq(-1,1,len=50))
+light <- list(specular=0.2,ambient=0.0,diffuse=0.6)
+plot3D::persp3D(g$x, g$y, evalongrid(f,grid=g), colvar=NULL, lighting=light,
+        theta=45, ltheta=10, lphi=40, col='green')
+plot3D::points3D(c(0,1,0,-1,0),c(0,0,1,0,-1),c(0,1,1,1/2,-2)+0.05,pch=20,add=TRUE,colvar=NULL)
+@ 
+
+\subsection{Special cases}
+There are some special cases, corresponding to data which can not be fitted with
+the function form in equation~\eqref{funcform}. More specifically, some of the
+denominators in equations~\eqref{monopars} and~\eqref{nmonopars} can vanish. We take the
+monotonic case first. Monotonicity means that \(v_i^-\) and \(v_i^+\) have opposite
+signs, but what if they are equal? The formula for \(c_i\) breaks down.
+But this is trivial, in this case we have a completely flat function with 
+\(v_i^- = v_i^+ = 0\), and \(b_i = d_i = 0\), with \(c_i\) irrelevant.
+
+The other special case in the monotonicity formulae is when \(k_i^- v_i^+ = k_i^+ v_i^-\).
+In this case, the points are on a straight line with derivative \(v_i^+/k_i^+ = v_i^-/k_i^-\), we take
+\(b_i = v_i^+/k_i^+\), \(c_i = d_i = 0\).
+
+Then to the non-monotonic special cases.
+The first case is when the formula for \(c_i\) breaks down, this is linearity and is defined
+as monotonic and handled there.
+The case where \(b_i\) and \(d_i\) are ill-defined is more complicated, it happens
+when \((k_i^-)^2 v_i^+ = (k_i^+)^2 v_i^-\). The three points lie on a parabola with
+its vertex in 0. We are unable to fit our function to these points, instead we
+choose a parabola, i.e. \(\frac{v_i^+}{(k_i^+)^2} x_i^2\). For the purpose of computing
+\(a\) from equation~\eqref{zeroval}, we use \(d_i = 0\).
+
+\subsection{Blending}
+Our functions are defined around each grid point in such a way that they
+agree with the given values on a ``cross''. They do not agree in the corners. 
+E.g. for two-dimensional data an \(f\) living in \((0,0)\) agree with the
+given values in \((0,0), (0,1), (1,0), (0,-1)\) and \((-1,0)\), but not in
+\((1,1), (1,-1), (-1,1)\) and \((-1,-1)\).
+
+When interpolating a point, there is a function living in each corner around it,
+but how should they be weighted?
+
+The simplest method is to use the barycentric coordinates of our point, i.e. the
+weight for a corner is the volume of the cube opposite the point. Alternatively,
+these weights can be modified by some sigmoid function. An illustration can be found
+in figure~\ref{fig:2dblending}. We have a point in \((0.3,0.4)\), there are functions
+living in each corner, the black dots. The weight for the function in \((1,1)\) is the
+area of the lower blue rectangle \(0.3 \times 0.4 = 0.12\).
+
+<<2dblending,fig.dim=c(3,3), fig.cap='Blending',echo=FALSE>>=
+#  par(mar=rep(0,4))
+  plot(c(0,1,1,0),c(0,0,1,1),pch=20,xlab='',ylab='')
+  points(0.3,0.4,col='blue')
+  abline(v=0.3,h=0.4,col='blue',lty=2)
+@
+
+
+This will ensure continuity, but it will not ensure differentiability even in simple
+examples, due to the fact that the function living in \((1,1)\) has a value in \((0,0)\)
+which is different from the given value in \((0,0)\).
+
 
 \section{Examples}
 In this section we compare the stalker spline to the 
