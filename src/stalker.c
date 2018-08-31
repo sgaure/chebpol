@@ -298,7 +298,7 @@ static void makehyp(const int nrank, const int *dims, double **grid, const doubl
       // Many common expressions below. Fix later. Compiler does anyway.
       double D = kmin*vplus - kplus*vmin;
       double D2 = kmin*kmin*vplus - kplus*kplus*vmin;
-      if(sign(vplus*vmin) <= 0) {
+      if(sign(vplus*vmin) <= 0 || fabs(vplus) <= MYEPS || fabs(vmin) <= MYEPS) {
 	// Monotonic
 	if(fabs(vplus-vmin) <= MYEPS*kplus) {
 	  // constant zero

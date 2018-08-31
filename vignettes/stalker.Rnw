@@ -139,9 +139,9 @@ To simplify, we consider a basis function \(f(x)\) on the
 interval \([-1,1]\). We have its function values in the three knots
 \(f(-1) = v_-\), \(f(0) = v_0\), and \(f(1) = v_+\). We assume
 
-\begin{equation}
+\begin{equation*}
 f(x) = a + bx + c|x|^r.
-\end{equation}
+\end{equation*}
 Inserting our three points, we obtain three equations with three unknowns:
 \begin{equation}\label{cdef}
 \begin{aligned}
@@ -303,18 +303,18 @@ The hyperbolic stalker is specified as \code{ipol(..., method='hstalker')}.
 \section{Overshoot and blending}
 To sum up, the function passing through \((-1,v_-)\), \((0,v_0)\) and
 \((1,v_+)\) is 
-\begin{equation}
+\begin{equation*}
 f(x) = a + bx + c|x|^r.
-  \end{equation}
+  \end{equation*}
 The coefficients \(a\), \(b\), and \(c\) are as in~\eqref{cvals}. For \(c\neq 0\) the exponent \(r\) is 
 chosen as follows:
-\begin{equation}
+\begin{equation*}
 r = \begin{cases}
  |b/c| &\text{for \(|c| \leq |b| < 2|c|\)},\\
  |c/b| & \text{for \(|b| < |c| < 2|b|\)},\\
  2 & \text{otherwise}.
 \end{cases}
-\end{equation}
+\end{equation*}
 
 It is clear that \(1 \leq r \leq 2\).
 The functions with \(1 < r \leq 2\) are everywhere
@@ -391,16 +391,22 @@ except possibly for the first dimension. We'll see an example later.
 
 
 \section{Multidimensional hyperbolic stalker}
-We now consider the generalization to higher dimensions, specifically \(\RN^n\).
-We have a Cartesian product grid, and in every grid point there
-should live a function. We will try to honor monotonicity and extreme points \emph{along
-the axes}. We consider the function living in the point \((0,\ldots,0)\). 
-The grids may be different in each dimension, but we call the three grid
-points along dimension \(i\): \(k_i^-\), \(0\), and \(k_i^+\). That is, we have
-\(k_i^- < 0 < k_i^+\). The corresponding function
-values (with all arguments in other dimensions equal to 0) are \(v_i^-\),\(0\), and \(v_i^+\).
+We have another shape preserving spline which is sligthly easier to
+work with. It's a rational spline. We replace the low degree \(|x|^r\)
+with a hyperbola.  We consider it in higher dimensions, specifically
+\(\RN^n\).  We have a Cartesian product grid, and in every grid point
+there should live a function. We will try to honor monotonicity and
+extreme points \emph{along the axes}. That is, we do not consider the
+grid to be just any points coincidentally lying on a grid, but as
+defining for monotonicity and local extreme point. We consider the
+function living in the point \((0,\ldots,0)\).  The grids may be
+different in each dimension, but we call the three grid points along
+dimension \(i\): \(k_i^-\), \(0\), and \(k_i^+\). That is, we have
+\(k_i^- < 0 < k_i^+\). The corresponding function values (with all
+arguments in other dimensions equal to 0) are \(v_i^-\), \(0\), and
+\(v_i^+\).
 
-The function form we take to interpolate is (with \(x=(x_1,x_2,\ldots,x_n)\))
+The function form we choose as a ``basis'' (with \(x=(x_1,x_2,\ldots,x_n)\))
 \begin{equation}\label{funcform}
 f(x) = a + \sum_{i=1}^n b_i x_i + \sum_{i=1}^n \frac{d_i}{1+c_ix_i}
 \end{equation}
@@ -410,28 +416,28 @@ The function value \(f(0) = 0\) gives us an equation
 a + \sum_i d_i = 0.
 \end{equation}
 For each \(i\) we also have equations for the two other grid points \(k_i^-\) and \(k_i^+\),
-\begin{equation}
+\begin{equation*}
   \begin{aligned}
     v_i^+ &=a + b_i k_i^+ + \frac{d_i}{1+c_i k_i^+} + \sum_{j\neq i} d_j,\\
     v_i^- &=a + b_i k_i^- + \frac{d_i}{1+c_i k_i^-} + \sum_{j\neq i} d_j.\\
   \end{aligned}
-\end{equation}
+\end{equation*}
 
 We introduce the simplifying notation \(D_i = \sum_{j\neq i} d_j\), and multiply the
 equations by the denominator occuring in them to obtain:
-\begin{equation}
+\begin{equation*}
   \begin{aligned}
     v_i^++ v_i^+ c_i k_i^+ &= a + ac_i k_i^+ +  b_i k_i^+ + b_i k_i^+ c_i k_i^+ +d_i+ D_i + c_i k_i^+ D_i,\\
     v_i^-+ v_i^- c_i k_i^- &= a + ac_i k_i^- +  b_i k_i^- + b_i k_i^- c_i k_i^- +d_i+ D_i + c_i k_i^- D_i.\\
   \end{aligned}
-\end{equation}
+\end{equation*}
 Noting that \(a + d_i + D_i = 0\), we can simplify further.
-\begin{equation}
+\begin{equation*}
   \begin{aligned}
     v_i^++ v_i^+ c_i k_i^+ &= ac_i k_i^+ +  b_i k_i^+ + b_i k_i^+ c_i k_i^+  + c_i k_i^+ D_i,\\
     v_i^-+ v_i^- c_i k_i^- &= ac_i k_i^- +  b_i k_i^- + b_i k_i^- c_i k_i^-  + c_i k_i^- D_i.\\
   \end{aligned}
-\end{equation}
+\end{equation*}
 These can be simplified further by the same equation in the form \(c_i k_i^+ (a + D_i) = -c_i k_i^+ d_i\):
 \begin{equation}\label{dimequations}
   \begin{aligned}
@@ -445,18 +451,20 @@ We now look at monotonocity. Given the three values \(v_i^-,0\), and \(v_i^+\), 
 or \(0\) is a local extremum. If they are monotonic we must ensure that our function is monotonic as
 well, i.e. that the derivative along this dimension is different from zero.  We have the
 derivative along dimension \(i\):
-\begin{equation}
+\begin{equation*}
   f_i(x) = b_i - \frac{c_i d_i}{(1+c_i x_i)^2}.
-\end{equation}
-One way to ensure it is nonzero is to choose \(b_i=0\).
-This is what we do for monotonic points.
+\end{equation*}
+One way to ensure it is nonzero is to choose \(b_i=0\). The only way
+\(f_i(x)\) can vanish is then if \(c_i d_i=0\), but this would mean that our
+function will be constant, this is a special case we handle below.
+So for a monotonic triplet, we set \(b_i = 0\).
 The equations~\eqref{dimequations} then simplify to:
-\begin{equation}
+\begin{equation*}
   \begin{aligned}
     v_i^++ v_i^+ c_i k_i^+ &=  -c_i k_i^+ d_i,\\
     v_i^-+ v_i^- c_i k_i^- &=  -c_i k_i^- d_i.\\
   \end{aligned}
-\end{equation}
+\end{equation*}
 These can be solved for \(c_i\) and \(d_i\) to yield,
 \begin{equation}\label{monopars}
   \begin{aligned}
@@ -469,23 +477,23 @@ These can be solved for \(c_i\) and \(d_i\) to yield,
 \subsection{Non-monotonicity}
 When the three points are non-monotonic, the middle one is an extreme point, i.e.
 \(f_i(0) = 0\). This yields the equation,
-\begin{equation}
+\begin{equation*}
   b_i = c_i d_i.
-\end{equation}
+\end{equation*}
 Inserting this in equations~\eqref{dimequations} yields,
-\begin{equation}
+\begin{equation*}
   \begin{aligned}
     v_i^++ v_i^+ c_i k_i^+ &= c_i d_i k_i^+ + c_i d_i k_i^+ c_i k_i^+  -c_i k_i^+ d_i,\\
     v_i^-+ v_i^- c_i k_i^- &= c_i d_i k_i^- + c_i d_i k_i^- c_i k_i^-  -c_i k_i^- d_i.\\
   \end{aligned}
-\end{equation}
+\end{equation*}
 These immediately simplifies to,
-\begin{equation}
+\begin{equation*}
   \begin{aligned}
     v_i^++ v_i^+ c_i k_i^+ &= c_i d_i k_i^+ c_i k_i^+,\\
     v_i^-+ v_i^- c_i k_i^- &= c_i d_i k_i^- c_i k_i^-.\\
   \end{aligned}
-\end{equation}
+\end{equation*}
 The solution is,
 \begin{equation}\label{nmonopars}
   \begin{aligned}
