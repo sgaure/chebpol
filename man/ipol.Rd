@@ -6,7 +6,8 @@
 \usage{
 ipol(val, dims = NULL, intervals = NULL, grid = NULL, knots = NULL,
   k = NULL, method = c("chebyshev", "multilinear", "fh", "uniform",
-  "general", "polyharmonic", "simplexlinear", "stalker", "crbf"), ...)
+  "general", "polyharmonic", "simplexlinear", "stalker", "hstalker",
+  "crbf"), ...)
 }
 \arguments{
 \item{val}{array or function. Function values on a grid, or the function
@@ -59,7 +60,8 @@ uniformly spaced knots are created.  The argument
 \code{intervals} generally goes with \code{dims} when something else than
 standard intervals \code{[-1, 1]} are used.
 
-The methods \code{"multilinear"}, \code{"fh"} (Floater-Hormann), \code{"stalker"}, and
+The methods \code{"multilinear"}, \code{"fh"} (Floater-Hormann), \code{"stalker"},
+\code{"hstalker"}, and
 \code{"general"} needs the argument \code{grid}.  These are the methods
 which can use arbitrary Cartesian grids.
 The stalker spline

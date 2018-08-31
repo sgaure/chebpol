@@ -48,4 +48,22 @@ stalkerappx <- function(val, grid, r=2, ...) {
   domain=lapply(grid,range))
 }
 
+hstalkerappx <- function(val, grid, ...) {
+  if(!is.list(grid)) grid <- list(grid)
+  grid <- lapply(grid,as.numeric)
+  if(any(sapply(grid,is.unsorted))) {
+    if(!is.function(val)) stop('Grid points must be ordered in increasing order')
+    grid <- lapply(grid,sort)
+  }
+  if(is.function(val)) val <- evalongrid(val,grid=grid,...)
+  stalker <- .Call(C_makehyp,val,grid)
+  vectorfun(function(x,threads=getOption('chebpol.threads'),degree=r,
+                     blend=c('cubic','linear','sigmoid','parodic','square')) {
+    blend <- switch(match.arg(blend),linear=0L,sigmoid=1L,parodic=2L,cubic=3L,square=4L)
+    .Call(C_evalhyp,x,stalker,as.integer(blend),as.integer(threads))
+  },
+  arity=length(grid),
+  domain=lapply(grid,range))
+}
+
 havegsl <- function() .Call(C_havegsl)

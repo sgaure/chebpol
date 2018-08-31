@@ -241,7 +241,8 @@ static R_INLINE double blendfun(double w,int blend) {
 
 // Find the parameters for the hyperbolic stalker in each grid point
 // use normalized coordinates as in the formulas, f(0) = 0
-static void computehyp(const int nrank, const int *dims, double **grid, const double *val,
+#define MYEPS (1e3*sqrt(DOUBLE_EPS))
+static void makehyp(const int nrank, const int *dims, double **grid, const double *val,
 		double *a, double *b, double *c, double *d, int depth, int *point) {
   // Loop over every grid point
   // In each grid point, find the function living there, i.e. an a,
@@ -252,7 +253,7 @@ static void computehyp(const int nrank, const int *dims, double **grid, const do
   if(depth < nrank) {
     for(int i = 0; i < dims[depth]; i++) {
       point[depth] = i;
-      computehyp(nrank, dims, grid, val, a, b, c, d, depth+1,point);
+      makehyp(nrank, dims, grid, val, a, b, c, d, depth+1,point);
     }
     return;
   }
@@ -295,41 +296,50 @@ static void computehyp(const int nrank, const int *dims, double **grid, const do
       double kplus = gr[idx+1] - gr[idx];
       double kmin = gr[idx-1] - gr[idx];
       // Many common expressions below. Fix later. Compiler does anyway.
+      double D = kmin*vplus - kplus*vmin;
+      double D2 = kmin*kmin*vplus - kplus*kplus*vmin;
       if(sign(vplus*vmin) <= 0) {
 	// Monotonic
-	if(fabs(vplus-vmin) <= 1e3*DOUBLE_EPS*vplus) {
+	if(fabs(vplus-vmin) <= MYEPS*kplus) {
 	  // constant zero
 	  bb[i] = cc[i] = dd[i] = 0.0;
-	} else if(fabs(kmin*vplus - kplus*vmin) <= 1e3*DOUBLE_EPS*vplus) {
+	} else if(fabs(D) <= MYEPS*kplus) {
 	  // Linear
 	  bb[i] = vplus/kplus;
 	  cc[i] = dd[i] = 0.0;
 	} else {
 	  // general
 	  bb[i] = 0.0;
-	  cc[i] = -(kmin*vplus - kplus*vmin)/(kmin*kplus*(vplus-vmin));
-	  dd[i] = -vplus*vmin*(kmin-kplus)/(kmin*vplus - kplus*vmin);
+	  cc[i] = -D/(kmin*kplus*(vplus-vmin));
+	  dd[i] = -vplus*vmin*(kmin-kplus)/D;
 	}
       } else {
 	// Non-monotonic
-	if(fabs(kmin*kmin*vplus - kplus*kplus*vmin) <= 1e3*DOUBLE_EPS*kplus) {
+	if(fabs(D2) <= MYEPS*kplus) {
 	  // Parabola
 	  bb[i] = vplus/(kplus*kplus);
-	  cc[i] = dd[i] = NA_REAL; // signals parabola
+	  dd[i] = 0.0;
+	  cc[i] = NA_REAL; // signals parabola
 	} else {
 	  // general
-	  bb[i] = vplus*vmin*(kmin-kplus)/(kmin*kmin*vplus - kplus*kplus*vmin);
-	  cc[i] = (kmin*kmin*vplus - kplus*kplus*vmin)/(kmin*kplus*(kmin*vplus-kplus*vmin));
-	  dd[i] = kmin*vplus*kplus*vmin*(kmin-kplus)*(kmin*vplus-kplus*vmin)/R_pow_di(kmin*kmin*vplus-kplus*kplus*vmin,2);
+	  bb[i] = vplus*vmin*(kmin-kplus)/D2;
+	  cc[i] = -D2/(kmin*kplus*D);
+	  dd[i] = -kmin*vplus*kplus*vmin*(kmin-kplus)*D/(D2*D2);
 	}
       }
+      /*
+      if(isnan(dd[i]) || fabs(dd[i]) > 1e12) {
+	printf("dd is na, i=%d, k-=%.2f, k+=%.2f, v-=%.2f, v+=%.2f D=%.2e D2=%.2e\n",
+	       i,kmin,kplus,vmin,vplus,D,D2);
+      }
+      */
     }
     a[index] -= dd[i];
     stride *= dims[i];
   }
 }
 
-double evalnewhyp(const double *x, const int nrank, const int *dims, 
+double evalhyp(const double *x, const int nrank, const int *dims, 
 		  double **grid, const double *val, int blend,
 		  double *a, double *b, double *c, double *d) {
   // loop over the corners of the hypercube surrounding x.
@@ -346,21 +356,20 @@ double evalnewhyp(const double *x, const int nrank, const int *dims,
     int mflag;
     double *gr = grid[g];
     int gp = findInterval(gr, dims[g], x[g], TRUE,TRUE,1,&mflag)-1;
-    int rend = 0;
-    // gp is at or below x
-    // It is below if x[g] is a right end point
-    // make it zero based in the right end point
+    // gp is below x
     gbase[g] = gp;
-    //    if(x[g] >= gr[dims[g]-1]) gbase[g]++;
     weight[g] = 1-(x[g]-gr[gbase[g]])/(gr[gbase[g]+1]-gr[gbase[g]]);
+    // This ensures extrapolation is linear
+    if(weight[g] < 0) weight[g] = 0;
+    if(weight[g] > 1) weight[g] = 1;
     llcorner += stride*gp;
-    if(rend) llcorner += stride;
     stride *= dims[g];
   }
 
   // Loop over the corners
   double V=0.0;
   double zx[nrank];
+  double sumw = 0.0;
   for(int i = 0; i < (1<<nrank); i++) {
     // i is a corner represented as nrank bits
     // bit j is 1 if above in dimension j, 0 if below
@@ -371,17 +380,18 @@ double evalnewhyp(const double *x, const int nrank, const int *dims,
     for(int g = 0; g < nrank; g++) {
       double *gr = grid[g];
       if(i & (1<<g)) {
-	cw *= 1-weight[g];
+	cw *= blendfun(1-weight[g],blend);
 	corner += stride;
 	// zero based in this corner
 	zx[g] = x[g] - gr[gbase[g]+1];
       } else {
 	zx[g] = x[g] - gr[gbase[g]];
-	cw *= weight[g];
+	cw *= blendfun(weight[g],blend);
       }
       stride *= dims[g];
     }
     if(cw == 0.0) continue;
+    //    cw = blendfun(cw,blend);
     // Nice. Now 'corner' is the index into our arrays
     // Find a, b, c, and d for the corner. These have stride 'nrank'
     double *bb = &b[nrank*corner], *cc=&c[nrank*corner], *dd=&d[nrank*corner];
@@ -401,103 +411,14 @@ double evalnewhyp(const double *x, const int nrank, const int *dims,
     }
     // That's the function value. The weight is in cw
     //    printf("corner %d fval %.2f weight %.2f\n",corner,fval,cw);
+    sumw += cw;
     V += cw*fval;
   }
-  return V;
+  return V/sumw;
 }
 
 
-double evalhyp(const double *x, const int nrank, const int *dims, 
-	       double **grid, const double *val, int blend,
-	       const double *degree, precomp *pcomp) {
-  // loop over the corners
-  // for each corner, find the function living there
 
-  // First, find the weights
-  int stride = 1;
-  double weight[nrank];
-  double xx[nrank];
-  int gpos[nrank];
-  int llcorner = 0;
-  for(int g = 0; g < nrank; g++) {
-    int mflag;
-    double *gr = grid[g];
-    int gp = findInterval(gr, dims[g], x[g], TRUE,TRUE,1,&mflag)-1;
-    // gp is at or below x
-    gpos[g] = gp;
-    xx[g] = x[g]-gr[gp];
-    weight[g] = xx[g]/(gr[gp+1]-gr[gp]);
-    llcorner += stride*gp;
-    stride *= dims[g];
-  }
-  // Fine. That's the weights.
-  // Now, loop over corners
-  double V = 0.0;
-  double sumw = 0.0;
-  for(int i = 0; i < (1<<nrank); i++) {
-    // i is a corner represented as nrank bits
-    // bit j is 1 if above in dimension j, 0 if below
-    // Find the position and weight of the corner
-    int stride = 1;
-    int corner = llcorner;
-    double cw = 1.0;
-    for(int g = 0; g < nrank; g++) {
-      if(i & (1<<g)) {
-	cw *= weight[g];
-	corner += stride;
-      } else {
-	cw *= (1.0-weight[g]);
-      }
-      stride *= dims[g];
-    }
-
-    // Now, loop over the dimensions, stalk it.
-    stride = 1;
-    double cV = 0;
-    double ccw = cw;
-    for(int g = 0; g < nrank; g++) {
-      double *gr = grid[g];
-      double *rdet = pcomp[g].det, *rpmin = pcomp[g].pmin, *rpplus = pcomp[g].pplus;
-      int uniform = pcomp[g].uniform;
-      //      double *rdet = det[g], *rpmin=pmin[g], *rpplus=pplus[g];
-      int pos = gpos[g];
-      const double *vptr = &val[corner];
-      double vmin=NA_REAL,v0=vptr[0],vplus=NA_REAL,dmin=NA_REAL,dplus=NA_REAL;
-      double w;
-      int above = i & (1<<g);
-      if(above) {
-	// corner is above point, stalk down
-	pos++;
-	vmin = vptr[-stride];
-	dmin = gr[pos] - gr[pos-1];
-	if(pos < dims[g]-1) {
-	  vplus = vptr[stride];
-	  dplus = gr[pos+1]-gr[pos];
-	}
-	w = weight[g];
-      } else {
-	// corner is below point, stalk up
-	vplus = vptr[stride];
-	dplus = gr[pos+1]-gr[pos];
-	if(pos > 0) {
-	  vmin = vptr[-stride];
-	  dmin = gr[pos]-gr[pos-1];
-	}
-	w = 1-weight[g];
-      }
-      double bw = blendfun(w,blend);
-      ccw = ((w>0)?bw/w:1);
-      cV += ccw*stalk1(x[g]-gr[pos],vmin,v0,vplus,dmin,dplus,degree[g],rdet[pos],rpmin[pos],rpplus[pos],uniform);
-      stride *= dims[g];
-    }
-    V += cw*cV;
-    sumw += cw;
-  }
-  return V/nrank;
-
-}
-
-#if 1
 double evalstalker(const double *x, const int nrank, const int *dims, 
 		   double **grid, const double *val, int blend,
 		   const double *degree, precomp *pcomp) {
@@ -560,104 +481,8 @@ double evalstalker(const double *x, const int nrank, const int *dims,
   w = blendfun(w,blend);
   return w*low + (1-w)*high;
 }
-#else
 
-// more like the multilinear, use only stalkers on the grid lines,
-// do linear interpolation between.
-double evalstalker(const double *x, const int nrank, const int *dims, 
-		   double **grid, const double *val, int blend,
-		   const double *degree, precomp *pcomp) { 
-  // loop over the corners
-  // for each corner, stalk the value in each dimension.
-  // take weighted averages
-  // First, find the weights
-  int stride = 1;
-  double weight[nrank];
-  double xx[nrank];
-  int gpos[nrank];
-  int llcorner = 0;
-  for(int g = 0; g < nrank; g++) {
-    int mflag;
-    double *gr = grid[g];
-    int gp = findInterval(gr, dims[g], x[g], TRUE,TRUE,1,&mflag)-1;
-    // gp is at or below x
-    gpos[g] = gp;
-    xx[g] = x[g]-gr[gp];
-    weight[g] = xx[g]/(gr[gp+1]-gr[gp]);
-    llcorner += stride*gp;
-    stride *= dims[g];
-  }
-  // Fine. That's the weights.
-  // Now, loop over corners
-  double V = 0.0;
-  double sumw = 0.0;
-  for(int i = 0; i < (1<<nrank); i++) {
-    // i is a corner represented as nrank bits
-    // bit j is 1 if above in dimension j, 0 if below
-    // Find the position and weight of the corner
-    int stride = 1;
-    int corner = llcorner;
-    double cw = 1.0;
-    for(int g = 0; g < nrank; g++) {
-      if(i & (1<<g)) {
-	cw *= weight[g];
-	corner += stride;
-      } else {
-	cw *= (1.0-weight[g]);
-      }
-      stride *= dims[g];
-    }
-    // Now, loop over the dimensions, stalk it.
-    stride = 1;
-    double cV = 0;
-    double ccw = cw;
-    for(int g = 0; g < nrank; g++) {
-      double *gr = grid[g];
-      double *rdet = pcomp[g].det, *rpmin = pcomp[g].pmin, *rpplus = pcomp[g].pplus;
-      int uniform = pcomp[g].uniform;
-      //      double *rdet = det[g], *rpmin=pmin[g], *rpplus=pplus[g];
-      int pos = gpos[g];
-      const double *vptr = &val[corner];
-      double vmin=NA_REAL,v0=vptr[0],vplus=NA_REAL,dmin=NA_REAL,dplus=NA_REAL;
-      double w;
-      int above = i & (1<<g);
-      if(above) {
-	// corner is above point, stalk down
-	pos++;
-	vmin = vptr[-stride];
-	dmin = gr[pos] - gr[pos-1];
-	if(pos < dims[g]-1) {
-	  vplus = vptr[stride];
-	  dplus = gr[pos+1]-gr[pos];
-	}
-	w = weight[g];
-      } else {
-	// corner is below point, stalk up
-	vplus = vptr[stride];
-	dplus = gr[pos+1]-gr[pos];
-	if(pos > 0) {
-	  vmin = vptr[-stride];
-	  dmin = gr[pos]-gr[pos-1];
-	}
-	w = 1-weight[g];
-      }
-      double bw = blendfun(w,blend);
-      ccw = ((w>0)?bw/w:1);
-      cV += ccw*stalk1(x[g]-gr[pos],vmin,v0,vplus,dmin,dplus,degree[g],rdet[pos],rpmin[pos],rpplus[pos],uniform);
-      stride *= dims[g];
-    }
-    V += cw*cV;
-    sumw += cw;
-  }
-  return V/nrank;
-}
-#endif
-
-/*
-static void computehyp(const int nrank, const int *dims, double **grid, const double *val,
-		double *a, double *b, double *c, double *d, int depth, int *pt) {
-*/
-SEXP R_computehyp(SEXP Sval, SEXP Sgrid) {
+SEXP R_makehyp(SEXP Sval, SEXP Sgrid) {
   const int nrank = LENGTH(Sgrid);
   int dims[nrank];
   int len = 1;
@@ -678,14 +503,17 @@ SEXP R_computehyp(SEXP Sval, SEXP Sgrid) {
   SEXP Sc = PROTECT(allocMatrix(REALSXP,nrank,len));
   SEXP Sd = PROTECT(allocMatrix(REALSXP,nrank,len));
   SEXP ret = PROTECT(NEW_LIST(6));
-  SET_VECTOR_ELT(ret,0,Sa);
-  SET_VECTOR_ELT(ret,1,Sb);
-  SET_VECTOR_ELT(ret,2,Sc);
-  SET_VECTOR_ELT(ret,3,Sd);
-  SET_VECTOR_ELT(ret,4,Sval);
-  SET_VECTOR_ELT(ret,5,Sgrid);
-  computehyp(nrank, dims, grid, val, REAL(Sa), REAL(Sb), REAL(Sc), REAL(Sd), 0, point);
-  UNPROTECT(5);
+  SEXP names = PROTECT(allocVector(STRSXP,6));
+  SET_NAMES(ret,names);
+  SET_VECTOR_ELT(ret,0,Sa); SET_STRING_ELT(names, 0, mkChar("a"));
+  SET_VECTOR_ELT(ret,1,Sb); SET_STRING_ELT(names, 1, mkChar("b"));
+  SET_VECTOR_ELT(ret,2,Sc);  SET_STRING_ELT(names, 2, mkChar("c"));
+  SET_VECTOR_ELT(ret,3,Sd); SET_STRING_ELT(names, 3, mkChar("d"));
+  SET_VECTOR_ELT(ret,4,Sval);  SET_STRING_ELT(names, 4, mkChar("val"));
+  SET_VECTOR_ELT(ret,5,Sgrid); SET_STRING_ELT(names, 5, mkChar("grid"));
+  
+  makehyp(nrank, dims, grid, val, REAL(Sa), REAL(Sb), REAL(Sc), REAL(Sd), 0, point);
+  UNPROTECT(6);
   return ret;
 }
 
@@ -713,15 +541,10 @@ SEXP R_evalhyp(SEXP Sx, SEXP stalker, SEXP Sblend, SEXP Sthreads) {
 
   SEXP ret = PROTECT(NEW_NUMERIC(N));
   double *out = REAL(ret);
-  /*
-double evalnewhyp(const double *x, const int nrank, const int *dims, 
-		  double **grid, const double *val, int blend,
-		  double *a, double *b, double *c, double *d) {
-  */
 
 #pragma omp parallel for num_threads(threads) schedule(guided) if(N > 1 && threads > 1)
   for(int i = 0; i < N; i++)  {
-    out[i] = evalnewhyp(x+i*nrank, nrank, dims, grid, val, blend, a,b,c,d);
+    out[i] = evalhyp(x+i*nrank, nrank, dims, grid, val, blend, a,b,c,d);
   }
   
   UNPROTECT(1);

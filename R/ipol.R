@@ -17,7 +17,8 @@
 #' \code{intervals} generally goes with \code{dims} when something else than
 #' standard intervals \code{[-1, 1]} are used. 
 #' 
-#' The methods \code{"multilinear"}, \code{"fh"} (Floater-Hormann), \code{"stalker"}, and
+#' The methods \code{"multilinear"}, \code{"fh"} (Floater-Hormann), \code{"stalker"},
+#' \code{"hstalker"}, and
 #' \code{"general"} needs the argument \code{grid}.  These are the methods
 #' which can use arbitrary Cartesian grids.
 #' The stalker spline
@@ -105,7 +106,7 @@
 #' @export
 ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
                  method=c('chebyshev','multilinear','fh','uniform','general','polyharmonic',
-                          'simplexlinear', 'stalker', 'crbf'),
+                          'simplexlinear', 'stalker', 'hstalker', 'crbf'),
                  ...) {
   method <- match.arg(method)
   args <- list(...)
@@ -183,6 +184,13 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
            grid <- lapply(grid,as.numeric)
            if(is.null(k)) k = 2
            return(stalkerappx(val,grid,r=k))
+         },
+         hstalker={
+           if(is.null(grid)) stop('grid must be specified for stalker interpolation')
+           if(!is.list(grid)) grid <- list(grid)
+           if(unsortedgrid(grid)) stop('grid must be distinct ordered values')
+           grid <- lapply(grid,as.numeric)
+           return(hstalkerappx(val,grid))
          },
          crbf={
            if(is.null(knots)) stop('Must specify knots for radial basis functions.')
