@@ -31,7 +31,7 @@ stalkerappx <- function(val, grid, r=2, ...) {
   if(!havegsl() && any(is.na(r) & !uniform)) {
     stop('Non-uniform grid and varying degree needs GSL. Recompile with GSL.')
   }
-  
+
   vectorfun(function(x,threads=getOption('chebpol.threads'),degree=r,
                      blend=c('linear','cubic','sigmoid','parodic','square')) {
     blend <- switch(match.arg(blend),linear=0L,sigmoid=1L,parodic=2L,cubic=3L,square=4L)

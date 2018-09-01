@@ -24,6 +24,24 @@ vectorfun <- function(fun,arity,domain=NULL) {
             chebpol.version=utils::packageVersion('chebpol'))
 }
 
+defaultblend <- c('linear','cubic','sigmoid','parodic','square')
+blenddef <- function(fun,blend=defaultblend) {
+  if(is.null(blend)) return(fun)
+  blend <- match.arg(blend)
+  pos <- match(blend,defaultblend)
+  f <- formals(fun)
+  if(!('blend' %in% names(f))) return(f)
+  f[['blend']] <- as.call(c(list(as.name('c')),c(defaultblend[pos],defaultblend[-pos])))
+  formals(fun) <- f
+  ffun <- get('fun',environment(fun))
+  ff <- formals(ffun)
+  if(!('blend' %in% names(ff))) return(fun)
+  ff[['blend']] <- f[['blend']]
+  formals(ffun) <- ff
+  assign('fun',ffun,envir=environment(fun))
+  fun
+}
+
 separgs <- function(fun,...) {
   fun <- match.fun(fun)
   f <- function() {

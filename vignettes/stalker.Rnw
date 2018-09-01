@@ -41,11 +41,13 @@
   differentiability.  That is, the derivative is not well behaved.
   The name comes from the fact that it follows the data frighteningly
   close, though it sometimes seems stupid with little foresight. \pkg{chebpol}
-  contains higher dimensional versions too, but they could as well be called \emph{wet paper spline}.  The
+  contains higher dimensional versions too, but only a limited set are useful.  The
   interpolation isn't a proper spline, since it is not a
   polynomial. We also obtain a limit in intuitive geometric terms on
   how large the overshoot can be. The stalker spline can be used when
-  a little more smoothness than multilinear is required.
+  more smoothness than multilinear is required, but is not 
+  a replacement for more conventional smooth splines like the thin plate spline
+  or Floater-Hormann.
 \end{abstract}
 \maketitle
 \section{Introduction}
@@ -372,14 +374,19 @@ stalker interpolant.
 The three blending functions are shown in figure~\ref{fig:blending}.
 
 <<blending, fig.dim=c(4,4),fig.cap='Blending functions'>>=
-sigmoid <- function(t) ifelse(t<0.5, 0.5*exp(2-1/t), 1-0.5*exp(2-1/(1-t)))
-cubic <- function(t) -2*t^3 + 3*t^2
 linear <- function(t) t
+cubic <- function(t) -2*t^3 + 3*t^2
+sigmoid <- function(t) ifelse(t<0.5, 0.5*exp(2-1/t), 1-0.5*exp(2-1/(1-t)))
+parodic <- function(t) ifelse(t<0.5, 0.5*exp(4-1/t^2), 1-0.5*exp(4-1/(1-t)^2))
+square <- function(t) ifelse(t<0.5, 0, 1)
 s <- seq(0,1,length=100)
 plot(s,sigmoid(s),typ='l',ylab='y')
 lines(s,linear(s), col='blue')
 lines(s,cubic(s), col='green')
-legend('topleft',legend=c('sigmoid','linear','cubic'),fill=c('black','blue','green'))
+lines(s,parodic(s), col='red')
+lines(s,square(s), col='cyan')
+legend('topleft',legend=c('linear','cubic','sigmoid','parodic','square'),
+       fill=c('blue','black','green','red','cyan'))
 @ 
 
 The interpolant can be given a \code{"degree"} argument, this
@@ -389,6 +396,78 @@ In more than one dimension, torsion can be a problem for stability. It can creat
 striping artefacts. This can be alleviated by having constant degree (different from \code{NA}),
 except possibly for the first dimension. We'll see an example later.
 
+\section{Multidimensional stalker}
+We consider the stalker in higher dimensions, specifically
+\(\RN^n\).  We have a Cartesian product grid, and in every grid point
+there should live a function. We will try to honor monotonicity and
+extreme points \emph{along the axes}. That is, we do not consider the
+grid to be just any points which happen to lie on a grid, but as
+defining for monotonicity and local extreme point. Thus, the resulting
+spline will typically have features parallel with the axes. We consider the
+function living in the point \((0,\ldots,0)\).  The grids may be
+different in each dimension, but we call the three grid points along
+dimension \(i\): \(k_i^-\), \(0\), and \(k_i^+\). That is, we have
+\(k_i^- < 0 < k_i^+\). The corresponding function values (with all
+arguments in other dimensions equal to 0) are \(v_i^-\), \(0\), and
+\(v_i^+\).
+
+The function form we choose as a ``basis'' (with \(x=(x_1,x_2,\ldots,x_n)\))
+\begin{equation}\label{funcform}
+f(x) = \sum_{i=1}^n b_i x_i + \sum_{i=1}^n c_i |x_i|^{r_i}
+\end{equation}
+The relation \(f(0) = 0\) is satisfied with this function form.
+For each \(i\) we also have equations for the two other grid points \(k_i^-\) and \(k_i^+\),
+\begin{equation}\label{ptbase}
+  \begin{aligned}
+    v_i^+ &=b_i k_i^+ + c_i|k_i^+|^{r_i},\\
+    v_i^- &=b_i k_i^- + c_i|k_i^-|^{r_i}
+  \end{aligned}
+\end{equation}
+
+These can be solved for \(b_i\) and \(c_i\), with the determinant
+\(D = k_i^+ |k_i^-|^{r_i} - k_i^- |k_i^+|^{r_i}\):
+\begin{equation}\label{pteqs}
+  \begin{aligned}
+    b_i &= \frac{v_i^+ |k_i^-|^{r_i}  - v_i^- |k_i^+|^{r_i}}{D},\\
+    c_i &= \frac{k_i^+ v_i^- - k_i^- v_i^+}{D}\\
+  \end{aligned}
+\end{equation}
+
+\subsection{Monotonic points}
+If a triple is monotonic we will ensure that our function is monotonic.
+The derivative along dimension \(i\) is \(f_i(x) = b_i + c_i r_i |x_i|^{r_i-1}\sign{x_i}\).
+We ensure that it is not zero by letting \(1\leq r_i \leq 2\) be the largest number
+which keeps \(f_i(x_i) \neq 0\) for \(k_i^- < x_i < k_i^+\). To be specific, the equation
+\(f_i(x_i) = 0\) is 
+\begin{equation}\label{deriv0}
+  |x_i|^{r_i-1} \sign(x_i) = -\frac{b_i}{c_i r_i}.
+\end{equation}
+We first check if \(r_i=2\) avoids a solution.
+In this case, equation~\eqref{deriv0} becomes
+\begin{equation}
+  x_i = -\frac{b_i}{2c_i}.
+\end{equation}
+So we avoid a critical point if,
+\begin{equation}
+  -\frac{b_i}{2c_i} \leq k_i^-\quad\text{or}\quad
+  -\frac{b_i}{2c_i} \geq k_i^+.
+\end{equation}
+
+If we don't have a critical point, it's fine. If \(r_i=2\) does not work we must lower \(r_i\) so
+much that the critical point is in one of the end points. I.e. we lower \(r_i\) until,
+\begin{equation}
+ b_i + c_i r_i (k_i^+)^{r_i-1} = 0 \quad\text{or}\quad b_i - c_i r_i |k_i^-|^{r_i-1} = 0.
+\end{equation}
+Recall that both \(b_i\) and \(c_i\) are functions of \(r_i\), so it is not
+easy to find a closed form solution in terms of Lambert's \(W\) or similar.
+
+For a uniform grid, i.e.\ with \(k_i^- + k_i^+ = 0\), this problem has a closed form solution, otherwise we solve
+it numerically.  [fill in details].
+
+\subsection{Non-monotonic points}
+For non-monotonic triples have adopted the following strategy. We change the sign of \(v_i^-\). This
+gives us a monotonic triple. We find the \(r\) suitable for that, then we use the original \(v_i^-\)
+to compute \(b_i\) and \(c_i\) from equations~\eqref{pteqs}.
 
 \section{Multidimensional hyperbolic stalker}
 We have another shape preserving spline which is sligthly easier to
@@ -397,8 +476,9 @@ with a hyperbola.  We consider it in higher dimensions, specifically
 \(\RN^n\).  We have a Cartesian product grid, and in every grid point
 there should live a function. We will try to honor monotonicity and
 extreme points \emph{along the axes}. That is, we do not consider the
-grid to be just any points coincidentally lying on a grid, but as
-defining for monotonicity and local extreme point. We consider the
+grid to be just any points which happen to lie on a grid, but as
+defining for monotonicity and local extreme point. Thus, the resulting
+spline will typically have features parallel with the axes. We consider the
 function living in the point \((0,\ldots,0)\).  The grids may be
 different in each dimension, but we call the three grid points along
 dimension \(i\): \(k_i^-\), \(0\), and \(k_i^+\). That is, we have
@@ -410,7 +490,6 @@ The function form we choose as a ``basis'' (with \(x=(x_1,x_2,\ldots,x_n)\))
 \begin{equation}\label{funcform}
 f(x) = a + \sum_{i=1}^n b_i x_i + \sum_{i=1}^n \frac{d_i}{1+c_ix_i}
 \end{equation}
-We will drop the \(n\) from the sums, as this simplifies the formulas.
 The function value \(f(0) = 0\) gives us an equation
 \begin{equation}\label{zeroval}
 a + \sum_i d_i = 0.
@@ -418,12 +497,12 @@ a + \sum_i d_i = 0.
 For each \(i\) we also have equations for the two other grid points \(k_i^-\) and \(k_i^+\),
 \begin{equation*}
   \begin{aligned}
-    v_i^+ &=a + b_i k_i^+ + \frac{d_i}{1+c_i k_i^+} + \sum_{j\neq i} d_j,\\
-    v_i^- &=a + b_i k_i^- + \frac{d_i}{1+c_i k_i^-} + \sum_{j\neq i} d_j.\\
+    v_i^+ &=a + b_i k_i^+ + \frac{d_i}{1+c_i k_i^+} + \sum_{j\neq i}^n d_j,\\
+    v_i^- &=a + b_i k_i^- + \frac{d_i}{1+c_i k_i^-} + \sum_{j\neq i}^n d_j.\\
   \end{aligned}
 \end{equation*}
 
-We introduce the simplifying notation \(D_i = \sum_{j\neq i} d_j\), and multiply the
+We introduce the simplifying notation \(D_i = \sum_{j\neq i}^n d_j\), and multiply the
 equations by the denominator occuring in them to obtain:
 \begin{equation*}
   \begin{aligned}
@@ -564,7 +643,7 @@ weight for a corner is the volume of the cube opposite the point. Alternatively,
 these weights can be modified by some sigmoid function. An illustration can be found
 in figure~\ref{fig:2dblending}. We have a point in \((0.3,0.4)\), there are functions
 living in each corner, the black dots. The weight for the function in \((1,1)\) is the
-area of the lower blue rectangle \(0.3 \times 0.4 = 0.12\).
+area of the lower blue rectangle \(0.3 \times 0.4 = 0.12\). 
 
 <<2dblending,fig.dim=c(3,3), fig.cap='Blending',echo=FALSE>>=
 #  par(mar=rep(0,4))
@@ -577,7 +656,11 @@ area of the lower blue rectangle \(0.3 \times 0.4 = 0.12\).
 This will ensure continuity, but it will not ensure differentiability even in simple
 examples, due to the fact that the function living in \((1,1)\) has a value in \((0,0)\)
 which is different from the given value in \((0,0)\). Therefore, the hyperbolic
-stalker is by default blended with a cubic.
+stalker is by default blended with a cubic in each dimension. I.e.\ the weight above
+will be \(s(0.3) \times s(0.4)\), where \(s\) is the blending function. Note that the blending does not introduce
+non-monotonicity where there is none, nor overshoot in the non-monotonic case, but
+we may still see a small amount of such shape disturbance due to the design of the bases.
+We have no absolute guarantee that overshoot will not occur on the diagonal of the crosses.
 
 
 \section{Examples}
@@ -683,7 +766,7 @@ st <- ipol(volc, grid=grid, method='stalker',k=NA)
 ml <- ipol(volc, grid=grid, method='multilinear')
 g <- list(x=seq(1,nrow(volc), len=71), y=seq(1,ncol(volc),len=71))
 par(mar=rep(0,4)); col <- 'green'
-light <- list(specular=0.2,ambient=0.0,diffuse=0.6)
+light <- list(specular=0.1,ambient=0.0,diffuse=0.6)
 plot3D::persp3D(grid$x, grid$y, volc, colvar=NULL, lighting=light,
         theta=45, ltheta=0, lphi=40, col=col, axes=FALSE, bty='n',scale=FALSE)
 for(f in list(ml, st, ph)) {
@@ -692,29 +775,32 @@ for(f in list(ml, st, ph)) {
 }
 @ 
 
-Then we interpolate some random points in figure~\ref{fig:random}. Incidentally, there are some
-plane areas, and some torsion. Torsion is a problem for the stalker spline, the degree in one dimension
-goes down to 1, creating striped artefacts in some regions. This is
-alleviated by using a constant degree.  The hyperbolic stalker is 
-much better.
-There is no advanced
-shading in \code{plot3D::persp3D}, so the \(100\times 100\) resolution
-can be seen if you zoom in.
+Then we interpolate some random points in
+figure~\ref{fig:random}. There is no ``correct'' way to do this, different
+interpolators have different ways to render a surface between the points.
+Incidentally, there are some plane areas, and
+some torsion. Torsion is a problem for the stalker spline, the degree
+in one dimension goes down to 1, creating striped artefacts in some
+regions. This can be alleviated by using a constant degree. The multidimensional stalker
+will be replaced at a later time. The
+hyperbolic stalker is much better.  There is no advanced shading in
+\code{plot3D::persp3D}, so the resolution can be
+seen if you zoom in.
 
-<<random, fig.dim=c(3.5,3.5), fig.pos='!ht', fig.align='center',fig.cap='Random surface',out.width='.4\\linewidth',fig.ncol=2,fig.subcap=c('stalker', 'thin plate spline','hyperbolic stalker','Floater-Hormann')>>=
-set.seed(42); N <- 8
+<<random, fig.dim=c(3.5,3.5), fig.pos='!ht', fig.align='center',fig.cap='Random surface',out.width='.5\\linewidth',fig.ncol=2,fig.subcap=c('general', 'thin plate spline','hyperbolic stalker','Floater-Hormann')>>=
+set.seed(52); N <- 8
 grid <- list(x=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0), 
              y=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0))
-val <- matrix(runif(N*N,0,0.3),N)
-st <- ipol(val,grid=grid, method='stalker',k=NA)
+val <- matrix(runif(N*N,0,0.4),N)
+gn <- ipol(val,grid=grid, method='general')
 ph <- ipol(val,grid=grid, method='polyharmonic', k=2)
 fh <- ipol(val,grid=grid, method='fh', k=0)
 hst <- ipol(val,grid=grid, method='hstalker')
-g <- list(x=seq(0,1, len=70), y=seq(0,1,len=70))
-par(mar=rep(0,4))
-for(f in list(st, ph, hst, fh)) {
-  plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,
-         theta=60, ltheta=30, lphi=45, col='green', axes=FALSE, bty='n', scale=FALSE,zlim=c(0,1))
+g <- list(x=seq(0,1, len=73), y=seq(0,1,len=73))
+for(f in list(gn, ph, hst, fh)) {
+  par(mar=rep(0,4))
+  plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,phi=60,
+         theta=210, ltheta=225, lphi=45, col='green', axes=FALSE, bty='n', scale=FALSE,zlim=c(0,1))
   pts <- evalongridV(f,grid=grid)+0.00
   plot3D::points3D(rep(grid$x,N),rep(grid$y,each=N),pts,add=TRUE,colvar=NULL,pch=20)
 }

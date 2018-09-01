@@ -4,6 +4,7 @@
 #include <fftw3.h>
 #endif
 
+
 static void chebcoef(double *x, int *dims, const int rank, double *F, int dct, int threads) {
   R_xlen_t siz = 1;
   for(int i = 0; i < rank; i++) siz *= dims[i];
@@ -614,7 +615,7 @@ static SEXP R_mlippred(SEXP sgrid, SEXP values) {
 }
 
 static double C_evalmlip(const int rank, double *x, double **grid, int *dims, 
-			 double *values) {
+			 double *values, int blend) {
 
   double weight[rank];
   int valpos = 0;
@@ -642,7 +643,7 @@ static double C_evalmlip(const int rank, double *x, double **grid, int *dims,
   }
 
   // loop over the corners of the box, sum values with weights
-
+  double wsum = 0.0;
   for(int i = 0; i < (1<<rank); i++) {
     // i represents a corner. bit=1 if upper corner, 0 if lower corner.
     // We should find its weight
@@ -652,26 +653,27 @@ static double C_evalmlip(const int rank, double *x, double **grid, int *dims,
     double cw = 1;
     for(int g = 0; g < rank; g++) {
       if( (1<<g) & i) {
-	cw *= weight[g];
+	cw *= blendfun(weight[g],blend);
       } else {
-	cw *= 1-weight[g];
+	cw *= blendfun(1-weight[g],blend);
 	vpos -= stride;
       }
       stride *= dims[g];
     }
+    wsum += cw;
     ipval += cw*values[vpos];
   }
-  return ipval;
+  return ipval/wsum;
 }
 
 /* Then a multilinear approximation */
-static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads) {
+static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads, SEXP Sblend) {
   const int rank = LENGTH(sgrid);
   int gridsize = 1;
   int dims[rank];
   int threads = INTEGER(AS_INTEGER(Rthreads))[0];
   double *grid[rank];
-
+  int blend = 0;
   if(!IS_NUMERIC(values)) error("values must be numeric");
   if(!IS_NUMERIC(x)) error("argument x must be numeric");  
   if(isMatrix(x) ? (nrows(x) != rank) : (LENGTH(x) != rank))
@@ -687,6 +689,7 @@ static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads) {
 
   if(LENGTH(values) != gridsize) error("grid has size %d, you supplied %d values",
 				       gridsize,LENGTH(values));
+  if(!isNull(Sblend)) blend = INTEGER(AS_INTEGER(Sblend))[0];
   const int numvec = isMatrix(x) ? ncols(x) : 1;
   double *xp = REAL(x);
 #ifdef RETMAT
@@ -697,7 +700,7 @@ static SEXP R_evalmlip(SEXP sgrid, SEXP values, SEXP x, SEXP Rthreads) {
   double *out = REAL(resvec);
 #pragma omp parallel for num_threads(threads) schedule(static) if (numvec > 1 && threads > 1)
   for(int i = 0; i < numvec; i++) {
-    out[i] = C_evalmlip(rank,xp+i*rank,grid,dims,REAL(values));
+    out[i] = C_evalmlip(rank,xp+i*rank,grid,dims,REAL(values),blend);
   }
   UNPROTECT(1);
   return resvec;
@@ -924,7 +927,7 @@ R_CallMethodDef callMethods[] = {
   {"chebcoef", (DL_FUNC) &R_chebcoef, 3},
   {"FH", (DL_FUNC) &R_FH, 6},
   {"FHweights", (DL_FUNC) &R_fhweights, 3},
-  {"evalmlip", (DL_FUNC) &R_evalmlip, 4},
+  {"evalmlip", (DL_FUNC) &R_evalmlip, 5},
   {"predmlip", (DL_FUNC) &R_mlippred, 2},
   {"evalongrid", (DL_FUNC) &R_evalongrid, 2},
   {"havefftw", (DL_FUNC) &R_havefftw, 0},

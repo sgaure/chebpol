@@ -122,7 +122,10 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
            if(!is.list(grid)) grid <- list(grid)
            grid <- lapply(grid,as.numeric)
            if(unsortedgrid(grid)) stop("grid must be distinct ordered values")
-           return(mlappx.real(val,grid,...))
+           blend <- args[['blend']]
+           if(is.null(blend)) return(mlappx.real(val,grid,...))
+           newarg <- args[-match(c('blend'),names(args), nomatch=0)]
+           return(blenddef(do.call(mlappx.real,c(list(val,grid), newarg)),blend))
          },
          simplexlinear={
            if(is.null(knots)) {
@@ -183,14 +186,21 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
            if(unsortedgrid(grid)) stop('grid must be distinct ordered values')
            grid <- lapply(grid,as.numeric)
            if(is.null(k)) k = 2
-           return(stalkerappx(val,grid,r=k))
+           blend <- args[['blend']]
+           if(is.null(blend)) return(stalkerappx(val,grid,r=k,...))
+           newarg <- args[-match(c('blend'),names(args), nomatch=0)]
+           return(blenddef(do.call(stalkerappx,c(list(val,grid,r=k), newarg)),blend))
          },
          hstalker={
            if(is.null(grid)) stop('grid must be specified for stalker interpolation')
            if(!is.list(grid)) grid <- list(grid)
            if(unsortedgrid(grid)) stop('grid must be distinct ordered values')
            grid <- lapply(grid,as.numeric)
-           return(hstalkerappx(val,grid))
+           blend <- args[['blend']]
+           if(is.null(blend)) return(hstalkerappx(val,grid,...))
+           newarg <- args[-match(c('blend'),names(args), nomatch=0)]
+           return(blenddef(do.call(hstalkerappx,c(list(val,grid), newarg)),blend))
+
          },
          crbf={
            if(is.null(knots)) stop('Must specify knots for radial basis functions.')
@@ -216,3 +226,4 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
 unsortedgrid <- function(g) {
   any(sapply(g,function(s) is.unsorted(s,strictly=TRUE) && is.unsorted(-s,strictly=TRUE)))
 }
+

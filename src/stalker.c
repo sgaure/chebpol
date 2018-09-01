@@ -219,25 +219,6 @@ static R_INLINE double stalk1(double x, double vmin, double v0, double vplus,dou
 #endif
   }
 }
-static R_INLINE double blendfun(double w,int blend) {
-  switch(blend) {
-  case 0:
-    // Linear, nothing to do here
-    break;
-  case 1:
-    w = w<0.5 ? 0.5*exp(2-1/w) : 1-0.5*exp(2-1/(1-w));  // smooth sigmoid blending
-    break;
-  case 2:
-    w = w<0.5 ? 0.5*exp(4-1/(w*w)) : 1-0.5*exp(4-1/((1-w)*(1-w)));  // parodic sigmoid blending
-    break;
-  case 3:
-    w = (-2*w + 3)*w*w; // cubic blending
-    break;
-  case 4:
-    w = (w < 0.5) ? 0 : 1;  // discontinuous blending
-  }    
-  return w;
-}
 
 // Find the parameters for the hyperbolic stalker in each grid point
 // use normalized coordinates as in the formulas, f(0) = 0
