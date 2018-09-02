@@ -5,6 +5,7 @@
 #include <gsl/gsl_roots.h>
 #endif
 
+#define MYEPS (1e3*sqrt(DOUBLE_EPS))
 typedef struct {double dmin, dplus, vmin, vplus; int pos;} rblock;
 typedef struct {double *det, *pmin, *pplus;int uniform;} precomp;
 #ifdef HAVE_GSL
@@ -53,7 +54,10 @@ static R_INLINE double findmonor(double dmin,double dplus, double vmin, double v
   double r;
   if(D2 > 2*dplus || D2 < -2*dmin) {
     r = 2.0;
-  } else {
+  } else if(fabs(dplus-dmin) < MYEPS*dplus) {
+    // uniform grid
+    r = fabs((vplus-vmin)/(vplus+vmin));
+  } else{
     // Find the largest r which keeps it monotonic, i.e. derivative 0 in one
     // of the end points
     rblock rb = {dmin,dplus,vmin,vplus,0};
@@ -212,8 +216,14 @@ static R_INLINE double stalk1(double x, double vmin, double v0, double vplus,dou
 	// fits these monotonic points.
 	r = findmonor(dmin,dplus,-vmin,vplus);
       }
-      c = (dplus*vmin + dmin*vplus)/(pow(dmin,r)*dplus + pow(dplus,r)*dmin);
-      b = (vplus - c*pow(dplus,r))/dplus;
+      if(isnan(r)) {
+	c = 0;
+	b = vplus/dplus;
+      } else {
+	c = (dplus*vmin + dmin*vplus)/(pow(dmin,r)*dplus + pow(dplus,r)*dmin);
+	b = (vplus - c*pow(dplus,r))/dplus;
+      }
+
       return v0 + b*x + c*pow(fabs(x),r);
     }
 #endif
@@ -222,7 +232,7 @@ static R_INLINE double stalk1(double x, double vmin, double v0, double vplus,dou
 
 // Find the parameters for the hyperbolic stalker in each grid point
 // use normalized coordinates as in the formulas, f(0) = 0
-#define MYEPS (1e3*sqrt(DOUBLE_EPS))
+
 static void makehyp(const int nrank, const int *dims, double **grid, const double *val,
 		double *a, double *b, double *c, double *d, int depth, int *point) {
   // Loop over every grid point

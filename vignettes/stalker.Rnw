@@ -409,7 +409,8 @@ different in each dimension, but we call the three grid points along
 dimension \(i\): \(k_i^-\), \(0\), and \(k_i^+\). That is, we have
 \(k_i^- < 0 < k_i^+\). The corresponding function values (with all
 arguments in other dimensions equal to 0) are \(v_i^-\), \(0\), and
-\(v_i^+\).
+\(v_i^+\). Thus, the triple is increasing if \(v_i^+ > 0\), it is convex
+if \(v_i^+ k_i^- - v_i^- k_i^+ < 0\).
 
 The function form we choose as a ``basis'' (with \(x=(x_1,x_2,\ldots,x_n)\))
 \begin{equation}\label{funcform}
@@ -444,30 +445,84 @@ which keeps \(f_i(x_i) \neq 0\) for \(k_i^- < x_i < k_i^+\). To be specific, the
 \end{equation}
 We first check if \(r_i=2\) avoids a solution.
 In this case, equation~\eqref{deriv0} becomes
-\begin{equation}
+\begin{equation*}
   x_i = -\frac{b_i}{2c_i}.
-\end{equation}
+\end{equation*}
 So we avoid a critical point if,
-\begin{equation}
+\begin{equation*}
   -\frac{b_i}{2c_i} \leq k_i^-\quad\text{or}\quad
   -\frac{b_i}{2c_i} \geq k_i^+.
-\end{equation}
+\end{equation*}
 
 If we don't have a critical point, it's fine. If \(r_i=2\) does not work we must lower \(r_i\) so
 much that the critical point is in one of the end points. I.e. we lower \(r_i\) until,
-\begin{equation}
- b_i + c_i r_i (k_i^+)^{r_i-1} = 0 \quad\text{or}\quad b_i - c_i r_i |k_i^-|^{r_i-1} = 0.
-\end{equation}
-Recall that both \(b_i\) and \(c_i\) are functions of \(r_i\), so it is not
-easy to find a closed form solution in terms of Lambert's \(W\) or similar.
+\begin{equation*}
+ b_i + c_i r_i |k_i^+|^{r_i-1} = 0 \quad\text{or}\quad b_i - c_i r_i |k_i^-|^{r_i-1} = 0.
+\end{equation*}
 
-For a uniform grid, i.e.\ with \(k_i^- + k_i^+ = 0\), this problem has a closed form solution, otherwise we solve
-it numerically.  [fill in details].
+Using equations~\eqref{pteqs}, we obtain,
+\begin{equation*}
+  \begin{aligned}
+    v_i^+ |k_i^-|^{r_i}  - v_i^- |k_i^+|^{r_i} &= 
+    -(k_i^+ v_i^- - k_i^- v_i^+) r_i |k_i^+|^{r_i-1},\\
+    v_i^+ |k_i^-|^{r_i}  - v_i^- |k_i^+|^{r_i} &= 
+    (k_i^+ v_i^- - k_i^- v_i^+ ) r_i |k_i^-|^{r_i-1}.\\
+  \end{aligned}
+\end{equation*}
+Dividing by \(|k_i^+|^{r_i}\) and \(|k_i^-|^{r_i}\), they become,
+\begin{equation}\label{eqrmono}
+  \begin{aligned}
+    v_i^+ \left|\frac{k_i^-}{k_i^+}\right|^{r_i} - v_i^- &=
+    \left(v_i^+ \frac{k_i^-}{k_i^+} - v_i^-\right) r_i, \\
+    v_i^- \left| \frac{k_i^+}{k_i^-}\right|^{r_i} - v_i^+ &=
+    \left(v_i^- \frac{k_i^+}{k_i^-} - v_i^+ \right) r_i .\\
+  \end{aligned}
+\end{equation}
+
+For a uniform grid, i.e.\ with \(k_i^+ = -k_i^-\), these simplify to
+\begin{equation*}
+\begin{aligned}
+  v_i^+ - v_i^- &= -(v_i^+ + v_i^-)r_i,\\
+  v_i^- - v_i^+  &= -(v_i^+ + v_i^-)r_i.
+\end{aligned}
+\end{equation*}
+We can then choose,
+\begin{equation}\label{unireq}
+  r_i = \frac{|v_i^+ - v_i^-|}{|v_i^+ + v_i^-|}.
+\end{equation}
+For a non-uniform grid, we take a closer look.  We have not found a closed form
+solution, but we can at least figure out which of the equations~\eqref{eqrmono} to solve.
+We can either do some algebra, or use our geometric intuition.
+If the triple is increasing and concave, or decreasing and convex,
+we should have the critical point in \(k_i^+\), otherwise in \(k_i^-\). I.e.,
+solve the first equation if either
+\begin{equation*}
+\begin{aligned}
+& v_i^+ > 0 \text{ and } v_i^+ k_i^- - v_i^- k_i^+ > 0, \quad\text{or,}\\
+& v_i^+ < 0 \text{ and } v_i^+ k_i^- - v_i^- k_i^+ < 0,\\
+\end{aligned}
+\end{equation*}
 
 \subsection{Non-monotonic points}
-For non-monotonic triples have adopted the following strategy. We change the sign of \(v_i^-\). This
+For non-monotonic triples we have adopted the following strategy. We change the sign of \(v_i^-\). This
 gives us a monotonic triple. We find the \(r\) suitable for that, then we use the original \(v_i^-\)
 to compute \(b_i\) and \(c_i\) from equations~\eqref{pteqs}.
+
+\subsection{Special cases}
+There are some special cases, our determinant can in principle vanish, i.e.
+\begin{equation*}
+k_i^+ |k_i^-|^{r_i} = k_i^- |k_i^+|^{r_i},
+\end{equation*}
+but the left side is positive, the right side negative, so this can't happen.
+
+For uniform grids, we can have \(v_i^+ + v_i^- = 0\) in equation~\eqref{unireq}. In
+this case our three points are on a straight line, we can let \(c_i=0\), and then
+\(r_i\) is irrelevant.
+
+Then, it might happen that the equations in~\eqref{eqrmono} do not have a solution.
+This can happen if \(k_i^+ v_i^- = k_i^- v_i^+\), but again this is the linear case,
+we have \(c_i=0\), and \(r_i\) is irrelevant. We can also have either \(v_i^+\) or \(v_i^-\)
+equal to zero, this yields \(r_i=1\).
 
 \section{Multidimensional hyperbolic stalker}
 We have another shape preserving spline which is sligthly easier to
