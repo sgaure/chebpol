@@ -41,7 +41,7 @@
   differentiability.  That is, the derivative is not well behaved.
   The name comes from the fact that it follows the data frighteningly
   close, though it sometimes seems stupid with little foresight. \pkg{chebpol}
-  contains higher dimensional versions too, but only a limited set are useful.  The
+  contains higher dimensional versions too.  The
   interpolation isn't a proper spline, since it is not a
   polynomial. We also obtain a limit in intuitive geometric terms on
   how large the overshoot can be. The stalker spline can be used when
@@ -128,13 +128,13 @@ achieved by ensuring that if the knots \(i-1, i\) and \(i+1\) are
 monotonic (either increasing or decreasing), then the function
 \(f_i(x)\) will also be monotonic.  Other splines, like the Fritsch-Carlson spline in
 \code{splinefun(...,method='monoH.FC')} also does something similar, though with proper
-polynomial spline.
+polynomial splines.
 We achieve this by non-traditionally using a
 fractional degree, i.e. a function of the form \(a + bx + c|x|^r\),
 with \(1\leq r \leq 2\). In this note we call these functions defined by
 three points and a monotonicity constraint, \emph{basis functions}. They
 are not basis functions in the vector space sense used in the spline literature; they are
-not glued together by scalar weights, but by linear functions.
+not glued together by scalar weights, but by linear or sigmoid functions .
 
 \section{The stalker spline}
 To simplify, we consider a basis function \(f(x)\) on the
@@ -255,12 +255,8 @@ the non-monotonic curves should have an extreme point in \(x=0\),
 i.e.\ no overshoot, but that is impossible with this function form.
 
 If either \(v_-\) or \(v_+\) grows, \(|b/c|\) converges to 1, so
-we will converge to the non-differentiable case. However, there is a
-problem which becomes pressing when trying to use the stalker spline
-in two or more dimensions.  If, as in figure~\ref{fig:failure}, \(v_-\) moves, the curve for
-\(x < 0\) moves down, but the curve for \(x>0\) moves up or down
-depending on whether the degree changes or not. 
-This behaviour creates problems e.g.\ for surfaces with torsion, as we shall see later.
+we will converge to the non-differentiable case. This dynamic can
+be seen in figure~\ref{fig:failure}.
 
 <<failure,echo=FALSE,fig.dim=c(7,5), fig.align='center', fig.cap='"Basis functions"'>>=
 s <- seq(-1,1,len=100)
@@ -371,7 +367,7 @@ A cubic blender is also available.
 These can be selected by the argument \code{blend="linear"}, \code{blend="sigmoid"}, or
 \code{blend="cubic"} to the
 stalker interpolant. 
-The three blending functions are shown in figure~\ref{fig:blending}.
+The blending functions are shown in figure~\ref{fig:blending}.
 
 <<blending, fig.dim=c(4,4),fig.cap='Blending functions'>>=
 linear <- function(t) t
@@ -389,13 +385,6 @@ legend('topleft',legend=c('linear','cubic','sigmoid','parodic','square'),
        fill=c('blue','black','green','red','cyan'))
 @ 
 
-The interpolant can be given a \code{"degree"} argument, this
-can be a vector, a fixed degree for each dimension. 
-
-In more than one dimension, torsion can be a problem for stability. It can create
-striping artefacts. This can be alleviated by having constant degree (different from \code{NA}),
-except possibly for the first dimension. We'll see an example later.
-
 \section{Multidimensional stalker}
 We consider the stalker in higher dimensions, specifically
 \(\RN^n\).  We have a Cartesian product grid, and in every grid point
@@ -403,7 +392,7 @@ there should live a function. We will try to honor monotonicity and
 extreme points \emph{along the axes}. That is, we do not consider the
 grid to be just any points which happen to lie on a grid, but as
 defining for monotonicity and local extreme point. Thus, the resulting
-spline will typically have features parallel with the axes. We consider the
+spline will typically preserve features parallel with the axes. We consider the
 function living in the point \((0,\ldots,0)\).  The grids may be
 different in each dimension, but we call the three grid points along
 dimension \(i\): \(k_i^-\), \(0\), and \(k_i^+\). That is, we have
@@ -527,19 +516,7 @@ equal to zero, this yields \(r_i=1\).
 \section{Multidimensional hyperbolic stalker}
 We have another shape preserving spline which is sligthly easier to
 work with. It's a rational spline. We replace the low degree \(|x|^r\)
-with a hyperbola.  We consider it in higher dimensions, specifically
-\(\RN^n\).  We have a Cartesian product grid, and in every grid point
-there should live a function. We will try to honor monotonicity and
-extreme points \emph{along the axes}. That is, we do not consider the
-grid to be just any points which happen to lie on a grid, but as
-defining for monotonicity and local extreme point. Thus, the resulting
-spline will typically have features parallel with the axes. We consider the
-function living in the point \((0,\ldots,0)\).  The grids may be
-different in each dimension, but we call the three grid points along
-dimension \(i\): \(k_i^-\), \(0\), and \(k_i^+\). That is, we have
-\(k_i^- < 0 < k_i^+\). The corresponding function values (with all
-arguments in other dimensions equal to 0) are \(v_i^-\), \(0\), and
-\(v_i^+\).
+with a hyperbola.  We have the same grid and notation as before.
 
 The function form we choose as a ``basis'' (with \(x=(x_1,x_2,\ldots,x_n)\))
 \begin{equation}\label{funcform}
@@ -581,7 +558,7 @@ These can be simplified further by the same equation in the form \(c_i k_i^+ (a 
 \end{equation}
 
 \subsection{Monotonicity}
-We now look at monotonocity. Given the three values \(v_i^-,0\), and \(v_i^+\), they are either monotonic
+We now look at monotonicity. Given the three values \(v_i^-,0\), and \(v_i^+\), they are either monotonic
 or \(0\) is a local extremum. If they are monotonic we must ensure that our function is monotonic as
 well, i.e. that the derivative along this dimension is different from zero.  We have the
 derivative along dimension \(i\):
@@ -796,19 +773,6 @@ legend('topleft',legend=c('stalker','mono','natural','hyperbolic'),
 @ 
 
 \section{Higher dimensions}
-The stalker spline in higher dimension \(N\) is simplistic and problematic.
-It works on a Cartesian grid.
-When evaluating the stalker in an \(x\) between grid points, the stalker is evaluated
-for the \(N-1\) first dimensions on two grid lines on each side of \(x\)
-in dimension \(N\). On these four points in dimension \(N\), two basis functions
-are found, evaluated and blended.  There is no guarantee that doing this
-with the dimensions in another order will yield exactly the same result.
-
-Everything comes at a price, the price for the stalker spline is that it does not
-work very well in higher dimensions. The variable degree causes creasing artefacts.
-
-The hyperbolic stalker (method='hstalker') is better at this.
-
 We take a look at 2d-interpolation, first the Maungawhau volcano with
 exaggerated height in figure~\ref{fig:volcano}. It is quite nice with the stalker interpolation.
 
@@ -817,7 +781,7 @@ data(volcano)
 volc <- volcano[seq(1,nrow(volcano),3),seq(1,ncol(volcano),3)]/10 #low res volcano
 grid <- list(x=as.numeric(seq_len(nrow(volc))), y=as.numeric(seq_len(ncol(volc))))
 ph <- ipol(volc, grid=grid, method='polyharmonic',k=2)
-st <- ipol(volc, grid=grid, method='stalker',k=NA)
+st <- ipol(volc, grid=grid, method='stalker')
 ml <- ipol(volc, grid=grid, method='multilinear')
 g <- list(x=seq(1,nrow(volc), len=71), y=seq(1,ncol(volc),len=71))
 par(mar=rep(0,4)); col <- 'green'
@@ -833,26 +797,21 @@ for(f in list(ml, st, ph)) {
 Then we interpolate some random points in
 figure~\ref{fig:random}. There is no ``correct'' way to do this, different
 interpolators have different ways to render a surface between the points.
-Incidentally, there are some plane areas, and
-some torsion. Torsion is a problem for the stalker spline, the degree
-in one dimension goes down to 1, creating striped artefacts in some
-regions. This can be alleviated by using a constant degree. The multidimensional stalker
-will be replaced at a later time. The
-hyperbolic stalker is much better.  There is no advanced shading in
+There is no advanced shading in
 \code{plot3D::persp3D}, so the resolution can be
 seen if you zoom in.
 
-<<random, fig.dim=c(3.5,3.5), fig.pos='!ht', fig.align='center',fig.cap='Random surface',out.width='.5\\linewidth',fig.ncol=2,fig.subcap=c('general', 'thin plate spline','hyperbolic stalker','Floater-Hormann')>>=
+<<random, fig.dim=c(4,4), fig.pos='!ht', fig.align='center',fig.cap='Random surface',out.width='.5\\linewidth',fig.ncol=2,fig.subcap=c('stalker', 'thin plate spline','hyperbolic stalker','Floater-Hormann')>>=
 set.seed(52); N <- 8
 grid <- list(x=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0), 
              y=seq(0,1,length=N)+c(0,rnorm(N-2,sd=0.3/N),0))
 val <- matrix(runif(N*N,0,0.4),N)
-gn <- ipol(val,grid=grid, method='general')
+st <- ipol(val,grid=grid, method='stalker')
 ph <- ipol(val,grid=grid, method='polyharmonic', k=2)
 fh <- ipol(val,grid=grid, method='fh', k=0)
 hst <- ipol(val,grid=grid, method='hstalker')
 g <- list(x=seq(0,1, len=73), y=seq(0,1,len=73))
-for(f in list(gn, ph, hst, fh)) {
+for(f in list(st, ph, hst, fh)) {
   par(mar=rep(0,4))
   plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,phi=60,
          theta=210, ltheta=225, lphi=45, col='green', axes=FALSE, bty='n', scale=FALSE,zlim=c(0,1))
@@ -865,32 +824,23 @@ for(f in list(gn, ph, hst, fh)) {
 \section{Summary}
 The stalker spline is created and used with
 <<eval=FALSE>>=
-st <- ipol(val,grid=grid,method='stalker',k=1.5)
-st(x,degree=1.2,blend='linear')
+st <- ipol(val,grid=grid,method='stalker')
+st(x,blend='linear')
 @ 
-where \(k\) is the degree. \code{k} can be a vector, one degree for each
-dimension. It is possible to specify any nonzero degree, though I see no use for
-degrees less than 1 other than for artful displays.
-Specifying \code{k=NA} makes the spline adjust the
-degree locally as described above. 
 
 Alternatively, one may create a hyperbolic stalker as
 <<eval=FALSE>>=
 st <- ipol(val,grid=grid,method='hstalker')
 @ 
-The varying degree stalker do not generalize
-very well to two or more dimensions,
-so for multidimenional data varying degree is strongly discouraged, except
-possibly in the first dimension.
-Evaluation on a non-uniform grid currently involves solving a non-linear equation
+
+Creation of the varying degree stalker on a non-uniform grid currently involves solving a non-linear equation
 numerically, so this is slower than on a uniform grid.
 
-The stalker spline is created with a default degree, be it \code{NA} or a numeric between 1 and 2.
-It is possible at evaluation time to use a different degree, this incurs a time penalty.
-Ordinarily, basis functions are combined linearly. I.e.\ when we approach a grid point more and
+Ordinarily, basis functions are combined with a cubic function. I.e.\ when we approach a grid point more and
 more of the basis function living there is weighted in. This can be changed at evaluation
 time, it can be done ``faster'' with
 a sigmoid map, i.e. so that near a grid point, the neighbouring basis functions are not used at all.
-Use \code{blend="sigmoid"} or \code{blend="cubic"} to choose between two such sigmoid maps.
+Use \code{blend="sigmoid"} or \code{blend="cubic"} to choose between two such sigmoid maps, 
+\code{blend="linear"} uses a linear map, but this can create blocking artefacts in higher dimensions.
 
 \end{document}

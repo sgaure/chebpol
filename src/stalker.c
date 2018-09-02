@@ -7,6 +7,7 @@
 
 #define MYEPS (1e3*sqrt(DOUBLE_EPS))
 typedef struct {double dmin, dplus, vmin, vplus; int pos;} rblock;
+typedef struct {double kq, vmin, vplus;} sblock;
 typedef struct {double *det, *pmin, *pplus;int uniform;} precomp;
 #ifdef HAVE_GSL
 static double rfun(double r, void *P) {
@@ -18,35 +19,7 @@ static double rfun(double r, void *P) {
   else
     return vmin*pow(dplus,r) - vplus*pow(dmin,r) + r*pow(dmin,r-1)*(vmin*dplus+vplus*dmin);
 }
-#endif
 
-#if 0
-//Could be faster, but it runs astray
-static double rfun_deriv(double r, void *P) {
-  rblock *p = (rblock*) P;
-  const double dmin=p->dmin, dplus=p->dplus, vmin=p->vmin, vplus=p->vplus;
-  int pos=p->pos;
-  if(pos) 
-    return vmin*r*pow(dplus,r-1) - vplus*r*pow(dmin,r-1) - r*(r-1)*pow(dplus,r-2)*(vmin*dplus+vplus*dmin);
-  else
-    return vmin*r*pow(dplus,r-1) - vplus*r*pow(dmin,r-1) + r*(r-1)*pow(dmin,r-2)*(vmin*dplus+vplus*dmin);
-}
-
-static void rfun_fdf(double r, void *P, double *y, double *dy) {
-  rblock *p = (rblock*) P;
-  const double dmin=p->dmin, dplus=p->dplus, vmin=p->vmin, vplus=p->vplus;
-  int pos=p->pos;
-  if(pos) {
-    *y = vmin*pow(dplus,r) - vplus*pow(dmin,r) - r*pow(dplus,r-1)*(vmin*dplus+vplus*dmin);
-    *dy = vmin*r*pow(dplus,r-1) - vplus*r*pow(dmin,r-1) - r*(r-1)*pow(dplus,r-2)*(vmin*dplus+vplus*dmin);
-  } else {
-    *y = vmin*pow(dplus,r) - vplus*pow(dmin,r) + r*pow(dmin,r-1)*(vmin*dplus+vplus*dmin);
-    *dy = vmin*r*pow(dplus,r-1) - vplus*r*pow(dmin,r-1) + r*(r-1)*pow(dmin,r-2)*(vmin*dplus+vplus*dmin);
-  }
-}
-#endif
-
-#ifdef HAVE_GSL
 static R_INLINE double findmonor(double dmin,double dplus, double vmin, double vplus) {
 // We should really cache results here, it could save time when computing r for the same interval
 // We can use std::unordered_map for that. We also need some parallel sync, std::mutex. Later.  
@@ -85,6 +58,66 @@ static R_INLINE double findmonor(double dmin,double dplus, double vmin, double v
     if(status != GSL_SUCCESS) {
       // I need to think about what to do here. We're in openmp, so can't do R-calls.
       //      printf("No convergence\n");
+    }
+    gsl_root_fsolver_free(s);
+  }
+  return r;
+}
+
+static double rfunnew(double r, void *P) {
+  sblock *p = (sblock*) P;
+  const double kq=p->kq, vmin=p->vmin, vplus=p->vplus;
+  return vplus*pow(-kq,r) - vmin - (vplus*kq - vmin)*r;
+}
+
+static R_INLINE double solver(double kmin,double kplus, double vmin, double vplus) {
+// We should really cache results here, it could save time when computing r for the same interval
+// We can use std::unordered_map for that. We also need some parallel sync, std::mutex. Later.  
+  double bn = (vplus*kmin*kmin - vmin*kplus*kplus);
+  double ncn = vplus*kmin - vmin*kplus;
+  double r;
+  if(bn/ncn <= 2*kmin || bn/ncn >= 2*kplus) {
+    r = 2.0;
+  } else if(fabs(kplus+kmin) < MYEPS*kplus) {
+    // uniform grid
+    r = fabs((vplus-vmin)/(vplus+vmin));
+    if(r < 1) r = 1; else if(isnan(r) || r > 2) r = 2;
+  } else{
+    // Find the largest r which keeps it monotonic, i.e. derivative 0 in one
+    // of the end points
+    sblock rb;
+    int eq1 = (vplus > 0 && ncn > 0) || (vplus < 0 && ncn < 0);
+    if(eq1) {
+      rb.kq = kmin/kplus;
+      rb.vmin=vmin;
+      rb.vplus=vplus;
+    } else {
+      rb.kq = kplus/kmin;
+      rb.vmin=vplus;
+      rb.vplus=vmin;
+    }
+    const gsl_root_fsolver_type *T;
+    gsl_root_fsolver *s;
+    gsl_function F;
+    int status;
+    F.function = &rfunnew;
+    F.params = &rb;
+    T = gsl_root_fsolver_brent;
+    s = gsl_root_fsolver_alloc(T);
+    gsl_root_fsolver_set(s, &F, 1, 2);
+    int iter = 0;
+    do {
+      iter++;
+      status = gsl_root_fsolver_iterate(s);
+      r = gsl_root_fsolver_root(s);
+      double lo = gsl_root_fsolver_x_lower(s);
+      double hi = gsl_root_fsolver_x_upper(s);
+      //      printf("iter %d %.4f < %.4f < %.4f\n",iter,lo,r,hi);
+      status = gsl_root_test_interval(lo,hi,0,1e-8);
+    } while(status == GSL_CONTINUE && iter < 50);
+    if(status != GSL_SUCCESS) {
+      // I need to think about what to do here. We're in openmp, so can't do R-calls.
+      //      printf("No convergence, r=%.2f\n",r);
     }
     gsl_root_fsolver_free(s);
   }
@@ -230,9 +263,173 @@ static R_INLINE double stalk1(double x, double vmin, double v0, double vplus,dou
   }
 }
 
+static void makestalk(const int nrank, const int *dims, double **grid, const double *val,
+		      double *b, double *c, double *r, int depth, int *point) {
+  // Loop over every grid point
+  // In each grid point, find the function living there, i.e. an a,
+  // and b,c,d for each dimension.
+  // how many grid points are there? prod(dims)
+  // We need nested loops to nrank depth. I.e. recursion.
+  // record point
+  if(depth < nrank) {
+    for(int i = 0; i < dims[depth]; i++) {
+      point[depth] = i;
+      makestalk(nrank, dims, grid, val, b, c, r, depth+1,point);
+    }
+    return;
+  }
+
+    // What is the index of the point?  (We could do this in the recursion as well).
+  R_xlen_t index = 0,stride = 1;  
+
+  for(int i = 0; i < nrank; i++) {
+    index += point[i]*stride;
+    stride *=  dims[i];
+  }
+
+  // Inner loop, we have a grid point in 'point'
+  // loop over the dimensions, collecting b, c and r
+  double *bb = &b[nrank*index], *cc=&c[nrank*index], *rr=&r[nrank*index];
+  stride = 1;
+
+  for(int i = 0; i < nrank; i++) {
+    double *gr = grid[i];
+    int idx = point[i];
+
+    // Check border, we do it linearly there
+    if(idx == 0) {
+      // Nothing below us, we are linear upwards
+      bb[i] = (val[index+stride]-val[index])/(gr[idx+1]-gr[idx]);
+      cc[i] = rr[i] = 0.0;
+
+    } else if(idx == dims[i]-1) {
+      // Nothing above us, linear downwards
+      bb[i] = (val[index-stride] - val[index])/(gr[idx-1]-gr[idx]);
+      cc[i] = rr[i] = 0.0;
+    } else {
+      // inside somewhere
+      double v0 = val[index];
+      double vplus = val[index+stride]-v0;
+      double vmin = val[index-stride]-v0;
+      double kplus = gr[idx+1] - gr[idx];
+      double kmin = gr[idx-1] - gr[idx];
+      int uniform = fabs(kplus + kmin) < MYEPS*kplus;
+      double r;
+      // Many common expressions below. Fix later. Compiler does anyway.
+      // If non-monotonic, simulate monotonic by changing sign on vmin when computing r
+      if(sign(vplus*vmin) <= 0) {
+	// monotonic
+	if(fabs(vplus-vmin) <= MYEPS*kplus) {
+	  // constant zero
+	  r = 2.0;
+	  bb[i] = cc[i] = 0.0;
+	} else if(fabs(kmin*vplus-kplus*vmin) <= MYEPS*kplus) {
+	  // Linear
+	  r = 2.0;
+	} else {
+	  // general
+	  if(uniform) {
+	    r = fabs( (vplus-vmin)/(vplus+vmin) );
+	    if(r < 1) r = 1;
+	    if(isnan(r) || r > 2.0) r = 2.0;
+	  } else {
+	    r = solver(kmin,kplus,vmin,vplus);
+	  }
+	}
+      } else {
+	// non-monotonic
+	// At the outset, r = 2.0
+	// But if we change sign on vmin, and the resulting monotonic triple
+	// can't be handled by r=2, we use the r from there
+	r = solver(kmin,kplus,-vmin,vplus);
+      }
+      rr[i] = r;
+      bb[i] = (vplus - vmin*pow(-kplus/kmin,r))/(kplus - kmin*pow(-kplus/kmin,r));
+      cc[i] = (kplus*vmin - kmin*vplus)/(kplus*pow(-kmin,r) - kmin*pow(kplus,r));
+    }
+    stride *= dims[i];
+  }
+}
+double evalstalk(const double *x, const int nrank, const int *dims, 
+		 double **grid, const double *val, int blend,
+		 double *b, double *c, double *r) {
+  // loop over the corners of the hypercube surrounding x.
+  // For each corner, evaluate the function there.
+  // Make weighted sum.
+
+  int stride = 1;
+  double weight[nrank];
+  int gbase[nrank];
+  int llcorner = 0;
+  // Find the lower left corner for each dimension.
+  // Store in gpos
+  for(int g = 0; g < nrank; g++) {
+    int mflag;
+    double *gr = grid[g];
+    int gp = findInterval(gr, dims[g], x[g], TRUE,TRUE,1,&mflag)-1;
+    // gp is below x
+    gbase[g] = gp;
+    weight[g] = 1-(x[g]-gr[gbase[g]])/(gr[gbase[g]+1]-gr[gbase[g]]);
+    // This ensures extrapolation is linear
+    if(weight[g] < 0) weight[g] = 0;
+    if(weight[g] > 1) weight[g] = 1;
+    llcorner += stride*gp;
+    stride *= dims[g];
+  }
+
+  // Loop over the corners
+  double V=0.0;
+  double zx[nrank];
+  double sumw = 0.0;
+  for(int i = 0; i < (1<<nrank); i++) {
+    // i is a corner represented as nrank bits
+    // bit j is 1 if above in dimension j, 0 if below
+    // Find the position and weight of the corner
+    int stride = 1;
+    int corner = llcorner;
+    double cw = 1.0;
+    for(int g = 0; g < nrank; g++) {
+      double *gr = grid[g];
+      if(i & (1<<g)) {
+	cw *= blendfun(1-weight[g],blend);
+	corner += stride;
+	// zero based in this corner
+	zx[g] = x[g] - gr[gbase[g]+1];
+      } else {
+	zx[g] = x[g] - gr[gbase[g]];
+	cw *= blendfun(weight[g],blend);
+      }
+      stride *= dims[g];
+    }
+    if(cw == 0.0) continue;
+    //    cw = blendfun(cw,blend);
+    // Nice. Now 'corner' is the index into our arrays
+    // Find b, c, and r for the corner. These have stride 'nrank'
+    double *bb = &b[nrank*corner], *cc=&c[nrank*corner], *rr=&r[nrank*corner];
+    // These are for a zero-based function, i.e. based on the corner being 0,
+    // and f(0)=0
+    // Compute the hyperbolic stalker in x
+    // The zero-based x is in zx
+    // 
+    double fval = val[corner];
+    for(int j = 0; j < nrank; j++) {
+      // It might be linear
+      if(cc[j] == 0) {
+	fval += bb[j]*zx[j];
+      } else {
+	fval += bb[j]*zx[j] + cc[j]*pow(fabs(zx[j]),rr[j]);
+      }
+    }
+    // That's the function value. The weight is in cw
+    //    printf("corner %d fval %.2f weight %.2f\n",corner,fval,cw);
+    sumw += cw;
+    V += cw*fval;
+  }
+  return V/sumw;
+}
+
 // Find the parameters for the hyperbolic stalker in each grid point
 // use normalized coordinates as in the formulas, f(0) = 0
-
 static void makehyp(const int nrank, const int *dims, double **grid, const double *val,
 		double *a, double *b, double *c, double *d, int depth, int *point) {
   // Loop over every grid point
@@ -318,12 +515,6 @@ static void makehyp(const int nrank, const int *dims, double **grid, const doubl
 	  dd[i] = -kmin*vplus*kplus*vmin*(kmin-kplus)*D/(D2*D2);
 	}
       }
-      /*
-      if(isnan(dd[i]) || fabs(dd[i]) > 1e12) {
-	printf("dd is na, i=%d, k-=%.2f, k+=%.2f, v-=%.2f, v+=%.2f D=%.2e D2=%.2e\n",
-	       i,kmin,kplus,vmin,vplus,D,D2);
-      }
-      */
     }
     a[index] -= dd[i];
     stride *= dims[i];
@@ -473,6 +664,48 @@ double evalstalker(const double *x, const int nrank, const int *dims,
   return w*low + (1-w)*high;
 }
 
+SEXP R_makestalk(SEXP Sval, SEXP Sgrid) {
+  const int nrank = LENGTH(Sgrid);
+  int dims[nrank];
+  int len = 1;
+  for(int r = 0; r < nrank; r++) {
+    dims[r] = LENGTH(VECTOR_ELT(Sgrid,r));
+    len *= dims[r];
+  }
+  if(len != LENGTH(Sval)) {
+    error("number of values (%d) does not match grid size (%d)\n",
+	  LENGTH(Sval), len);
+  }
+  double *val = REAL(Sval);
+  double *grid[nrank];
+  for(int i = 0; i < nrank; i++) grid[i] = REAL(VECTOR_ELT(Sgrid,i));
+  int point[nrank];
+  SEXP Sb = PROTECT(allocMatrix(REALSXP,nrank,len));
+  SEXP Sc = PROTECT(allocMatrix(REALSXP,nrank,len));
+  SEXP Sr = PROTECT(allocMatrix(REALSXP,nrank,len));
+  SEXP ret = PROTECT(NEW_LIST(5));
+  SEXP names = PROTECT(allocVector(STRSXP,5));
+  SET_NAMES(ret,names);
+  SET_VECTOR_ELT(ret,0,Sb); SET_STRING_ELT(names, 0, mkChar("b"));
+  SET_VECTOR_ELT(ret,1,Sc); SET_STRING_ELT(names, 1, mkChar("c"));
+  SET_VECTOR_ELT(ret,2,Sr);  SET_STRING_ELT(names, 2, mkChar("r"));
+  SET_VECTOR_ELT(ret,3,Sval);  SET_STRING_ELT(names, 3, mkChar("val"));
+  SET_VECTOR_ELT(ret,4,Sgrid); SET_STRING_ELT(names, 4, mkChar("grid"));
+#ifdef HAVE_GSL
+  gsl_error_handler_t *gslh = gsl_set_error_handler_off();
+#endif
+ 
+  makestalk(nrank, dims, grid, val, REAL(Sb), REAL(Sc), REAL(Sr), 0, point);
+
+#ifdef HAVE_GSL
+  gsl_set_error_handler(gslh);
+#endif
+
+
+  UNPROTECT(5);
+  return ret;
+}
+
 SEXP R_makehyp(SEXP Sval, SEXP Sgrid) {
   const int nrank = LENGTH(Sgrid);
   int dims[nrank];
@@ -508,6 +741,40 @@ SEXP R_makehyp(SEXP Sval, SEXP Sgrid) {
   return ret;
 }
 
+SEXP R_evalstalk(SEXP Sx, SEXP stalker, SEXP Sblend, SEXP Sthreads) {
+  const double *x = REAL(Sx);
+  //const int K = nrows(Sx);
+  const int N = ncols(Sx);
+  int blend = INTEGER(Sblend)[0];
+  int threads = INTEGER(AS_INTEGER(Sthreads))[0];
+  double *b = REAL(VECTOR_ELT(stalker,0));
+  double *c = REAL(VECTOR_ELT(stalker,1));
+  double *r = REAL(VECTOR_ELT(stalker,2));
+  double *val = REAL(VECTOR_ELT(stalker,3));
+  SEXP Sgrid = VECTOR_ELT(stalker,4);
+  const int nrank = LENGTH(Sgrid);
+  double *grid[nrank];
+  for(int i = 0; i < nrank; i++) grid[i] = REAL(VECTOR_ELT(Sgrid,i));
+  int dims[nrank];
+  int len = 1;
+  for(int r = 0; r < nrank; r++) {
+    dims[r] = LENGTH(VECTOR_ELT(Sgrid,r));
+    len *= dims[r];
+  }
+
+  SEXP ret = PROTECT(NEW_NUMERIC(N));
+  double *out = REAL(ret);
+
+
+#pragma omp parallel for num_threads(threads) schedule(guided) if(N > 1 && threads > 1)
+  for(int i = 0; i < N; i++)  {
+    out[i] = evalstalk(x+i*nrank, nrank, dims, grid, val, blend, b,c,r);
+  }
+  
+  UNPROTECT(1);
+  return ret;
+}
+
 SEXP R_evalhyp(SEXP Sx, SEXP stalker, SEXP Sblend, SEXP Sthreads) {
   const double *x = REAL(Sx);
   //const int K = nrows(Sx);
@@ -532,11 +799,11 @@ SEXP R_evalhyp(SEXP Sx, SEXP stalker, SEXP Sblend, SEXP Sthreads) {
 
   SEXP ret = PROTECT(NEW_NUMERIC(N));
   double *out = REAL(ret);
-
 #pragma omp parallel for num_threads(threads) schedule(guided) if(N > 1 && threads > 1)
   for(int i = 0; i < N; i++)  {
     out[i] = evalhyp(x+i*nrank, nrank, dims, grid, val, blend, a,b,c,d);
   }
+
   
   UNPROTECT(1);
   return ret;

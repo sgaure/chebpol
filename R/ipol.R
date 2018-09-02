@@ -106,7 +106,7 @@
 #' @export
 ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
                  method=c('chebyshev','multilinear','fh','uniform','general','polyharmonic',
-                          'simplexlinear', 'stalker', 'hstalker', 'crbf'),
+                          'simplexlinear', 'hstalker', 'stalker','crbf', 'oldstalker'),
                  ...) {
   method <- match.arg(method)
   args <- list(...)
@@ -180,7 +180,7 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
            newarg <- args[-match(c('normalize','nowarn'),names(args), nomatch=0)]
            return(do.call(polyh.real,c(list(val,knots,k,normalize,nowarn),newarg)))
          },
-         stalker={
+         oldstalker={
            if(is.null(grid)) stop('grid must be specified for stalker interpolation')
            if(!is.list(grid)) grid <- list(grid)
            if(unsortedgrid(grid)) stop('grid must be distinct ordered values')
@@ -200,6 +200,17 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
            if(is.null(blend)) return(hstalkerappx(val,grid,...))
            newarg <- args[-match(c('blend'),names(args), nomatch=0)]
            return(blenddef(do.call(hstalkerappx,c(list(val,grid), newarg)),blend))
+
+         },
+         stalker={
+           if(is.null(grid)) stop('grid must be specified for stalker interpolation')
+           if(!is.list(grid)) grid <- list(grid)
+           if(unsortedgrid(grid)) stop('grid must be distinct ordered values')
+           grid <- lapply(grid,as.numeric)
+           blend <- args[['blend']]
+           if(is.null(blend)) return(newstalkerappx(val,grid,...))
+           newarg <- args[-match(c('blend'),names(args), nomatch=0)]
+           return(blenddef(do.call(newstalkerappx,c(list(val,grid), newarg)),blend))
 
          },
          crbf={

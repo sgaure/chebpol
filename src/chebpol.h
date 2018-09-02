@@ -16,6 +16,8 @@ SEXP R_evalrbf(SEXP, SEXP, SEXP);
 SEXP R_evalstalker(SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP R_makehyp(SEXP, SEXP);
 SEXP R_evalhyp(SEXP, SEXP, SEXP, SEXP);
+SEXP R_makestalk(SEXP, SEXP);
+SEXP R_evalstalk(SEXP, SEXP, SEXP, SEXP);
 SEXP R_havealglib();
 SEXP havegsl();
 

@@ -6,8 +6,8 @@
 \usage{
 ipol(val, dims = NULL, intervals = NULL, grid = NULL, knots = NULL,
   k = NULL, method = c("chebyshev", "multilinear", "fh", "uniform",
-  "general", "polyharmonic", "simplexlinear", "stalker", "hstalker",
-  "crbf"), ...)
+  "general", "polyharmonic", "simplexlinear", "hstalker", "stalker",
+  "crbf", "oldstalker"), ...)
 }
 \arguments{
 \item{val}{array or function. Function values on a grid, or the function
