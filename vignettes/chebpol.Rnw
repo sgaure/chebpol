@@ -220,13 +220,15 @@ f <- function(x) 1/(1+25*x^2)
 # Uniform grid:
 unigrid <- list(seq(-3,2,length.out=20))
 uni <- ipol(f, grid=unigrid, k=2, method='fh')
+st <- ipol(f, grid=unigrid, method='hstalker')
 ch <- ipol(f, dims=20, intervals=c(-3,2), method='chebyshev')
 s <- seq(-3,2,length.out=1000)
 plot(s,f(s),ylim=range(uni(s),f(s),ch(s)),typ='l')
 lines(s,uni(s),col='blue')
 points(unigrid[[1]],uni(unigrid[[1]]),col='blue',pch=20)
 lines(s,ch(s),col='green')
-legend('topleft',c('function','FH','chebyshev'),fill=c('black','blue','green'))
+lines(s,st(s),col='red',lty=2)
+legend('topleft',c('function','FH','chebyshev','stalker'),fill=c('black','blue','green','red'))
 @ 
 
 
@@ -251,14 +253,17 @@ f <- function(x) sign(sum(x^3)-0.1)*
                   (1+25*sum(x)^2)
 grid <- replicate(4,list(seq(-1,1,length=15)))
 ml <- ipol(f, grid=grid, method='multilinear')
+st <- ipol(f, grid=grid, method='hstalker')
 s <- seq(-1,1,length=400)
 curve <- function(x) c(cos(1.2*pi*x),
                        sin(1.5*pi*x^3), 
                        x^2, -x/(1+x^2))
 wf <- sapply(s,function(x) f(curve(x)))
 wml <- sapply(s,function(x) ml(curve(x)))
+wst <- sapply(s,function(x) st(curve(x)))
 plot(s,wf,typ='l')  # function
 lines(s,wml,col='blue') # multilinear interpolation
+lines(s,wst,col='green',lty=2) # hyperbolic stalker
 @ 
 
 \section{Scattered data}
