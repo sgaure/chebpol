@@ -25,7 +25,7 @@
 
 \author{Simen Gaure}
 \address{Ragnar Frisch Centre for Economic Research, Oslo, Norway}
-\date{July 28, 2018}
+\date{September 3, 2018}
 
 \begin{document}
 \setkeys{Gin}{width=0.6\textwidth }
@@ -382,7 +382,7 @@ lines(s,cubic(s), col='green')
 lines(s,parodic(s), col='red')
 lines(s,square(s), col='cyan')
 legend('topleft',legend=c('linear','cubic','sigmoid','parodic','square'),
-       fill=c('blue','black','green','red','cyan'))
+       fill=c('blue','green','black','red','cyan'))
 @ 
 
 \section{Multidimensional stalker}
