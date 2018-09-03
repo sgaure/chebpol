@@ -187,9 +187,9 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
            grid <- lapply(grid,as.numeric)
            if(is.null(k)) k = 2
            blend <- args[['blend']]
-           if(is.null(blend)) return(stalkerappx(val,grid,r=k,...))
+           if(is.null(blend)) return(oldstalkerappx(val,grid,r=k,...))
            newarg <- args[-match(c('blend'),names(args), nomatch=0)]
-           return(blenddef(do.call(stalkerappx,c(list(val,grid,r=k), newarg)),blend))
+           return(blenddef(do.call(oldstalkerappx,c(list(val,grid,r=k), newarg)),blend))
          },
          hstalker={
            if(is.null(grid)) stop('grid must be specified for stalker interpolation')
@@ -208,9 +208,9 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
            if(unsortedgrid(grid)) stop('grid must be distinct ordered values')
            grid <- lapply(grid,as.numeric)
            blend <- args[['blend']]
-           if(is.null(blend)) return(newstalkerappx(val,grid,...))
+           if(is.null(blend)) return(stalkerappx(val,grid,...))
            newarg <- args[-match(c('blend'),names(args), nomatch=0)]
-           return(blenddef(do.call(newstalkerappx,c(list(val,grid), newarg)),blend))
+           return(blenddef(do.call(stalkerappx,c(list(val,grid), newarg)),blend))
 
          },
          crbf={

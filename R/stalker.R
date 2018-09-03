@@ -8,7 +8,7 @@ stalkercontext <- function(dmin,dplus,r,grid) {
   })
   list(det=det,pmin=powmin,pplus=powplus)
 }
-stalkerappx <- function(val, grid, r=2, ...) {
+oldstalkerappx <- function(val, grid, r=2, ...) {
   if(!is.list(grid)) grid <- list(grid)
   grid <- lapply(grid,as.numeric)
   if(any(sapply(grid,is.unsorted))) {
@@ -66,7 +66,7 @@ hstalkerappx <- function(val, grid, ...) {
   domain=lapply(grid,range))
 }
 
-newstalkerappx <- function(val, grid, ...) {
+stalkerappx <- function(val, grid, ...) {
   if(!is.list(grid)) grid <- list(grid)
   grid <- lapply(grid,as.numeric)
   if(any(sapply(grid,is.unsorted))) {
@@ -75,7 +75,7 @@ newstalkerappx <- function(val, grid, ...) {
   }
   if(is.function(val)) val <- evalongrid(val,grid=grid,...)
   stalker <- .Call(C_makestalk,val,grid)
-  vectorfun(function(x,threads=getOption('chebpol.threads'),degree=r,
+  vectorfun(function(x,threads=getOption('chebpol.threads'),
                      blend=c('cubic','linear','sigmoid','parodic','square')) {
     blend <- switch(match.arg(blend),linear=0L,sigmoid=1L,parodic=2L,cubic=3L,square=4L)
     .Call(C_evalstalk,x,stalker,as.integer(blend),as.integer(threads))

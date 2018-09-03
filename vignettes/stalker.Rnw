@@ -710,7 +710,7 @@ pts <- pts/max(pts)
 plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
 ns <- splinefun(pts,val,method='natural')
 ms <- splinefun(pts,val,method='mono')
-st <- ipol(val,grid=pts,method='stalker',k=NA)
+st <- ipol(val,grid=pts,method='stalker')
 hst <- ipol(val,grid=pts,method='hstalker')
 s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
@@ -740,7 +740,7 @@ val <- sort(val)
 plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
 ns <- splinefun(pts,val,method='natural')
 ms <- splinefun(pts,val,method='mono')
-st <- ipol(val,grid=pts, method='stalker', k=NA)
+st <- ipol(val,grid=pts, method='stalker')
 hst <- ipol(val,grid=pts,method='hstalker')
 s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
@@ -761,7 +761,7 @@ val <- rep(runif(N/2),each=2) + c(0,1e-16)
 plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
 ns <- splinefun(pts,val,method='natural')
 ms <- splinefun(pts,val,method='mono')
-st <- ipol(val,grid=pts, method='stalker',k=NA)
+st <- ipol(val,grid=pts, method='stalker')
 hst <- ipol(val,grid=pts,method='hstalker')
 s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
@@ -834,7 +834,7 @@ st <- ipol(val,grid=grid,method='hstalker')
 @ 
 
 Creation of the varying degree stalker on a non-uniform grid currently involves solving a non-linear equation
-numerically, so this is slower than on a uniform grid.
+for each grid point numerically, so this is slower than on a uniform grid.
 
 Ordinarily, basis functions are combined with a cubic function. I.e.\ when we approach a grid point more and
 more of the basis function living there is weighted in. This can be changed at evaluation
