@@ -1,6 +1,6 @@
 Package: chebpol
 Version: 2.0
-Date: 2018-09-03
+Date: 2018-09-08
 Title: Multivariate Interpolation
 Authors@R: person("Simen", "Gaure", email="Simen.Gaure@frisch.uio.no", role=c("aut","cre"),
  comment="Ragnar Frisch Centre for Economic Research")
