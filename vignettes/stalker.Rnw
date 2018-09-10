@@ -783,7 +783,7 @@ grid <- list(x=as.numeric(seq_len(nrow(volc))), y=as.numeric(seq_len(ncol(volc))
 ph <- ipol(volc, grid=grid, method='polyharmonic',k=2)
 st <- ipol(volc, grid=grid, method='stalker')
 ml <- ipol(volc, grid=grid, method='multilinear')
-g <- list(x=seq(1,nrow(volc), len=71), y=seq(1,ncol(volc),len=71))
+g <- list(x=seq(1,nrow(volc), len=50), y=seq(1,ncol(volc),len=50))
 par(mar=rep(0,4)); col <- 'green'
 light <- list(specular=0.1,ambient=0.0,diffuse=0.6)
 plot3D::persp3D(grid$x, grid$y, volc, colvar=NULL, lighting=light,
@@ -810,7 +810,7 @@ st <- ipol(val,grid=grid, method='stalker')
 ph <- ipol(val,grid=grid, method='polyharmonic', k=2)
 fh <- ipol(val,grid=grid, method='fh', k=0)
 hst <- ipol(val,grid=grid, method='hstalker')
-g <- list(x=seq(0,1, len=73), y=seq(0,1,len=73))
+g <- list(x=seq(0,1, len=50), y=seq(0,1,len=50))
 for(f in list(st, ph, hst, fh)) {
   par(mar=rep(0,4))
   plot3D::persp3D(g$x, g$y, evalongridV(f,grid=g), colvar=NULL, lighting=light,phi=60,
