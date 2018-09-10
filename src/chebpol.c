@@ -735,12 +735,10 @@ static SEXP R_sqdiffs(SEXP x1, SEXP x2, SEXP Sthreads) {
   return res;
 }
 
-static double findsimplex(double *x, double *knots, int *dtri, SEXP adata, int epol,
+//static double findsimplex(double *x, double *knots, int *dtri, SEXP adata, int epol,
+static double findsimplex(double *x, double *knots, int *dtri, double *lumats, int *ipivs, double *bbox, int epol,
 			  double *val, const int dim, const int numsimplex, int nknots) {
 
-  SEXP lumats = VECTOR_ELT(adata,0);
-  SEXP ipivs = VECTOR_ELT(adata,1);
-  double *bbox = REAL(VECTOR_ELT(adata,2));
   double vec[dim+1];
   int N=dim+1, one=1, info;
   for(int simplex = 0; simplex < numsimplex; simplex++) {
@@ -754,8 +752,8 @@ static double findsimplex(double *x, double *knots, int *dtri, SEXP adata, int e
     if(bad) continue;
 
     // bounding box matches. Transform to barycentric coordinates, check that they are positive.
-    double *lumat = REAL(VECTOR_ELT(lumats, simplex));
-    int *ipiv = INTEGER(VECTOR_ELT(ipivs, simplex));
+    double *lumat = lumats + simplex*N*N;
+    int *ipiv = ipivs + simplex*N;
     for(int d = 0; d < dim; d++) vec[d] = x[d];
     vec[dim] = 1.0;
     F77_CALL(dgetrs)("N", &N, &one, lumat, &N, ipiv, vec, &N, &info);
@@ -789,8 +787,8 @@ static double findsimplex(double *x, double *knots, int *dtri, SEXP adata, int e
     }
 
     if(nearest == -1) return NA_REAL;
-    double *lumat = REAL(VECTOR_ELT(lumats, nearest));
-    int *ipiv = INTEGER(VECTOR_ELT(ipivs, nearest));
+    double *lumat = lumats + nearest*N*N;
+    int *ipiv = ipivs + nearest*N;
     const int *tri = dtri + nearest * (dim+1);
     for(int d = 0; d < dim; d++) vec[d] = x[d];
     vec[dim] = 1.0;
@@ -808,6 +806,9 @@ static SEXP R_evalsl(SEXP Sx, SEXP Sknots, SEXP Sdtri, SEXP adata, SEXP Sval,
   // Loop over the triangulation
   int *dtri = INTEGER(Sdtri);
   const int numsimplex = ncols(Sdtri);
+  double *lumats = REAL(VECTOR_ELT(adata,0));
+  int *pivots = INTEGER(VECTOR_ELT(adata,1));
+  double *bboxmat = REAL(VECTOR_ELT(adata,2));
   double *x = REAL(Sx);
   const int dim = nrows(Sknots);
   const int numvec = ncols(Sx);
@@ -819,7 +820,8 @@ static SEXP R_evalsl(SEXP Sx, SEXP Sknots, SEXP Sdtri, SEXP adata, SEXP Sval,
   int epol = LOGICAL(AS_LOGICAL(extrapolate))[0];
 #pragma omp parallel for num_threads(threads) schedule(guided) if(threads > 1 && numvec > 1)
   for(int i = 0; i < numvec; i++) {
-    resvec[i] = findsimplex(x + i*dim, knots, dtri, adata, epol, val, dim, numsimplex, ncols(Sknots));
+    resvec[i] = findsimplex(x + i*dim, knots, dtri, lumats, pivots, bboxmat,
+			    epol, val, dim, numsimplex, ncols(Sknots));
   }
   UNPROTECT(1);
   return ret;
@@ -834,23 +836,19 @@ static SEXP R_analyzesimplex(SEXP Sdtri, SEXP Sknots, SEXP Sthreads) {
   int N = dim+1;
   SEXP retlist = PROTECT(NEW_LIST(3));
   // Allocate everything before parallel for
-  SET_VECTOR_ELT(retlist, 0, NEW_LIST(numsimplex));
-  SET_VECTOR_ELT(retlist, 1, NEW_LIST(numsimplex));
-  SET_VECTOR_ELT(retlist,2,allocMatrix(REALSXP, 2*dim, numsimplex));
-  SEXP lumats = VECTOR_ELT(retlist,0);
-  SEXP pivots = VECTOR_ELT(retlist,1);
+  SET_VECTOR_ELT(retlist, 0, NEW_NUMERIC(numsimplex*N*N));
+  SET_VECTOR_ELT(retlist, 1, NEW_INTEGER(numsimplex*N));
+  SET_VECTOR_ELT(retlist, 2, allocMatrix(REALSXP, 2*dim, numsimplex));
+  double *lumats = REAL(VECTOR_ELT(retlist,0));
+  int *pivots = INTEGER(VECTOR_ELT(retlist,1));
   double *bboxmat = REAL(VECTOR_ELT(retlist,2));
-  for(int i = 0; i < numsimplex; i++) {
-    SET_VECTOR_ELT(lumats,i,allocMatrix(REALSXP,N,N));
-    SET_VECTOR_ELT(pivots,i,NEW_INTEGER(N));
-    for(int j = 0; j <= dim; j++) INTEGER(VECTOR_ELT(pivots,i))[j] = j+1;
-  }
 
 #pragma omp parallel for num_threads(threads) schedule(static) if(threads > 1 && numsimplex > 1)
   for(int simplex = 0; simplex < numsimplex; simplex++) {
     int *tri = dtri + simplex*(dim+1);
-    double *lumat = REAL(VECTOR_ELT(lumats,simplex));
-    int *ipiv = INTEGER(VECTOR_ELT(pivots,simplex));
+    int *ipiv = pivots + simplex*N;
+    for(int j = 0; j < N; j++) ipiv[j] = j+1;
+    double *lumat = lumats + simplex*N*N;
     int info;
     double *m = bboxmat + simplex*2*dim;
     for(int j = 0; j < dim; j++) {m[2*j] = 1e100; m[2*j+1] = -1e100;}
