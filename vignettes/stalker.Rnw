@@ -36,7 +36,7 @@
   that it attempts to honour monotonocity properties and local extreme
   points in the data, though not entirely. There is no fancy theory
   behind, but it served a purpose for the author, and here it is. The
-  near monotonicity is achieved by somewhat non-traditional means, by
+  monotonicity is achieved by somewhat non-traditional means, by
   sacrificing analyticity, and in a corner case even
   differentiability.  That is, the derivative is not well behaved.
   The name comes from the fact that it follows the data frighteningly
@@ -72,18 +72,22 @@ lines(s,ml(s))
 
 There is another way to think about this, we can imagine that at each
 knot \(i\) there lives a function \(f_i(x)\). Whenever we are between
-two knots, the interpolated value is a convex combination of the two
+two knots, the interpolated value is a convex combination (a weighted
+average) of the two
 functions at each side. Say we are in \(x=3.3\). We should have a part
-of \(f_3(3.3)\), and a part of \(f_4(3.3)\), the value should be
+of \(f_3(3.3)\), and a part of \(f_4(3.3)\). Since our point is closest
+to \(3\), we should have more of \(f_3\) than of \(f_4\). We use a linear weight,
+i.e. we have \(4-3.3=0.7\) of \(f_3\), and \(1-(4-3.3)=0.3\) of \(f_4\).
+So the value is
 \(0.7f_3(3.3) + 0.3f_4(3.3)\), or more generally for \(3 \leq x \leq
 4\), \(t f_3(x) + (1-t)f_4(x)\) where \(0 \leq t=4-x \leq 1\).  In the
 multilinear case, all the functions are constant, and equal to the
 value in the point where it lives.
 
-<<out.width='0.5\\linewidth', echo=FALSE>>=
+<<fig.dim=c(5,5), out.width='0.5\\linewidth', echo=FALSE>>=
 plot(pts,val,pch=20,xlab='x',ylab='y')
 for(i in seq_along(pts)) {
-    lines(pts[i]+c(-1,1),c(val[i],val[i]))
+    lines(pts[i]+c(-1,1),c(val[i],val[i]),col=c('blue','green','red')[i%%3+1])
 }
 @ 
 
@@ -94,10 +98,10 @@ it honours local extrema as well as monotonicity.
 
 In the stalker spline we replace these constant functions with non-constant
 functions. I.e. the function \(f_i(x)\) should not be constant, but pass
-through the 3 knots \(i-1, i\) and \(i+1\). A classical method is to
+through the 3 knots \(i-1, i\) and \(i+1\). An obvious method is to
 let \(f_i\) be the unique quadratic which passes through the three knots. 
 
-<<fig.dim=c(5,5), echo=FALSE>>=
+<<fig.dim=c(5,5), out.width='0.5\\linewidth', echo=FALSE>>=
 plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
 for(i in seq_along(pts)[c(-1,-length(pts))]) {
     a <- val[i]
@@ -108,8 +112,10 @@ for(i in seq_along(pts)[c(-1,-length(pts))]) {
 }
 @ 
 
+Whenever we are between two knots, there are two functions living there, one
+on each side.
 The interpolated value between two knots is still a convex combination
-of the two functions living there. The result is that the interpolant between
+of the two functions. The result is that the interpolant between
 any two points is a cubic, with a value between the two functions
 living there.
 
@@ -117,7 +123,7 @@ In the random points
 we have chosen, we have deliberately made the fourth and fifth points
 equal. The 7th and 8th differ by only 0.00001. 
 This accentuates a phenomenon which in some cases can be
-a problem, no polynomial except for the constant
+a problem, no polynomial (actually, no analytic function) except for the constant
 can be constant on an interval. There is ``overshoot'' between knots
 4 and 5. Indeed, many of the functions overshoot, like between 7 
 and 8.
@@ -137,9 +143,11 @@ are not basis functions in the vector space sense used in the spline literature;
 not glued together by scalar weights, but by linear or sigmoid functions .
 
 \section{The stalker spline}
-To simplify, we consider a basis function \(f(x)\) on the
-interval \([-1,1]\). We have its function values in the three knots
-\(f(-1) = v_-\), \(f(0) = v_0\), and \(f(1) = v_+\). We assume
+To simplify, we consider a basis function \(f(x)\) on the interval
+\([-1,1]\). With a uniform grid we can always scale and translate
+\(x\) to have this situation.  We have function values in the
+three knots \(f(-1) = v_-\), \(f(0) = v_0\), and \(f(1) = v_+\). We
+assume,
 
 \begin{equation*}
 f(x) = a + bx + c|x|^r.
@@ -162,7 +170,7 @@ c &= \frac12 (v_+ + v_-) - v_0.\\
 \end{aligned}
 \end{equation}
 
-These coefficients will work with any \(r\). Typically we will pick
+These coefficients will work with any \(r\). Typically we would like to pick
 \(r = 2\), but this may destroy monotonicity.
 The three knots are monotonic (either increasing or decreasing)
 whenever \(|c| < |b|\). This can be seen from equation~\eqref{cdef}.
@@ -181,10 +189,12 @@ that the critical point disappears from the interior.  More
 specifically, if \(r=2\) results in non-monotonicity, i.e.\ if
 \(|b| < 2|c|\), we pick the largest \(r\) which will make \(f(x)\)
 monotonic. That is, \(r = |b/c| < 2\), this will relegate the
-critical point to one of the end points.
+critical point to one of the end points. Since \(|c| < |b|\), we also
+have \(r > 1\).
 
 The same exercise with a non-uniform grid results in a non-linear
-equation in \(r\) which is solved numerically by \pkg{chebpol}.
+equation in \(r\) which is solved numerically by \pkg{chebpol}. We come
+back to this later, when we consider the more general case in higher dimensions.
 
 There are some special cases.  What if \(c=0\)? This
 only happens when the knots are collinear, i.e. on a straight line,
@@ -294,8 +304,7 @@ Again we have four parameters and three points. For monotonic
 points we use monotonocity as a fourth constraint, or more precisely we let \(b=0\). 
 For non-monotonic points, we use
 that the middle point should be a local extremum. Thus, the hyperbolic stalker respects
-both monotonicity and local extrema, but still at the cost of non-differentiability
-in the case of completely flat regions. In another special case, it reduces to a parabola.
+both monotonicity and local extrema. In a special case, it reduces to a parabola.
 The hyperbolic stalker is specified as \code{ipol(..., method='hstalker')}.
 
 \section{Overshoot and blending}
@@ -356,7 +365,7 @@ we get \(d_r/(v_- - v_0) =| r^{(1+r)/(1-r)} - r^{2/(1-r)} |/(r-1) \leq e^{-2} \a
 In short, the overshoot is always less than 14\% of the vertical distance from the lowest/highest knot
 to the next lowest/highest knot.
 
-\section{Blending and degree}
+\subsection{Blending}
 There is a basis function in every knot, so we glue the functions
 \(f_1\) and \(f_2\) together as a convex combination \(tf_1(x) +
 (1-t)f_2(x-1)\) (\(x-1\) is the normalized coordinate for \(f_2\),
@@ -382,7 +391,7 @@ lines(s,cubic(s), col='green')
 lines(s,parodic(s), col='red')
 lines(s,square(s), col='cyan')
 legend('topleft',legend=c('linear','cubic','sigmoid','parodic','square'),
-       fill=c('blue','green','black','red','cyan'))
+       col=c('blue','green','black','red','cyan'),lty=1)
 @ 
 
 \section{Multidimensional stalker}
@@ -391,17 +400,18 @@ We consider the stalker in higher dimensions, specifically
 there should live a function. We will try to honor monotonicity and
 extreme points \emph{along the axes}. That is, we do not consider the
 grid to be just any points which happen to lie on a grid, but as
-defining for monotonicity and local extreme point. Thus, the resulting
+defining for monotonicity and local extreme points. Thus, the resulting
 spline will typically preserve features parallel with the axes. We consider the
 function living in the point \((0,\ldots,0)\).  The grids may be
 different in each dimension, but we call the three grid points along
 dimension \(i\): \(k_i^-\), \(0\), and \(k_i^+\). That is, we have
-\(k_i^- < 0 < k_i^+\). The corresponding function values (with all
+\(k_i^- < 0 < k_i^+\). We also transform the function values to be zero based, i.e.
+the value in 0 is 0. The function values (with all
 arguments in other dimensions equal to 0) are \(v_i^-\), \(0\), and
 \(v_i^+\). Thus, the triple is increasing if \(v_i^+ > 0\), it is convex
 if \(v_i^+ k_i^- - v_i^- k_i^+ < 0\).
 
-The function form we choose as a ``basis'' (with \(x=(x_1,x_2,\ldots,x_n)\))
+The function form we choose as a ``basis'' (with \(x=(x_1,x_2,\ldots,x_n)\)) is,
 \begin{equation}\label{funcform}
 f(x) = \sum_{i=1}^n b_i x_i + \sum_{i=1}^n c_i |x_i|^{r_i}
 \end{equation}
@@ -542,7 +552,7 @@ equations by the denominator occuring in them to obtain:
     v_i^-+ v_i^- c_i k_i^- &= a + ac_i k_i^- +  b_i k_i^- + b_i k_i^- c_i k_i^- +d_i+ D_i + c_i k_i^- D_i.\\
   \end{aligned}
 \end{equation*}
-Noting that \(a + d_i + D_i = 0\), we can simplify further.
+Noting from equation~\eqref{zeroval} that \(a + d_i + D_i = 0\), we can simplify further.
 \begin{equation*}
   \begin{aligned}
     v_i^++ v_i^+ c_i k_i^+ &= ac_i k_i^+ +  b_i k_i^+ + b_i k_i^+ c_i k_i^+  + c_i k_i^+ D_i,\\
@@ -556,10 +566,12 @@ These can be simplified further by the same equation in the form \(c_i k_i^+ (a 
     v_i^-+ v_i^- c_i k_i^- &= b_i k_i^- + b_i k_i^- c_i k_i^-  -c_i k_i^- d_i.\\
   \end{aligned}
 \end{equation}
+Again we have two equations in three unknowns \(b_i, c_i, d_i\). To find these
+parameters we use a monotonicity or overshoot constraint.
 
 \subsection{Monotonicity}
 We now look at monotonicity. Given the three values \(v_i^-,0\), and \(v_i^+\), they are either monotonic
-or \(0\) is a local extremum. If they are monotonic we must ensure that our function is monotonic as
+or \(0\) is a local extreme point. If they are monotonic we must ensure that our function is monotonic as
 well, i.e. that the derivative along this dimension is different from zero.  We have the
 derivative along dimension \(i\):
 \begin{equation*}
@@ -620,7 +632,7 @@ and we have all the parameters in the definition of the function \(f\) in equati
 
 We can try this out on a simple example, on a grid \((-1,0,1)\) in two dimensions,
 i.e. \(k_i^- = -1\) and \(k_i^+ = 1\).
-We let \(w_1 = 1/2, v_1 = 1, w_2=-2, v_2 = 1\). I.e. non-monotonic in the
+We let \(v_1^- = 1/2, v_1^+ = 1, v_2^-=-2, v_2^+ = 1\). I.e. non-monotonic in the
 first dimension, monotonic in the second. We get the parameters:
 \(b_1 = -2, c_1 = -1/3, d_1 = 6, b_2=0, c_2=1/3, d_2=-4, a=-2\). An illustration
 of the function can be found in figure~\ref{fig:2dhyp}.
@@ -659,6 +671,16 @@ when \((k_i^-)^2 v_i^+ = (k_i^+)^2 v_i^-\). The three points lie on a parabola w
 its vertex in 0. We are unable to fit our function to these points, instead we
 choose a parabola, i.e. \(\frac{v_i^+}{(k_i^+)^2} x_i^2\). For the purpose of computing
 \(a\) from equation~\eqref{zeroval}, we use \(d_i = 0\).
+
+The last problem could be that the pole \(x^*=-1/c_i\) is in the
+interior, i.e.\ that \(k_i^- < x^* < k_i^+\). This would be
+devastating for an interpolation as we would tend to infinity close to
+this \(x^*\). An algebraic excursion convinces us that this can't
+happen. However, the pole may lie outside the interval, arbitrarily
+close to one of the end points.  It will then be attenuated by our
+blending function. It typically happens when \(v_i^- \approx 0 \neq
+v_i^+\), i.e. a flat area.  When implementing this we must be a little
+bit careful as such a pole easily will create instability.
 
 \subsection{Blending}
 Our functions are defined around each grid point in such a way that they
@@ -718,7 +740,7 @@ lines(s,ms(s),col='green')
 lines(s, st(s), col='magenta')
 lines(s, hst(s),col='red')
 legend('topright',legend=c('stalker','mono','natural','hyperbolic'),
-       fill=c('magenta','green','blue','red'))
+       col=c('magenta','green','blue','red'),lty=1)
 @ 
 
 Note that both the stalker and the \code{"monoH.FC"} spline honours the
@@ -748,7 +770,7 @@ lines(s,ms(s),col='green')
 lines(s, st(s), col='magenta')
 lines(s, hst(s), col='red')
 legend('topleft',legend=c('stalker','mono','natural','hyperbolic'),
-       fill=c('magenta','green','blue','red'))
+       col=c('magenta','green','blue','red'),lty=1)
 @ 
 
 An interesting case is when the knots are pairwise constant. The stalker spline
@@ -769,7 +791,7 @@ lines(s,ms(s),col='green')
 lines(s, st(s), col='magenta')
 lines(s, hst(s), col='red')
 legend('topleft',legend=c('stalker','mono','natural','hyperbolic'),
-       fill=c('magenta','green','blue','red'))
+       col=c('magenta','green','blue','red'),lty=1)
 @ 
 
 \section{Higher dimensions}
@@ -842,5 +864,8 @@ time, it can be done ``faster'' with
 a sigmoid map, i.e. so that near a grid point, the neighbouring basis functions are not used at all.
 Use \code{blend="sigmoid"} or \code{blend="cubic"} to choose between two such sigmoid maps, 
 \code{blend="linear"} uses a linear map, but this can create blocking artefacts in higher dimensions.
+It is also possible to specify \code{blend='square'}, this is a discontinuous blender which near
+a knot will use the basis living there without blending with the nearby bases. I see no use
+for this other than educational.
 
 \end{document}

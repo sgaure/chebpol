@@ -13,10 +13,8 @@ be evaluated in parallel.}
 
 \item{...}{Other parameters. Currently used for simplex linear interpolants with the logical argument
 \code{epol} which makes the interpolant extrapolate to points outside the domain.
-The stalker spline has two such arguments: \code{degree} is the degree if
-different from the one at creation time. It can be a vector, one degree for each dimension.
-\code{blend=c("linear","cubic","sigmoid")} is
-a blending function as described in a vignette. The \code{"multilinear"} interpolant also
+The stalker spline has the argument \code{blend=c("linear","cubic","sigmoid")} where a
+blending function can be chosen as described in a vignette. The \code{"multilinear"} interpolant also
 has such a blending function.}
 }
 \value{
