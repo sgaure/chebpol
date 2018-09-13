@@ -31,24 +31,28 @@
 \setkeys{Gin}{width=0.6\textwidth }
 \begin{abstract}
   The idea behind the stalker spline in package \pkg{chebpol} is
-  outlined.  It is designed as a one-dimensional interpolation to be almost 
-  shape preserving in the sense
-  that it attempts to honour monotonocity properties and local extreme
-  points in the data, though not entirely. There is no fancy theory
-  behind, but it served a purpose for the author, and here it is. The
-  monotonicity is achieved by somewhat non-traditional means, by
-  sacrificing analyticity, and in a corner case even
+  outlined.  It is designed as a one-dimensional interpolation to be
+  almost shape preserving in the sense that it attempts to honour
+  monotonocity properties and local extreme points in the data, though
+  not entirely. There is no fancy theory behind, but it served a
+  purpose for the author, and here it is. Indeed, it can proabably be
+  phrased in terms of NURBS, wavelets or some such theory, but I am
+  not in need of a certificate of completed apprenticeship
+  (a.k.a.\ ph.d), and am free to phrase it with elementary
+  calculus. 
+  
+  The monotonicity is achieved by somewhat non-traditional
+  means, by sacrificing analyticity, and in a corner case even
   differentiability.  That is, the derivative is not well behaved.
   The name comes from the fact that it follows the data frighteningly
   close, though it sometimes seems stupid with little foresight. An
-  alternative name could be ``wet paper spline''. \pkg{chebpol}
-  contains higher dimensional versions too.  The
-  interpolation isn't a proper spline, since it is not a
-  polynomial. We also obtain a limit in intuitive geometric terms on
-  how large the overshoot can be. The stalker spline can be used when
-  more smoothness than multilinear is required, but is not 
-  a replacement for more conventional smooth splines like the thin plate spline
-  or Floater-Hormann.
+  alternative name could be \emph{wet paper spline}. \pkg{chebpol}
+  contains higher dimensional versions too.  The interpolation isn't a
+  proper spline, since it is not a polynomial. We also obtain a limit
+  in intuitive geometric terms on how large the overshoot can be. The
+  stalker spline can be used when more smoothness than multilinear is
+  required, but is not a replacement for more conventional smooth
+  splines like the thin plate spline or Floater-Hormann.
 \end{abstract}
 \maketitle
 \section{Introduction}
@@ -141,9 +145,9 @@ fractional degree, i.e. a function of the form \(a + bx + c|x|^r\),
 with \(1\leq r \leq 2\). 
 The idea is that if three monotonic points are such that they can't be
 connected with a quadratic without the quadratic being non-monotonic,
-we modify the quadratic function by lowering the degree:
+we modify it by lowering the degree:
 <<echo=FALSE,fig.dim=c(5,5),out.width='0.5\\linewidth'>>=
-vplus <- 1
+vplus <- 2
 vmin <- -0.2
 c <- (vplus+vmin)/2
 b <- (vplus-vmin)/2
@@ -153,14 +157,27 @@ plot(s,b*s + c*s^2,typ='l',xlab='x',ylab='y',lwd=2)
 lines(s,b*s + c*abs(s)^r,col='blue',lwd=2)
 points(c(-1,0,1),c(vmin,0,vplus),pch=20)
 abline(h=vmin,lty=2)
-legend('topleft',legend=c(sprintf('%.1fx+%.1fx^2',b,c),sprintf('%.1fx+%.1f|x|^%.1f',b,c,r)),
+legend('topleft',legend=c(sprintf('%.1fx + %.1fx^2',b,c),sprintf('%.1fx + %.1f|x|^%.1f',b,c,r)),
        col=c('black','blue'),lty=1)
 @ 
+The blue graph does not look differentiable in 0. It is, but it is not twice differentiable.
 
-In this note we call these functions defined by
-three points and a monotonicity constraint, \emph{basis functions}. They
-are not basis functions in the vector space sense; they are
-not glued together by scalar weights, but by linear or sigmoid functions.
+We will also consider another parametrized function family of the form
+\begin{equation*}
+a + bx + \frac{d}{1+cx}.
+\end{equation*}
+I.e.\ we replace the fractional degree term with a hyperbola.
+These functions can also be tailored to be monotonic on three points, or with a
+local extreme point in the middle.
+
+In this note we call these functions defined by three points and a
+monotonicity constraint, \emph{basis functions}. They are not basis
+functions in the vector space sense; they are not glued together by
+scalar weights, but by linear or sigmoid functions.  We start out with
+the variable degree stalker in one dimension on a uniform unit grid,
+to get a feel for it without too much notation. Then we take the more
+general case of \(n\) dimensions on non-uniform grids, for both the
+variable degree and hyperbolic case.
 
 \section{The stalker spline}
 To simplify, we consider a basis function \(f(x)\) on the interval
@@ -168,11 +185,12 @@ To simplify, we consider a basis function \(f(x)\) on the interval
 \(x\) to have this situation.  We have function values in the
 three knots \(f(-1) = v_-\), \(f(0) = v_0\), and \(f(1) = v_+\). We
 assume,
-
 \begin{equation*}
-f(x) = a + bx + c|x|^r.
+f(x) = a + bx + c|x|^r,
 \end{equation*}
-Inserting our three points, we obtain three equations with three unknowns:
+and must figure out the four parameters \(a,b,c\), and \(r\).
+Inserting our three points, we obtain three equations with three unknowns (the
+\(r\) disappears because we have cleverly chosen our grid points to be \(-1\) and \(1\)):
 \begin{equation}\label{cdef}
 \begin{aligned}
 &a - b + c &= v_-,\\
@@ -204,7 +222,8 @@ f'(x) = b + cr|x|^{r-1}\sign(x),
 \end{equation}
 where \(\sign(x)\) is the sign function.  We have a critical point
 \(f'(x) = 0\) for \(|x|^{r-1}\sign(x) = -b/(cr)\). This equation has a
-solution in \(-1 < x < 1\) if \(|b| < r|c|\).  We pick an \(r\) so
+solution in \(-1 < x < 1\) if \(|b| < r|c|\), i.e.\ if the right hand side
+has absolute value less than 1.  We pick an \(r\) so
 that the critical point disappears from the interior.  More
 specifically, if \(r=2\) results in non-monotonicity, i.e.\ if
 \(|b| < 2|c|\), we pick the largest \(r\) which will make \(f(x)\)
@@ -317,17 +336,6 @@ for(i in seq_along(v)) {
 points(rep(-1,length(vseq)),vseq,pch=20)
 @ 
 
-The stalker spline can also be realized with hyperbolic functions of the type
-\(a + bx +\frac{d}{1+cx}\) which are guaranteed to honour both monotonicity
-and local extrema.
-Again we have four parameters and three points. For monotonic
-points we use monotonocity as a fourth constraint, or more precisely we let \(b=0\). 
-For non-monotonic points, we use
-that the middle point should be a local extremum. Thus, the hyperbolic stalker respects
-both monotonicity and local extrema. In a special case, it reduces to a parabola.
-We get back to this in the higher dimensional case.
-The hyperbolic stalker is specified as \code{ipol(..., method='hstalker')}.
-
 \section{Overshoot and blending}
 To sum up, the function passing through \((-1,v_-)\), \((0,v_0)\) and
 \((1,v_+)\) is 
@@ -352,7 +360,7 @@ the graph may turn arbitrarily abruptly in the knots.
 We define the overshoot as 0 for monotonic knots, and as \(|v_0 - f(x_0)|\) where
 \(x_0\) is the critical point of the function: \(f'(x_0) = 0\).
 From equation~\eqref{deriv} we have by elementary calculus \(x_0 = -\sign(bc)|b/(rc)|^{1/(r-1)}\).  
-If \(|b| \geq 2|c|\) then \(x_0 \notin (-1,1)\), hence the min/max
+If \(|b| \geq r|c|\) then \(x_0 \notin (-1,1)\), hence the min/max
 occurs in an end point, in which case it is not an overshoot.  
 We look at the case \(|b| < r|c|\).
 
@@ -712,16 +720,16 @@ Our functions are defined around each grid point in such a way that they
 agree with the given values on a ``cross''. They do not agree in the corners. 
 E.g. for two-dimensional data an \(f\) living in \((0,0)\) agree with the
 given values in \((0,0), (0,1), (1,0), (0,-1)\) and \((-1,0)\), but not in
-\((1,1), (1,-1), (-1,1)\) and \((-1,-1)\). This can be imagined in figure~\ref{fig:2dhyp},
-there are of course some values in the corners of the green carpet, and they do
+\((1,1), (1,-1), (-1,1)\) and \((-1,-1)\). This can be imagined in figure~\ref{fig:2dhyp}.
+There are of course some values in the corners of the green carpet, and they do
 not necessarily agree with the given points which are not drawn. Those points belong
-to a neighbouring basis function.
+to neighbouring basis functions.
 
 When interpolating a point, there is a function living in each corner around it,
 but how should they be weighted?
 
 The simplest method is to use the barycentric coordinates of our point, i.e. the
-weight for a corner is the volume of the cube opposite the point. Alternatively,
+weight for a corner is the volume of the hypercube opposite the point. Alternatively,
 these weights can be modified by some sigmoid function. An illustration can be found
 in figure~\ref{fig:2dblending}. We have a point in \((0.3,0.4)\), there are functions
 living in each corner, the black dots. The weight for the function in \((1,1)\) is the
@@ -735,14 +743,18 @@ area of the lower blue rectangle \(0.3 \times 0.4 = 0.12\).
 @
 
 
-This will ensure continuity, but it will not ensure differentiability even in simple
-examples, due to the fact that the function living in \((1,1)\) has a value in \((0,0)\)
-which is different from the given value in \((0,0)\). Therefore, the hyperbolic
-stalker is by default blended with a cubic in each dimension. I.e.\ the weight above
-will be \(s(0.3) \times s(0.4)\), where \(s\) is the blending function. Note that the blending does not introduce
-non-monotonicity where there is none, nor overshoot in the non-monotonic case, but
-we may still see a small amount of such shape disturbance due to the design of the bases.
-We have no absolute guarantee that overshoot will not occur on the diagonal of the crosses.
+This will ensure continuity, but it will not ensure differentiability
+even in simple examples, due to the fact that the function living in
+\((1,1)\) has a value in \((0,0)\) which is different from the given
+value in \((0,0)\). Therefore, the hyperbolic stalker is by default
+blended with a cubic in each dimension. I.e.\ the weight above will be
+\(s(0.3) \times s(0.4)\), where \(s\) is the blending function. Note
+that the blending does not introduce non-monotonicity where there is
+none, nor overshoot in the non-monotonic case, but we may still see a
+small amount of such shape disturbance due to the design of the bases.
+We have no absolute guarantee that overshoot will not occur on the
+diagonal of the crosses.  In some extreme cases, additional local
+extrema can also be introduced.
 
 In figure~\ref{fig:meanblend}, we have some random values on a unform
 4x4 grid. For illustration purposes we use a ``mean'' blender , i.e.\ at
@@ -751,8 +763,8 @@ The resulting interpolant is discontinuous, and we miss the given
 points, it's not actually interpolating.  In order to have reasonably
 smooth transitions we must blend them more properly, when approaching
 a point we must gradually switch to the basis function living
-there. Linear blending creates a continuous interpolation, but it is
-not differentiable on the grid lines. This can be seen as striped
+there. Linear barycentric blending creates a continuous interpolation, but it is
+not differentiable on the grid lines. This can be discerned as striped
 artifacts along the grid lines. The cubic blender creates a smooth
 surface.
 
@@ -814,10 +826,10 @@ hst <- ipol(val,grid=pts,method='hstalker')
 s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
 lines(s,ms(s),col='green')
-lines(s, st(s), col='magenta')
-lines(s, hst(s),col='red')
+lines(s, st(s), col='magenta',lty=2)
+lines(s, hst(s),col='red',lty=2)
 legend('topright',legend=c('stalker','mono','natural','hyperbolic'),
-       col=c('magenta','green','blue','red'),lty=1)
+       col=c('magenta','green','blue','red'),lty=c(2,1,1,2))
 @ 
 
 Note that both the stalker and the \code{"monoH.FC"} spline honours the
@@ -844,18 +856,19 @@ hst <- ipol(val,grid=pts,method='hstalker')
 s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
 lines(s,ms(s),col='green')
-lines(s, st(s), col='magenta')
-lines(s, hst(s), col='red')
+lines(s, st(s), col='magenta',lty=2)
+lines(s, hst(s), col='red',lty=2)
 legend('topleft',legend=c('stalker','mono','natural','hyperbolic'),
-       col=c('magenta','green','blue','red'),lty=1)
+       col=c('magenta','green','blue','red'),lty=c(2,1,1,2))
 @ 
 
 An interesting case is when the knots are pairwise constant. The stalker spline
-reduces to a linear interpolation. The knots below are not
+reduces to a piecewise linear interpolation. The knots below are not
 exactly pairwise constant, they differ by \(10^{-16}\). This is sufficient
 to make \code{"monoH.FC"} overshoot.
 
 <<fig.dim=c(6,4),echo=FALSE>>=
+set.seed(25)
 val <- rep(runif(N/2),each=2) + c(0,1e-16)
 plot(pts,val,pch=20,xlab='x',ylab='y',ylim=c(0,1.1))
 ns <- splinefun(pts,val,method='natural')
@@ -865,10 +878,10 @@ hst <- ipol(val,grid=pts,method='hstalker')
 s <- seq(0,1,len=1000)
 lines(s,ns(s),col='blue')
 lines(s,ms(s),col='green')
-lines(s, st(s), col='magenta')
-lines(s, hst(s), col='red')
+lines(s, st(s), col='magenta',lty=2)
+lines(s, hst(s), col='red',lty=2)
 legend('topleft',legend=c('stalker','mono','natural','hyperbolic'),
-       col=c('magenta','green','blue','red'),lty=1)
+       col=c('magenta','green','blue','red'),lty=c(2,1,1,2))
 @ 
 
 \section{Higher dimensions}
