@@ -37,7 +37,10 @@ static R_INLINE double blendfun(double w,int blend) {
     break;
   case 4:
     w = (w < 0.5) ? 0 : 1;  // discontinuous blending
-  }    
+  break;
+  case 5:
+    w = 0.5; // mean blending
+  }        
   return w;
 }
 #endif

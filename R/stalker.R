@@ -58,8 +58,8 @@ hstalkerappx <- function(val, grid, ...) {
   if(is.function(val)) val <- evalongrid(val,grid=grid,...)
   stalker <- .Call(C_makehyp,val,grid)
   vectorfun(function(x,threads=getOption('chebpol.threads'),
-                     blend=c('cubic','linear','sigmoid','parodic','square')) {
-    blend <- switch(match.arg(blend),linear=0L,sigmoid=1L,parodic=2L,cubic=3L,square=4L)
+                     blend=c('cubic','linear','sigmoid','parodic','square','mean')) {
+    blend <- switch(match.arg(blend),linear=0L,sigmoid=1L,parodic=2L,cubic=3L,square=4L,mean=5L)
     .Call(C_evalhyp,x,stalker,as.integer(blend),as.integer(threads))
   },
   arity=length(grid),
@@ -76,8 +76,8 @@ stalkerappx <- function(val, grid, ...) {
   if(is.function(val)) val <- evalongrid(val,grid=grid,...)
   stalker <- .Call(C_makestalk,val,grid)
   vectorfun(function(x,threads=getOption('chebpol.threads'),
-                     blend=c('cubic','linear','sigmoid','parodic','square')) {
-    blend <- switch(match.arg(blend),linear=0L,sigmoid=1L,parodic=2L,cubic=3L,square=4L)
+                     blend=c('cubic','linear','sigmoid','parodic','square','mean')) {
+    blend <- switch(match.arg(blend),linear=0L,sigmoid=1L,parodic=2L,cubic=3L,square=4L,mean=5L)
     .Call(C_evalstalk,x,stalker,as.integer(blend),as.integer(threads))
   },
   arity=length(grid),

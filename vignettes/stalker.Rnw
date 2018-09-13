@@ -40,7 +40,8 @@
   sacrificing analyticity, and in a corner case even
   differentiability.  That is, the derivative is not well behaved.
   The name comes from the fact that it follows the data frighteningly
-  close, though it sometimes seems stupid with little foresight. \pkg{chebpol}
+  close, though it sometimes seems stupid with little foresight. An
+  alternative name could be ``wet paper spline''. \pkg{chebpol}
   contains higher dimensional versions too.  The
   interpolation isn't a proper spline, since it is not a
   polynomial. We also obtain a limit in intuitive geometric terms on
@@ -93,7 +94,7 @@ for(i in seq_along(pts)) {
 
 When we make a convex combination of two constant values \(v_i\) and
 \(v_{i+1}\), we obtain a straight line: \(t v_i + (1-t) v_{i+1}\).
-This linear interpolation is faithful to the data in the sense that
+This piecewise linear interpolation is faithful to the data in the sense that
 it honours local extrema as well as monotonicity.
 
 In the stalker spline we replace these constant functions with non-constant
@@ -137,10 +138,29 @@ monotonic (either increasing or decreasing), then the function
 polynomial splines.
 We achieve this by non-traditionally using a
 fractional degree, i.e. a function of the form \(a + bx + c|x|^r\),
-with \(1\leq r \leq 2\). In this note we call these functions defined by
+with \(1\leq r \leq 2\). 
+The idea is that if three monotonic points are such that they can't be
+connected with a quadratic without the quadratic being non-monotonic,
+we modify the quadratic function by lowering the degree:
+<<echo=FALSE,fig.dim=c(5,5),out.width='0.5\\linewidth'>>=
+vplus <- 1
+vmin <- -0.2
+c <- (vplus+vmin)/2
+b <- (vplus-vmin)/2
+s <- seq(-1,1,len=100)
+r <- abs(b/c)
+plot(s,b*s + c*s^2,typ='l',xlab='x',ylab='y',lwd=2)
+lines(s,b*s + c*abs(s)^r,col='blue',lwd=2)
+points(c(-1,0,1),c(vmin,0,vplus),pch=20)
+abline(h=vmin,lty=2)
+legend('topleft',legend=c(sprintf('%.1fx+%.1fx^2',b,c),sprintf('%.1fx+%.1f|x|^%.1f',b,c,r)),
+       col=c('black','blue'),lty=1)
+@ 
+
+In this note we call these functions defined by
 three points and a monotonicity constraint, \emph{basis functions}. They
-are not basis functions in the vector space sense used in the spline literature; they are
-not glued together by scalar weights, but by linear or sigmoid functions .
+are not basis functions in the vector space sense; they are
+not glued together by scalar weights, but by linear or sigmoid functions.
 
 \section{The stalker spline}
 To simplify, we consider a basis function \(f(x)\) on the interval
@@ -297,7 +317,7 @@ for(i in seq_along(v)) {
 points(rep(-1,length(vseq)),vseq,pch=20)
 @ 
 
-The stalker spline also contains hyperbolic functions of the type
+The stalker spline can also be realized with hyperbolic functions of the type
 \(a + bx +\frac{d}{1+cx}\) which are guaranteed to honour both monotonicity
 and local extrema.
 Again we have four parameters and three points. For monotonic
@@ -305,6 +325,7 @@ points we use monotonocity as a fourth constraint, or more precisely we let \(b=
 For non-monotonic points, we use
 that the middle point should be a local extremum. Thus, the hyperbolic stalker respects
 both monotonicity and local extrema. In a special case, it reduces to a parabola.
+We get back to this in the higher dimensional case.
 The hyperbolic stalker is specified as \code{ipol(..., method='hstalker')}.
 
 \section{Overshoot and blending}
@@ -315,13 +336,13 @@ f(x) = a + bx + c|x|^r.
   \end{equation*}
 The coefficients \(a\), \(b\), and \(c\) are as in~\eqref{cvals}. For \(c\neq 0\) the exponent \(r\) is 
 chosen as follows:
-\begin{equation*}
+\begin{equation}\label{onedimstalker}
 r = \begin{cases}
  |b/c| &\text{for \(|c| \leq |b| < 2|c|\)},\\
  |c/b| & \text{for \(|b| < |c| < 2|b|\)},\\
  2 & \text{otherwise}.
 \end{cases}
-\end{equation*}
+\end{equation}
 
 It is clear that \(1 \leq r \leq 2\).
 The functions with \(1 < r \leq 2\) are everywhere
@@ -331,7 +352,7 @@ the graph may turn arbitrarily abruptly in the knots.
 We define the overshoot as 0 for monotonic knots, and as \(|v_0 - f(x_0)|\) where
 \(x_0\) is the critical point of the function: \(f'(x_0) = 0\).
 From equation~\eqref{deriv} we have by elementary calculus \(x_0 = -\sign(bc)|b/(rc)|^{1/(r-1)}\).  
-If \(|b| >= 2|c|\) then \(x_0 \notin (-1,1)\), hence the min/max
+If \(|b| \geq 2|c|\) then \(x_0 \notin (-1,1)\), hence the min/max
 occurs in an end point, in which case it is not an overshoot.  
 We look at the case \(|b| < r|c|\).
 
@@ -435,10 +456,10 @@ These can be solved for \(b_i\) and \(c_i\), with the determinant
 
 \subsection{Monotonic points}
 If a triple is monotonic we will ensure that our function is monotonic.
-The derivative along dimension \(i\) is \(f_i(x) = b_i + c_i r_i |x_i|^{r_i-1}\sign{x_i}\).
+The derivative along dimension \(i\) is \(f_i'(x) = b_i + c_i r_i |x_i|^{r_i-1}\sign{x_i}\).
 We ensure that it is not zero by letting \(1\leq r_i \leq 2\) be the largest number
-which keeps \(f_i(x_i) \neq 0\) for \(k_i^- < x_i < k_i^+\). To be specific, the equation
-\(f_i(x_i) = 0\) is 
+which keeps \(f_i'(x_i) \neq 0\) for \(k_i^- < x_i < k_i^+\). To be specific, the equation
+\(f_i'(x_i) = 0\) is 
 \begin{equation}\label{deriv0}
   |x_i|^{r_i-1} \sign(x_i) = -\frac{b_i}{c_i r_i}.
 \end{equation}
@@ -477,6 +498,8 @@ Dividing by \(|k_i^+|^{r_i}\) and \(|k_i^-|^{r_i}\), they become,
     \left(v_i^- \frac{k_i^+}{k_i^-} - v_i^+ \right) r_i .\\
   \end{aligned}
 \end{equation}
+This form is faster when solving numerically due to fewer power operators.
+
 
 For a uniform grid, i.e.\ with \(k_i^+ = -k_i^-\), these simplify to
 \begin{equation*}
@@ -487,8 +510,10 @@ For a uniform grid, i.e.\ with \(k_i^+ = -k_i^-\), these simplify to
 \end{equation*}
 We can then choose,
 \begin{equation}\label{unireq}
-  r_i = \frac{|v_i^+ - v_i^-|}{|v_i^+ + v_i^-|}.
+  r_i = \left|\frac{v_i^+ - v_i^-}{v_i^+ + v_i^-}\right|.
 \end{equation}
+This is the \(|b/c|\) of equation~\eqref{onedimstalker}.
+
 For a non-uniform grid, we take a closer look.  We have not found a closed form
 solution, but we can at least figure out which of the equations~\eqref{eqrmono} to solve.
 We can either do some algebra, or use our geometric intuition.
@@ -503,12 +528,14 @@ solve the first equation if either
 \end{equation*}
 
 \subsection{Non-monotonic points}
-For non-monotonic triples we have adopted the following strategy. We change the sign of \(v_i^-\). This
-gives us a monotonic triple. We find the \(r\) suitable for that, then we use the original \(v_i^-\)
-to compute \(b_i\) and \(c_i\) from equations~\eqref{pteqs}.
+For non-monotonic triples we have adopted the following strategy. We
+change the sign of \(v_i^-\). This gives us a monotonic triple. We
+find the \(r\) suitable for that, then we use the original \(v_i^-\)
+to compute \(b_i\) and \(c_i\) from equations~\eqref{pteqs}. This is
+the \(|c/b|\) of equation~\eqref{onedimstalker}.
 
 \subsection{Special cases}
-There are some special cases, our determinant can in principle vanish, i.e.
+There are some special cases. One could imagine that our determinant \(D\) could vanish, i.e.
 \begin{equation*}
 k_i^+ |k_i^-|^{r_i} = k_i^- |k_i^+|^{r_i},
 \end{equation*}
@@ -544,41 +571,37 @@ For each \(i\) we also have equations for the two other grid points \(k_i^-\) an
   \end{aligned}
 \end{equation*}
 
-We introduce the simplifying notation \(D_i = \sum_{j\neq i}^n d_j\), and multiply the
-equations by the denominator occuring in them to obtain:
-\begin{equation*}
-  \begin{aligned}
-    v_i^++ v_i^+ c_i k_i^+ &= a + ac_i k_i^+ +  b_i k_i^+ + b_i k_i^+ c_i k_i^+ +d_i+ D_i + c_i k_i^+ D_i,\\
-    v_i^-+ v_i^- c_i k_i^- &= a + ac_i k_i^- +  b_i k_i^- + b_i k_i^- c_i k_i^- +d_i+ D_i + c_i k_i^- D_i.\\
-  \end{aligned}
-\end{equation*}
-Noting from equation~\eqref{zeroval} that \(a + d_i + D_i = 0\), we can simplify further.
-\begin{equation*}
-  \begin{aligned}
-    v_i^++ v_i^+ c_i k_i^+ &= ac_i k_i^+ +  b_i k_i^+ + b_i k_i^+ c_i k_i^+  + c_i k_i^+ D_i,\\
-    v_i^-+ v_i^- c_i k_i^- &= ac_i k_i^- +  b_i k_i^- + b_i k_i^- c_i k_i^-  + c_i k_i^- D_i.\\
-  \end{aligned}
-\end{equation*}
-These can be simplified further by the same equation in the form \(c_i k_i^+ (a + D_i) = -c_i k_i^+ d_i\):
+We first use equation~\eqref{zeroval} to replace \(a+\sum_{j\neq i}^n d_j\) with \(-d_i\), then
+we multiply each equation with the denominator occuring in them, to obtain:
 \begin{equation}\label{dimequations}
   \begin{aligned}
     v_i^++ v_i^+ c_i k_i^+ &= b_i k_i^+ + b_i k_i^+ c_i k_i^+  -c_i k_i^+ d_i,\\
     v_i^-+ v_i^- c_i k_i^- &= b_i k_i^- + b_i k_i^- c_i k_i^-  -c_i k_i^- d_i.\\
   \end{aligned}
 \end{equation}
-Again we have two equations in three unknowns \(b_i, c_i, d_i\). To find these
-parameters we use a monotonicity or overshoot constraint.
+Again we have two equations in three unknowns \(b_i, c_i, d_i\), and
+the dimensions are independent (i.e. different \(i\)s are independent
+of each other), so the equations can be solved separately for each
+\(i\). That is, we do not have to solve a large simultaneous system of
+non linear equations for all the \(i\)s, only a system of two equations for each \(i\).  
+An intuitive reason why this happens is that we did not include any cross terms of the
+type \(x_i x_j\) in our function form~\eqref{funcform}, nor do we have constraints where
+more than one of the coordinates are non-zero. Thus, the dependence on \(i\) can be
+dropped in the following equations, though we do keep it to avoid confusion.
+To find these three parameters from two equations we need an additional equation.
+We use a monotonicity or overshoot constraint.
 
 \subsection{Monotonicity}
-We now look at monotonicity. Given the three values \(v_i^-,0\), and \(v_i^+\), they are either monotonic
+Given the three values \(v_i^-,0\), and \(v_i^+\), they are either monotonic, i.e.\ \(v_i^-\) and \(v_i^+\)
+have opposite signs, 
 or \(0\) is a local extreme point. If they are monotonic we must ensure that our function is monotonic as
 well, i.e. that the derivative along this dimension is different from zero.  We have the
 derivative along dimension \(i\):
 \begin{equation*}
-  f_i(x) = b_i - \frac{c_i d_i}{(1+c_i x_i)^2}.
+  f_i'(x) = b_i - \frac{c_i d_i}{(1+c_i x_i)^2}.
 \end{equation*}
 One way to ensure it is nonzero is to choose \(b_i=0\). The only way
-\(f_i(x)\) can vanish is then if \(c_i d_i=0\), but this would mean that our
+\(f_i'(x)\) can vanish is then if \(c_i d_i=0\), but this would mean that our
 function will be constant, this is a special case we handle below.
 So for a monotonic triplet, we set \(b_i = 0\).
 The equations~\eqref{dimequations} then simplify to:
@@ -599,7 +622,7 @@ These can be solved for \(c_i\) and \(d_i\) to yield,
 
 \subsection{Non-monotonicity}
 When the three points are non-monotonic, the middle one is an extreme point, i.e.
-\(f_i(0) = 0\). This yields the equation,
+\(f_i'(0) = 0\). This yields the equation,
 \begin{equation*}
   b_i = c_i d_i.
 \end{equation*}
@@ -617,7 +640,7 @@ These immediately simplifies to,
     v_i^-+ v_i^- c_i k_i^- &= c_i d_i k_i^- c_i k_i^-.\\
   \end{aligned}
 \end{equation*}
-The solution is,
+According to Maple, the solution is,
 \begin{equation}\label{nmonopars}
   \begin{aligned}
     b_i &= \frac{v_i^+ v_i^- (k_i^--k_i^+)}{(k_i^-)^2 v_i^+-(k_i^+)^2 v_i^-},\\
@@ -625,7 +648,7 @@ The solution is,
     d_i &= -\frac{(k_i^- v_i^+-k_i^+ v_i^-) k_i^- v_i^+ v_i^- k_i^+ (k_i^--k_i^+)}{((k_i^-)^2 v_i^+-(k_i^+)^2 v_i^-)^2}\\
   \end{aligned}
 \end{equation}
-So, both for monotonic and non-monotonic triples we can find the constants
+So, both for monotonic and non-monotonic triples we can for every \(i\) find the constants
 \(b_i,c_i\) and \(d_i\) from equations~\eqref{monopars} and~\eqref{nmonopars}.
 From equation~\eqref{zeroval} we can then find \(a\),
 and we have all the parameters in the definition of the function \(f\) in equation~\eqref{funcform}.
@@ -645,6 +668,7 @@ b.2 <- 0; c.2 <- 1/3; d.2 <- -4
 f <- function(x) a + b.1*x[1] + b.2*x[2] + d.1/(1+c.1*x[1]) + d.2/(1+c.2*x[2])
 g <- list(x=seq(-1,1,len=50), y=seq(-1,1,len=50))
 light <- list(specular=0.2,ambient=0.0,diffuse=0.6)
+par(mar=rep(0,4))
 plot3D::persp3D(g$x, g$y, evalongrid(f,grid=g), colvar=NULL, lighting=light,
         theta=45, ltheta=10, lphi=40, col='green')
 plot3D::points3D(c(0,1,0,-1,0),c(0,0,1,0,-1),c(0,1,1,1/2,-2)+0.05,pch=20,add=TRUE,colvar=NULL)
@@ -680,14 +704,18 @@ happen. However, the pole may lie outside the interval, arbitrarily
 close to one of the end points.  It will then be attenuated by our
 blending function. It typically happens when \(v_i^- \approx 0 \neq
 v_i^+\), i.e. a flat area.  When implementing this we must be a little
-bit careful as such a pole easily will create instability.
+bit careful as such a pole easily will create instability when approaching
+an expression of the form \(0\times\infty\). The same goes for the other special cases.
 
 \subsection{Blending}
 Our functions are defined around each grid point in such a way that they
 agree with the given values on a ``cross''. They do not agree in the corners. 
 E.g. for two-dimensional data an \(f\) living in \((0,0)\) agree with the
 given values in \((0,0), (0,1), (1,0), (0,-1)\) and \((-1,0)\), but not in
-\((1,1), (1,-1), (-1,1)\) and \((-1,-1)\).
+\((1,1), (1,-1), (-1,1)\) and \((-1,-1)\). This can be imagined in figure~\ref{fig:2dhyp},
+there are of course some values in the corners of the green carpet, and they do
+not necessarily agree with the given points which are not drawn. Those points belong
+to a neighbouring basis function.
 
 When interpolating a point, there is a function living in each corner around it,
 but how should they be weighted?
@@ -715,6 +743,55 @@ will be \(s(0.3) \times s(0.4)\), where \(s\) is the blending function. Note tha
 non-monotonicity where there is none, nor overshoot in the non-monotonic case, but
 we may still see a small amount of such shape disturbance due to the design of the bases.
 We have no absolute guarantee that overshoot will not occur on the diagonal of the crosses.
+
+In figure~\ref{fig:meanblend}, we have some random values on a unform
+4x4 grid. For illustration purposes we use a ``mean'' blender , i.e.\ at
+every point we compute the mean of the basis functions living there.
+The resulting interpolant is discontinuous, and we miss the given
+points, it's not actually interpolating.  In order to have reasonably
+smooth transitions we must blend them more properly, when approaching
+a point we must gradually switch to the basis function living
+there. Linear blending creates a continuous interpolation, but it is
+not differentiable on the grid lines. This can be seen as striped
+artifacts along the grid lines. The cubic blender creates a smooth
+surface.
+
+<<meanblend, fig.cap='2d blending', fig.dim=c(4,4),out.width='0.4\\linewidth',echo=FALSE,fig.ncol=2,fig.subcap=c('mean','linear','cubic','sigmoid')>>=
+set.seed(49)
+NN <- 3
+grid <- list(x=as.numeric(seq(0,NN)),y=as.numeric(seq(0,NN)))
+value <- runif((NN+1)^2)
+ip <- ipol(value,grid=grid, method='hstalker')
+g <- list(x=seq(0,NN,len=50), y=seq(0,NN,len=50))
+light <- list(specular=0.2,ambient=0.0,diffuse=0.6)
+for(bl in c('mean','linear','cubic','sigmoid')) {
+  par(mar=rep(0,4))
+  plot3D::persp3D(g$x, g$y, evalongridV(ip,grid=g,blend=bl), colvar=NULL, lighting=light,
+                  theta=135, ltheta=100, lphi=40, col='green',bty='n',axes=FALSE,zlim=range(value))
+  plot3D::points3D(rep(grid$x,NN+1), rep(grid$y,each=NN+1), 
+                   value+0.01,pch=20,add=TRUE,colvar=NULL)
+}
+@ 
+
+\section{Simplex stalker}
+Here is an idea which has not yet been worked out and implemented in
+\pkg{chebpol}. A weakness with the above stalkers is that they only
+preserve features along the axes. The resulting interpolation will
+typically have rectangular features along the grid lines. It might be
+possible to define similar splines on a Delaunay
+triangulation. I.e.\ given some knots (not necessarily organized as a
+Cartesian grid), one can find its Delaunay triangulation.  In a given
+knot \(k\) we consider all pairs of simplices with the knot as a
+vertex. For each such simplex pair \(S_1, S_2\) we consider triplets
+of points \(s_1, k, s_2\) with \(s_1\) a vertex in \(S_1\), and
+\(s_2\) a vertex in \(S_2\). We can then find a basis function on
+these three points in much the same way as we find basis functions
+along the axes in the grid stalker. We need some local coordinates
+which vanish on the other triplets. We can then interpolate a point in
+a simplex by weighing the surrounding basis functions. In this way we
+can consider monotonicity and local extrema in all directions in the
+Delaunay triangulation.  Though, exactly what will be preserved by
+such a concoction escapes my topological intuition.
 
 
 \section{Examples}

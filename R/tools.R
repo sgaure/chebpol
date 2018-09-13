@@ -24,7 +24,7 @@ vectorfun <- function(fun,arity,domain=NULL) {
             chebpol.version=utils::packageVersion('chebpol'))
 }
 
-defaultblend <- c('linear','cubic','sigmoid','parodic','square')
+defaultblend <- c('linear','cubic','sigmoid','parodic','square','mean')
 blenddef <- function(fun,blend=defaultblend) {
   if(is.null(blend)) return(fun)
   blend <- match.arg(blend)
