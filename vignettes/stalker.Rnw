@@ -31,23 +31,23 @@
 \setkeys{Gin}{width=0.6\textwidth }
 \begin{abstract}
   The idea behind the stalker spline in package \pkg{chebpol} is
-  outlined.  It is designed as a one-dimensional interpolation to be
+  outlined.  It was originally designed as a one-dimensional interpolation to be
   almost shape preserving in the sense that it attempts to honour
   monotonocity properties and local extreme points in the data, though
-  not entirely. There is no fancy theory behind, but it served a
+  not entirely. There is no fancy theory behind, but it once served a
   purpose for the author, and here it is. Indeed, it can proabably be
   phrased in terms of NURBS, wavelets or some such theory, but I am
   not in need of a certificate of completed apprenticeship
   (a.k.a.\ ph.d), and am free to phrase it with elementary
-  calculus. 
+  calculus. In line with the policy of \pkg{chebpol}
+  there are also multidimensional versions.
   
   The monotonicity is achieved by somewhat non-traditional
   means, by sacrificing analyticity, and in a corner case even
   differentiability.  That is, the derivative is not well behaved.
   The name comes from the fact that it follows the data frighteningly
   close, though it sometimes seems stupid with little foresight. An
-  alternative name could be \emph{wet paper spline}. \pkg{chebpol}
-  contains higher dimensional versions too.  The interpolation isn't a
+  alternative name could be \emph{wet paper spline}. The interpolation isn't a
   proper spline, since it is not a polynomial. We also obtain a limit
   in intuitive geometric terms on how large the overshoot can be. The
   stalker spline can be used when more smoothness than multilinear is
@@ -396,10 +396,17 @@ to the next lowest/highest knot.
 
 \subsection{Blending}
 There is a basis function in every knot, so we glue the functions
-\(f_1\) and \(f_2\) together as a convex combination \(tf_1(x) +
-(1-t)f_2(x-1)\) (\(x-1\) is the normalized coordinate for \(f_2\),
-the basis function in the knot \(x_+\)). We use a linear blender,
-\(t = 1 - x\).  Alternatively we could modify the \(t\) with a sigmoid blender like
+\(f_0\) and \(f_1\) together as a convex combination \(tf_0(x) +
+(1-t)f_1(x)\). We use a linear blender, \(t = 1 - x\) (assuming \(f_0\) lives in 0 and \(f_1\) lives in 1).  
+If we like, we can take a closer look at the actual blended function, i.e.\ 
+\(g(x) = (1-x)f_0(x) + x f_1(x)\). It is possible to write it out by inserting expressions for
+\(f_0(x)\) and \(f_1(x)\) and analyze it closer. We must then remember that
+our exposition above assumes that the \(x\) is shifted so that each function is centred in \(0\).
+For the hyperbolic bases we end up with a rational function with two poles outside \([0,1]\), 
+for the fractional degree stalker we 
+end up with a sum of fractional degree functions.
+
+We can also modify the \(t\) with a sigmoid blender like
 \(t\in [0,1/2] \mapsto \exp(2-1/t)/2\) and \(t\in (1/2,1] \mapsto 1-\exp(2-1/(1-t))/2.\)
 A cubic blender is also available. 
 These can be selected by the argument \code{blend="linear"}, \code{blend="sigmoid"}, or
@@ -428,7 +435,8 @@ We consider the stalker in higher dimensions, specifically
 \(\RN^n\).  We have a Cartesian product grid, and in every grid point
 there should live a function. We will try to honor monotonicity and
 extreme points \emph{along the axes}. That is, we do not consider the
-grid to be just any points which happen to lie on a grid, but as
+grid to be just any points which happen to lie on a grid, as a radial basis
+function approach would do, but as
 defining for monotonicity and local extreme points. Thus, the resulting
 spline will typically preserve features parallel with the axes. We consider the
 function living in the point \((0,\ldots,0)\).  The grids may be
@@ -461,6 +469,9 @@ These can be solved for \(b_i\) and \(c_i\), with the determinant
     c_i &= \frac{k_i^+ v_i^- - k_i^- v_i^+}{D}\\
   \end{aligned}
 \end{equation}
+Note that we still have to find \(r_i\) since it occurs in the expressions
+for \(b_i\) and \(c_i\). We will use monotonicity or local extreme points for this
+purpose.
 
 \subsection{Monotonic points}
 If a triple is monotonic we will ensure that our function is monotonic.
@@ -594,8 +605,7 @@ of each other), so the equations can be solved separately for each
 non linear equations for all the \(i\)s, only a system of two equations for each \(i\).  
 An intuitive reason why this happens is that we did not include any cross terms of the
 type \(x_i x_j\) in our function form~\eqref{funcform}, nor do we have constraints where
-more than one of the coordinates are non-zero. Thus, the dependence on \(i\) can be
-dropped in the following equations, though we do keep it to avoid confusion.
+more than one of the coordinates are non-zero. 
 To find these three parameters from two equations we need an additional equation.
 We use a monotonicity or overshoot constraint.
 
@@ -610,7 +620,7 @@ derivative along dimension \(i\):
 \end{equation*}
 One way to ensure it is nonzero is to choose \(b_i=0\). The only way
 \(f_i'(x)\) can vanish is then if \(c_i d_i=0\), but this would mean that our
-function will be constant, this is a special case we handle below.
+function is constant, this is a special case we handle below.
 So for a monotonic triplet, we set \(b_i = 0\).
 The equations~\eqref{dimequations} then simplify to:
 \begin{equation*}
@@ -641,7 +651,7 @@ Inserting this in equations~\eqref{dimequations} yields,
     v_i^-+ v_i^- c_i k_i^- &= c_i d_i k_i^- + c_i d_i k_i^- c_i k_i^-  -c_i k_i^- d_i.\\
   \end{aligned}
 \end{equation*}
-These immediately simplifies to,
+These immediately simplify to,
 \begin{equation*}
   \begin{aligned}
     v_i^++ v_i^+ c_i k_i^+ &= c_i d_i k_i^+ c_i k_i^+,\\
@@ -753,22 +763,26 @@ that the blending does not introduce non-monotonicity where there is
 none, nor overshoot in the non-monotonic case, but we may still see a
 small amount of such shape disturbance due to the design of the bases.
 We have no absolute guarantee that overshoot will not occur on the
-diagonal of the crosses.  In some extreme cases, additional local
+diagonal of the crosses.  In some cases, additional local
 extrema can also be introduced.
 
 In figure~\ref{fig:meanblend}, we have some random values on a unform
 4x4 grid. For illustration purposes we use a ``mean'' blender , i.e.\ at
 every point we compute the mean of the basis functions living there.
 The resulting interpolant is discontinuous, and we miss the given
-points, it's not actually interpolating.  In order to have reasonably
+points, it's not actually interpolating. The same thing would happen in
+our first example with the piecewise linear interpolation, we could not
+use a ``mean'' blender there. In order to have reasonably
 smooth transitions we must blend them more properly, when approaching
 a point we must gradually switch to the basis function living
 there. Linear barycentric blending creates a continuous interpolation, but it is
-not differentiable on the grid lines. This can be discerned as striped
+not differentiable on the grid lines. This can be seen as striped
 artifacts along the grid lines. The cubic blender creates a smooth
-surface.
+surface. The square blender is included as a way to discern what
+the individual basis functions look like. Halfway between two points,
+the surface jumps to the other basis function.
 
-<<meanblend, fig.cap='2d blending', fig.dim=c(4,4),out.width='0.4\\linewidth',echo=FALSE,fig.ncol=2,fig.subcap=c('mean','linear','cubic','sigmoid')>>=
+<<meanblend, fig.cap='2d blending', fig.pos='!ht', fig.dim=c(4,4),out.width='0.4\\linewidth',echo=FALSE,fig.ncol=2,fig.subcap=c('square','mean','linear','cubic')>>=
 set.seed(49)
 NN <- 3
 grid <- list(x=as.numeric(seq(0,NN)),y=as.numeric(seq(0,NN)))
@@ -776,15 +790,22 @@ value <- runif((NN+1)^2)
 ip <- ipol(value,grid=grid, method='hstalker')
 g <- list(x=seq(0,NN,len=50), y=seq(0,NN,len=50))
 light <- list(specular=0.2,ambient=0.0,diffuse=0.6)
-for(bl in c('mean','linear','cubic','sigmoid')) {
+for(bl in c('square','mean','linear','cubic')) {
   par(mar=rep(0,4))
   plot3D::persp3D(g$x, g$y, evalongridV(ip,grid=g,blend=bl), colvar=NULL, lighting=light,
-                  theta=135, ltheta=100, lphi=40, col='green',bty='n',axes=FALSE,zlim=range(value))
+                  theta=45, ltheta=10, lphi=40, col='green',bty='n',axes=FALSE,zlim=range(value))
   plot3D::points3D(rep(grid$x,NN+1), rep(grid$y,each=NN+1), 
                    value+0.01,pch=20,add=TRUE,colvar=NULL)
 }
 @ 
 
+In figure~\ref{fig:meanblend} we can imagine that we preserve
+monotonicity and local extrema, but only parallel with the axes. At
+the top of the cubic surface the three visible points are monotonic,
+but the monotonicity is not preserved by the surface. That's because
+those three points do not lie on the same grid line, it's a diagonal
+pattern like a knight on a chess board, points \((2,0)\) and
+\((2,1)\), but \((3,2)\), not \((2,2)\) (with \((0,0)\) to the left).
 \section{Simplex stalker}
 Here is an idea which has not yet been worked out and implemented in
 \pkg{chebpol}. A weakness with the above stalkers is that they only
@@ -803,7 +824,8 @@ which vanish on the other triplets. We can then interpolate a point in
 a simplex by weighing the surrounding basis functions. In this way we
 can consider monotonicity and local extrema in all directions in the
 Delaunay triangulation.  Though, exactly what will be preserved by
-such a concoction escapes my topological intuition.
+such a concoction escapes my topological intuition. It might be stretching
+the idea too far.
 
 
 \section{Examples}
@@ -911,7 +933,8 @@ figure~\ref{fig:random}. There is no ``correct'' way to do this, different
 interpolators have different ways to render a surface between the points.
 There is no advanced shading in
 \code{plot3D::persp3D}, so the resolution can be
-seen if you zoom in.
+seen if you zoom in. Higher resolution would violate space constraints for packages
+on CRAN.
 
 <<random, fig.dim=c(4,4), fig.pos='!ht', fig.align='center',fig.cap='Random surface',out.width='.5\\linewidth',fig.ncol=2,fig.subcap=c('stalker', 'thin plate spline','hyperbolic stalker','Floater-Hormann')>>=
 set.seed(52); N <- 8

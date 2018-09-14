@@ -23,12 +23,17 @@
 
 \begin{document}
 \begin{abstract}
-\pkg{chebpol} is a package for multivariate interpolation using Chebyshev-polynomials.
+\pkg{chebpol} is a package for multivariate interpolation. The name is a misnomer,
+the package initially contained Chebyshev methods, now it contains several interpolation
+methods. Because the author disapproves of hand waving of the type ``this can also
+be done in higher dimensions'', all of them are multivariate with any number of dimensions
+within the available resource limits.
+
 Interpolation means that the approximating function it produces matches the original
 function in prespecified points, and try to fill in between the gaps.  Thus, it is not
-smoothing like the \pkg{mgcv} package.
-Indeed, the package also contains some other
-multivariate interpolation methods.  This document outlines how \pkg{chebpol} works.
+smoothing like the \pkg{mgcv} package. The package produces R-functions which interpolates
+between given values, it is not intended for knot editing, cubature or symbolic differentiation, 
+or similar partakings. This document outlines how \pkg{chebpol} works, and what it contains.
 \end{abstract}
 
 \maketitle
@@ -214,6 +219,8 @@ the weights have alternating signs, with absolute values \(|w_0| = |w_N| = 1\),
 and \(|w_i| = 2\) for \(0 < i < N\).  See e.g.\ \cite{BT04}. In \cite[eq.~18]{FH07} another
 set of weights which corresponds to certain blending polynomials in rational interpolants
 are found. This is used in method \code{"fh"}. Here is an example with a Runge function.
+The depicted ``stalker'' interpolation is an attempt at a shape preserving interpolation described
+in another vignette.
 
 <<fig.dim=c(5,5)>>=
 f <- function(x) 1/(1+25*x^2)
@@ -359,7 +366,7 @@ Note that the fitting may fail, in particular for \(k < 0\) and irregular data. 
 case a least squares fit is used, and a warning is issued. The \(k\)
 parameter then may need to be tuned for the problem at hand. Note that by
 default the knots and coordinates are transformed into a unit hypercube if any of the knots
-are outside, see the help entry for \code{polyh}.  Note that for positive \(k\) the theory 
+are outside.  Note also that for positive \(k\) the theory 
 in \cite[Proposition 6]{HL12} says that there are enough splines even if we do not scale, but
 the numerics may be more favourable when we scale.  There is more about polyharmonic splines in 
 \cite{Rabut92}.

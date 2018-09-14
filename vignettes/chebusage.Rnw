@@ -171,9 +171,8 @@ lattice::contourplot(stalker+F.H.+fun+cheb ~ x+y, data=data, cuts=10,
           main='Level plots of function and interpolations')
 @ 
 
-It is not so easy to see in this picture, but the stalker interpolant
-is not generally twice differentiable in the grid points. The other
-interpolants are typically twice continuously differentiable.
+The stalker spline is not designed for smooth surfaces, but for following
+first order features (monotonicity and local extrema) along the grid lines.
 
 There are two interpolation methods we have not mentioned yet. If the
 data are scattered in two or more dimensions, none of the methods
@@ -294,7 +293,7 @@ The multilinear interpolation is the fastest in \pkg{chebpol}. Creating
 the interpolant takes little time at all, the grid and function values are
 saved, \emph{as is}, that's all. Evaluation consists of computing a convex
 combination of the function values in the corners of the surrounding hypercube.
-Typically a \(O(\log n)\) task for each dimension, but there are \(2^r\) corners for an \(r\)-dimensional
+Typically an \(O(\log n)\) task for each dimension, but there are \(2^r\) corners for an \(r\)-dimensional
 problem, so \(O(r 2^r +r\log n)\).
 
 The stalker and hyperbolic stalker interpolations are also local methods which
@@ -306,7 +305,7 @@ roughly an \(O(rn^2)\) task. Evaluation is \(O(n^r)\). Quite similar to the Cheb
 
 The polyharmonic spline method is the most demanding. Creation requires calculating some
 weights which amounts to solving a dense
-\(K\times K\) linear system, a \(O(K^3)\) task (or \(O(n^{3r})\) to compare with the grid methods).
+\(K\times K\) linear system, an \(O(K^3)\) task (or \(O(n^{3r})\) to compare with the grid methods).
 Evaluation is faster, of the order \(O(Kr)\) (or \(O(rn^r)\)).
 
 Creation of the simplex linear interpolation requires calculation of
@@ -321,8 +320,8 @@ and dimension below 4-5. With more knots, or higher dimensions, both creation an
 evaluation is markedly slower due to exceedingly high numbers of simplices.
 
 The compact radial basis functions approach of ALGLIB in \code{method='crbf'} \emph{requires}
-tuning. The three parameters in \code{k} is the base radius, the number of layers and
-a smoothing parameter \(\lambda\). The ALGLIB docs says that the base radius should be
+tuning. The three parameters is the base radius (\code{rbase}), the number of layers (\code{layers}), and
+a smoothing parameter (\code{lambda}). The ALGLIB docs says that the base radius should be
 larger than the typical Euclidean distance between the knots. Each layer halves
 the radius, and the final radius should be smaller than the minimal distance, to capture the 
 most rapid changes. The smoothing parameter \(\lambda\) defaults to \(0\), but typical
