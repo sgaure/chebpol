@@ -134,7 +134,10 @@ ipol <- function(val,dims=NULL,intervals=NULL,grid=NULL,knots=NULL,k=NULL,
              else
                stop('knots must be specified for simplex linear interpolation')
            }
-           return(slappx.real(val,knots,...))
+           blend <- args[['blend']]
+           if(is.null(blend)) return(slappx.real(val,knots,...))
+           newarg <- args[-match(c('blend'),names(args), nomatch=0)]
+           return(blenddef(do.call(slappx.real,c(list(val,knots), newarg)),blend))
          },
          fh={
            if(is.null(grid)) stop('grid must be specified for Floater-Hormann interpolation')
