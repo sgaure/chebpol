@@ -18,6 +18,10 @@ AC_ARG_ENABLE([alglib],
   [AS_HELP_STRING([--disable-alglib],[do not use alglib rbf])],
   [use_alglib="${enableval}"],[use_alglib=yes])
 
+AC_ARG_ENABLE([gsl],
+  [AS_HELP_STRING([--disable-gsl],[do not use gsl])],
+  [use_gsl="${enableval}"],[use_gsl=yes])
+
 AC_ARG_ENABLE([check],
 	[AS_HELP_STRING([--enable-check],[enable pedantic syntax check])],
 	[use_check="${enableval}"],[use_check=no])
@@ -49,11 +53,13 @@ AS_IF([test "x$use_fftw" = "xyes"], [
                     [AC_MSG_WARN([FFTW not found. Compiling with matrix method])])
 ])
 
-PKG_CHECK_MODULES([GSL], gsl, [AC_DEFINE(HAVE_GSL)],
+AS_IF([test "x$use_gsl" = "xyes"], [
+  PKG_CHECK_MODULES([GSL], gsl, [AC_DEFINE(HAVE_GSL)],
 			 [AC_MSG_WARN([GSL not found])])
+])
+
 AC_SUBST(GSL_CFLAGS)
 AC_SUBST(GSL_LIBS)
-AC_SUBST(HAVE_GSL)
 
 AS_IF([test "x$have_fftw" = "xyes" ], [
  # figure out if it works

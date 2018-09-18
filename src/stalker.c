@@ -315,7 +315,7 @@ static void makestalk(const int nrank, const int *dims, double **grid, const dou
       double kmin = gr[idx-1] - gr[idx];
       int uniform = fabs(kplus + kmin) < MYEPS*kplus;
       double r;
-      // Many common expressions below. Fix later. Compiler does anyway.
+
       // If non-monotonic, simulate monotonic by changing sign on vmin when computing r
       if(sign(vplus*vmin) <= 0) {
 	// monotonic
@@ -333,7 +333,11 @@ static void makestalk(const int nrank, const int *dims, double **grid, const dou
 	    if(r < 1) r = 1;
 	    if(isnan(r) || r > 2.0) r = 2.0;
 	  } else {
+#ifdef HAVE_GSL	    
 	    r = solver(kmin,kplus,vmin,vplus);
+#else
+	    r = 2.0;
+#endif
 	  }
 	}
       } else {
@@ -341,7 +345,11 @@ static void makestalk(const int nrank, const int *dims, double **grid, const dou
 	// At the outset, r = 2.0
 	// But if we change sign on vmin, and the resulting monotonic triple
 	// can't be handled by r=2, we use the r from there
+#ifdef HAVE_GSL	
 	r = solver(kmin,kplus,-vmin,vplus);
+#else
+	r = 2.0;
+#endif
       }
       rr[i] = r;
       bb[i] = (vplus - vmin*pow(-kplus/kmin,r))/(kplus - kmin*pow(-kplus/kmin,r));
@@ -693,6 +701,14 @@ SEXP R_makestalk(SEXP Sval, SEXP Sgrid) {
   SET_VECTOR_ELT(ret,4,Sgrid); SET_STRING_ELT(names, 4, mkChar("grid"));
 #ifdef HAVE_GSL
   gsl_error_handler_t *gslh = gsl_set_error_handler_off();
+#else
+  // Check if grid is uniform
+  for(int i = 0; i < nrank; i++) {
+    double *gr = grid[i];
+    double df = gr[1]-gr[0];
+    for(int j = 2; j < dims[i]; j++)
+      if(fabs(gr[j]-gr[j-1] - df) > MYEPS) warn("Non-uniform grid requires linking chebpol with GSL");
+  }
 #endif
  
   makestalk(nrank, dims, grid, val, REAL(Sb), REAL(Sc), REAL(Sr), 0, point);

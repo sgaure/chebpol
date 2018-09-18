@@ -113,6 +113,7 @@ grid <- list(s, su, sort(1-s))
 # make multilinear, Floater-Hormann, Chebyshev and polyharmonic spline.
 ml2 <- ipol(f, grid=grid, method='multilin')
 fh2 <- ipol(f, grid=grid, method='fh')
+hst <- ipol(f, grid=grid, method='hstalker')
 ch2 <- ipol(f, dims=c(10,10,10), intervals=list(0:1,0:1,0:1), method='cheb')
 knots <- matrix(runif(3*1000),3)
 ph2 <- ipol(f, knots=knots, k=2, method='poly')
@@ -122,7 +123,7 @@ if(havealglib()) crb <- ipol(f, knots=knots[,1:100], method='crbf',
   rbase=2, layers=5, lambda=0) 
 # make 7 points in R3 to test them on
 m <- matrix(runif(3*7),3)
-rbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ph2(m), sl=sl2(m),
+rbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ph2(m), sl=sl2(m),hst=hst(m),
 crbf=if(havealglib()) crb(m) else NULL )
 
 }
