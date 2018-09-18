@@ -707,7 +707,7 @@ SEXP R_makestalk(SEXP Sval, SEXP Sgrid) {
     double *gr = grid[i];
     double df = gr[1]-gr[0];
     for(int j = 2; j < dims[i]; j++)
-      if(fabs(gr[j]-gr[j-1] - df) > MYEPS) warn("Non-uniform grid requires linking chebpol with GSL");
+      if(fabs(gr[j]-gr[j-1] - df) > MYEPS) warning("Non-uniform grid requires linking chebpol with GSL");
   }
 #endif
  
