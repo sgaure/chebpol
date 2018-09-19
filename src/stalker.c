@@ -47,14 +47,19 @@ static R_INLINE double findmonor(double dmin,double dplus, double vmin, double v
     double t1 = rfun(1,&rb), t2 = rfun(2,&rb);
     if(sign(t1*t2) > 0) rb.pos = 0;
     int iter = 0;
+    double lo,hi;
     do {
       iter++;
       status = gsl_root_fsolver_iterate(s);
       r = gsl_root_fsolver_root(s);
-      double lo = gsl_root_fsolver_x_lower(s);
-      double hi = gsl_root_fsolver_x_upper(s);
+      lo = gsl_root_fsolver_x_lower(s);
+      hi = gsl_root_fsolver_x_upper(s);
       status = gsl_root_test_interval(lo,hi,0,1e-8);
     } while(status == GSL_CONTINUE && iter < 50);
+    // Err on the low side, this will ensure that we do not
+    // overshoot due to numerical inaccuracy in the solution
+    r = lo;
+    if(r < 1) r = 1;
     if(status != GSL_SUCCESS) {
       // I need to think about what to do here. We're in openmp, so can't do R-calls.
       //      printf("No convergence\n");

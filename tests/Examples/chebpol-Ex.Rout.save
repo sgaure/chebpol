@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2018-08-22 r75176) -- "Unsuffered Consequences"
+R version 3.5.1 (2018-07-02) -- "Feather Spray"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -462,6 +462,7 @@ fh   0.2501152 0.4132112 1.751460 0.001677869 0.1709544
 > # make multilinear, Floater-Hormann, Chebyshev and polyharmonic spline.
 > ml2 <- ipol(f, grid=grid, method='multilin')
 > fh2 <- ipol(f, grid=grid, method='fh')
+> hst <- ipol(f, grid=grid, method='hstalker')
 > ch2 <- ipol(f, dims=c(10,10,10), intervals=list(0:1,0:1,0:1), method='cheb')
 > knots <- matrix(runif(3*1000),3)
 > ph2 <- ipol(f, knots=knots, k=2, method='poly')
@@ -478,7 +479,7 @@ fh   0.2501152 0.4132112 1.751460 0.001677869 0.1709544
 +   rbase=2, layers=5, lambda=0) 
 > # make 7 points in R3 to test them on
 > m <- matrix(runif(3*7),3)
-> rbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ph2(m), sl=sl2(m),
+> rbind(true=apply(m,2,f), ml=ml2(m), fh=fh2(m), cheb=ch2(m), poly=ph2(m), sl=sl2(m),hst=hst(m),
 + crbf=if(havealglib()) crb(m) else NULL )
          [,1]      [,2]     [,3]      [,4]      [,5]     [,6]      [,7]
 true 1.170558 0.6568743 1.552163 0.9664714 0.5314819 1.441940 0.7867956
@@ -486,7 +487,8 @@ ml   1.179175 0.6557517 1.551257 0.9680901 0.5326367 1.415848 0.7860947
 fh   1.189234 0.6568705 1.552155 1.0086296 0.5315642 1.444985 0.7868997
 cheb 1.170537 0.6568743 1.552185 0.9664563 0.5314819 1.441953 0.7867967
 poly 1.170018 0.6573040 1.552691 0.9648213 0.5316708 1.440624 0.7859224
-sl   1.169379 0.6583101 1.551590 0.9607525 0.5309636 1.442886 0.7873733
+sl   1.186031 0.6786952 1.550582 0.9776420 0.5247542 1.478330 0.7961787
+hst  1.166729 0.6569404 1.552856 0.9696696 0.5326136 1.416647 0.7832519
 crbf 1.172243 0.6636280 1.546904 0.9577260 0.5307419 1.435105 0.6335464
 > 
 > 
@@ -616,7 +618,7 @@ crbf 1.172243 0.6636280 1.546904 0.9577260 0.5307419 1.435105 0.6335464
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  2.538 0.036 0.931 0 0 
+Time elapsed:  1.576 0.031 1.108 0 0 
 > grDevices::dev.off()
 null device 
           1 
