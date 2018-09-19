@@ -145,22 +145,7 @@ fractional degree, i.e. a function of the form \(a + bx + c|x|^r\),
 with \(1\leq r \leq 2\). 
 The idea is that if three monotonic points are such that they can't be
 connected with a quadratic without the quadratic being non-monotonic,
-we modify it by lowering the degree:
-<<echo=FALSE,fig.dim=c(5,5),out.width='0.5\\linewidth'>>=
-vplus <- 2
-vmin <- -0.2
-c <- (vplus+vmin)/2
-b <- (vplus-vmin)/2
-s <- seq(-1,1,len=100)
-r <- abs(b/c)
-plot(s,b*s + c*s^2,typ='l',xlab='x',ylab='y',lwd=2)
-lines(s,b*s + c*abs(s)^r,col='blue',lwd=2)
-points(c(-1,0,1),c(vmin,0,vplus),pch=20)
-abline(h=vmin,lty=2)
-legend('topleft',legend=c(sprintf('%.1fx + %.1fx^2',b,c),sprintf('%.1fx + %.1f|x|^%.1f',b,c,r)),
-       col=c('black','blue'),lty=1)
-@ 
-The blue graph does not look differentiable in 0. It is, but it is not twice differentiable.
+we modify it by lowering the degree.
 
 We will also consider another parametrized function family of the form
 \begin{equation*}
@@ -169,6 +154,28 @@ a + bx + \frac{d}{1+cx}.
 I.e.\ we replace the fractional degree term with a hyperbola.
 These functions can also be tailored to be monotonic on three points, or with a
 local extreme point in the middle.
+
+<<echo=FALSE,fig.dim=c(5,5),out.width='0.5\\linewidth'>>=
+vplus <- 2
+vmin <- -0.4
+hb <- 0
+hc <- -(vplus+vmin)/(vplus-vmin)
+hd <- -2*vplus*vmin/(vplus+vmin)
+ha <- -hd
+c <- (vplus+vmin)/2
+b <- (vplus-vmin)/2
+s <- seq(-1,1,len=100)
+r <- abs(b/c)
+plot(s,b*s + c*s^2,typ='l',xlab='x',ylab='y',lwd=2)
+lines(s,b*s + c*abs(s)^r,col='blue',lwd=2)
+lines(s,ha+hd/(1+hc*s),col='green',lwd=2)
+points(c(-1,0,1),c(vmin,0,vplus),pch=20)
+abline(h=vmin,lty=2)
+legend('topleft',legend=c(sprintf('%.1fx + %.1fx^2',b,c),
+                          sprintf('%.1fx + %.1f|x|^%.1f',b,c,r),
+                          sprintf('%.1fx + %.1f/(1%-.1fx)',ha,hd,hc)),
+       col=c('black','blue','green'),lty=1,lwd=2)
+@ 
 
 In this note we call these functions defined by three points and a
 monotonicity constraint, \emph{basis functions}. They are not basis
