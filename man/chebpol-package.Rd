@@ -6,7 +6,7 @@
 \alias{chebpol}
 \title{Methods for creating multivariate interpolations on hypercubes}
 \description{
-The package contains methods for creating multivariate
+The package contains methods for creating multivariate/multidimensional
 interpolations for real-valued functions on hypercubes. The
 methods include classical Chebyshev interpolation, multilinear
 and Floater-Hormann for arbitrary Cartesian product grids, and simplex linear
