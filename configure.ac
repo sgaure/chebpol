@@ -41,9 +41,9 @@ AS_IF([test "${use_check}" = "yes"], [
 AC_LANG([C])
 AC_PROG_CC
 
-
-AS_IF([test "x${use_alglib}" = xyes], [
- PKG_CHECK_MODULES([ALGLIB], [alglib >= 3.11], [AC_DEFINE(HAVE_ALGLIB)], [use_alglib=no])
+dnl remove alglib because we can't do OpenMP in C++ portably (E-exts.html, 1.2.1.1, 11. mar. 2019
+AS_IF([test "x${use_alglib}" = xxxyes], [
+ PKG_CHECK_MODULES([ALGLIB], [alglib >= 3.11], [AC_DEFINE(HAVE_ALGLIB,1,[alglib?])], [use_alglib=no])
 ])
 AC_SUBST(ALGLIB_CFLAGS)
 AC_SUBST(ALGLIB_LIBS)
@@ -54,7 +54,7 @@ AS_IF([test "x$use_fftw" = "xyes"], [
 ])
 
 AS_IF([test "x$use_gsl" = "xyes"], [
-  PKG_CHECK_MODULES([GSL], gsl, [AC_DEFINE(HAVE_GSL)],
+  PKG_CHECK_MODULES([GSL], gsl, [AC_DEFINE(HAVE_GSL, 1, [gsl?])],
 			 [AC_MSG_WARN([GSL not found])])
 ])
 
@@ -87,11 +87,11 @@ EOF
   stat=$?
   AS_IF([test "x$stat" = "x1" ], [
     AC_MSG_RESULT(yes)
-    AC_DEFINE(HAVE_FFTW)
+    AC_DEFINE(HAVE_FFTW,1,[fftw?])
   ],[
     AC_MSG_RESULT(no)
     AS_IF([test "x$stat" = "x2" ], [
-      AC_DEFINE(HAVE_FFTW)
+      AC_DEFINE(HAVE_FFTW,1,[fftw?])
       AC_MSG_WARN([Your FFTW can't do 2d r2r-transforms, could it be MKL?])
       AC_MSG_CHECKING(whether static linking of FFTW solves it)
       TESTLIBS="-Wl,-Bstatic,-Bsymbolic-functions $FFTW_LIBS -Wl,-Bdynamic"

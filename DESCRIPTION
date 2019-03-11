@@ -1,10 +1,10 @@
 Package: chebpol
 Version: 2.1
-Date: 2018-09-18
+Date: 2019-03-11
 Title: Multivariate Interpolation
 Authors@R: person("Simen", "Gaure", email="Simen.Gaure@frisch.uio.no", role=c("aut","cre"),
- comment="Ragnar Frisch Centre for Economic Research")
-Copyright: 2013-2018, Simen Gaure
+ comment=c(ORCID="https://orcid.org/0000-0001-7251-8747"))
+Copyright: 2013-2019, Simen Gaure
 Imports: compiler, stats, geometry
 Suggests: lattice, knitr, cubature, plot3D
 SystemRequirements: fftw3 (>= 3.1.2), gsl
@@ -22,4 +22,4 @@ URL: https://github.com/sgaure/chebpol
 VignetteBuilder: knitr
 BugReports: https://github.com/sgaure/chebpol/issues
 Encoding: UTF-8
-RoxygenNote: 6.1.0
+RoxygenNote: 6.1.1

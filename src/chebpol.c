@@ -923,6 +923,22 @@ static SEXP R_phifunc(SEXP Sx, SEXP Sk, SEXP Sthreads) {
   if(y != x) UNPROTECT(1);
   return res;
 }
+#ifndef HAVE_ALGLIB
+SEXP R_makerbf(SEXP a, SEXP b, SEXP c, SEXP d) {
+  UNUSED(a); UNUSED(b); UNUSED(c); UNUSED(d);
+  error("ALGLIB not available");
+  return R_NilValue;
+}
+SEXP R_evalrbf(SEXP a, SEXP b, SEXP c) {
+  UNUSED(a); UNUSED(b); UNUSED(c);
+  error("ALGLIB not available");
+  return R_NilValue;
+}
+SEXP R_havealglib() {
+  return ScalarLogical(FALSE);
+}
+
+#endif
 
 R_CallMethodDef callMethods[] = {
   {"evalcheb", (DL_FUNC) &R_evalcheb, 4},
@@ -937,6 +953,7 @@ R_CallMethodDef callMethods[] = {
   {"phifunc", (DL_FUNC) &R_phifunc, 3},
   {"makerbf", (DL_FUNC) &R_makerbf, 4},
   {"evalrbf", (DL_FUNC) &R_evalrbf, 3},
+  {"havealglib", (DL_FUNC) &R_havealglib, 0},
   {"evalpolyh", (DL_FUNC) &R_evalpolyh, 7},
   {"evalsl", (DL_FUNC) &R_evalsl, 8},
   {"evalstalker", (DL_FUNC) &R_evalstalker, 5},
@@ -945,7 +962,6 @@ R_CallMethodDef callMethods[] = {
   {"makestalk", (DL_FUNC) &R_makestalk, 2},
   {"evalstalk", (DL_FUNC) &R_evalstalk, 4},
   {"analyzesimplex", (DL_FUNC) &R_analyzesimplex, 3},
-  {"havealglib", (DL_FUNC) &R_havealglib, 0},
   {"havegsl", (DL_FUNC) &havegsl, 0},  
   {NULL, NULL, 0}
 };
