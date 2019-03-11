@@ -267,6 +267,9 @@ Cflags: -I${includedir}
 
 When this works, \pkg{chebpol} will be built with ALGLIB when you do an \code{install.packages('chebpol')}.
 
+As of version 2.1, ALGLIB support has been removed from \pkg{chebpol} because CRAN
+does not support OpenMP in both C and C++, and alglib requires C++.
+
 \section{Speed considerations}
 There are two parts to interpolation. Creating the interpolant, and
 using it. Both of these take some time. The time depends on the method,
