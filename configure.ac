@@ -29,9 +29,7 @@ AC_ARG_ENABLE([check],
 # some R standards
 if test -n "${R_HOME}"; then
   CC=`${R_HOME}/bin/R CMD config CC`
-  CPP=`${R_HOME}/bin/R CMD config CPP`
   CFLAGS=`${R_HOME}/bin/R CMD config CFLAGS`
-  CPPFLAGS=`${R_HOME}/bin/R CMD config CPPFLAGS`
 fi
 
 AS_IF([test "${use_check}" = "yes"], [
@@ -116,7 +114,6 @@ AC_SUBST(FFTW)
 AC_SUBST(FFTW_CFLAGS)
 AC_SUBST(FFTW_LIBS)
 
-AC_SUBST(CPPFLAGS)
 AC_SUBST(LIBS)
 
 AC_OUTPUT
