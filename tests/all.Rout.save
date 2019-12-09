@@ -1,6 +1,6 @@
 
-R Under development (unstable) (2018-08-19 r75170) -- "Unsuffered Consequences"
-Copyright (C) 2018 The R Foundation for Statistical Computing
+R Under development (unstable) (2019-12-09 r77544) -- "Unsuffered Consequences"
+Copyright (C) 2019 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -113,7 +113,7 @@ true: 1.414461 appx: 1.418184
 > grid <- list(su,su^2,su^3)
 > dims <- lapply(grid,length)
 > 
-> fv <- structure(apply(expand.grid(grid),1,f),dim=lapply(grid,length))
+> fv <- structure(apply(expand.grid(grid),1,f),dim=sapply(grid,length))
 > ch <- ipol(fv,grid=grid,method='general')
 > s <- runif(3)
 > cat('true:',f(s),'appx:',ch(s),'\n')
@@ -225,4 +225,4 @@ In (function (val, knots, k = 2, normalize = NA, nowarn = FALSE,  :
 > 
 > proc.time()
    user  system elapsed 
-  5.437   0.234   1.639 
+  8.386   0.297   1.932 

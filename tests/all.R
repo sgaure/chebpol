@@ -49,7 +49,7 @@ su <- seq(0,1,length.out=11)
 grid <- list(su,su^2,su^3)
 dims <- lapply(grid,length)
 
-fv <- structure(apply(expand.grid(grid),1,f),dim=lapply(grid,length))
+fv <- structure(apply(expand.grid(grid),1,f),dim=sapply(grid,length))
 ch <- ipol(fv,grid=grid,method='general')
 s <- runif(3)
 cat('true:',f(s),'appx:',ch(s),'\n')
