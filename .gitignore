@@ -2,3 +2,8 @@
 *.cache
 *~
 #*#
+config.log
+*.so
+config.status
+src/config.h
+src/Makevars

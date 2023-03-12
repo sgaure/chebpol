@@ -116,7 +116,7 @@ static void chebcoef(double *x, int *dims, const int rank, double *F, int dct, i
       src = dest;
       dest = p;
       
-      F77_CALL(dgemm)("TRANS","TRANS",&N,&stride,&N,&alpha,mat[i],&N,src,&stride,&beta,dest,&N);
+      F77_CALL(dgemm)("T", "T", &N, &stride, &N, &alpha, mat[i], &N, src, &stride, &beta, dest, &N FCONE FCONE);
       // Fix the first element in each vector, nah do it at the end
       //    for(int k = 0; k < siz; k+= N) dest[k] *= 0.5;
     }
@@ -193,7 +193,7 @@ static double FH(double *fv, double *x, double **knots, int *dims, const int ran
 
   // Special case:
   for(int i = 0; i < N; i++) {
-    if(fabs(xx - kn[i]) < 10.0*DOUBLE_EPS) return FH(&fv[i*siz], x, knots, dims, newrank, weights);
+    if(fabs(xx - kn[i]) < 10.0*DBL_EPSILON) return FH(&fv[i*siz], x, knots, dims, newrank, weights);
   }
 
 #if 1
@@ -755,7 +755,7 @@ static double findsimplex(double *x, double *knots, int *dtri, double *lumats, i
     int *ipiv = ipivs + simplex*N;
     for(int d = 0; d < dim; d++) vec[d] = x[d];
     vec[dim] = 1.0;
-    F77_CALL(dgetrs)("N", &N, &one, lumat, &N, ipiv, vec, &N, &info);
+    F77_CALL(dgetrs)("N", &N, &one, lumat, &N, ipiv, vec, &N, &info FCONE);
     for(int d = 0; d < N; d++) if(vec[d] < -1e-10) {bad = 1; break;}
     if(bad) continue;
 
@@ -794,7 +794,7 @@ static double findsimplex(double *x, double *knots, int *dtri, double *lumats, i
     const int *tri = dtri + nearest * (dim+1);
     for(int d = 0; d < dim; d++) vec[d] = x[d];
     vec[dim] = 1.0;
-    F77_CALL(dgetrs)("N", &N, &one, lumat, &N, ipiv, vec, &N, &info);
+    F77_CALL(dgetrs)("N", &N, &one, lumat, &N, ipiv, vec, &N, &info FCONE);
     double sum = 0;
     for(int d = 0; d <= dim; d++) sum += vec[d]*val[tri[d]-1];
     return sum;

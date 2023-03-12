@@ -5,7 +5,7 @@
 #include <gsl/gsl_roots.h>
 #endif
 
-#define MYEPS (1e3*sqrt(DOUBLE_EPS))
+#define MYEPS (1e3*sqrt(DBL_EPSILON))
 typedef struct {double dmin, dplus, vmin, vplus; int pos;} rblock;
 typedef struct {double kq, vmin, vplus;} sblock;
 typedef struct {double *det, *pmin, *pplus;int uniform;} precomp;
@@ -135,15 +135,15 @@ static R_INLINE double stalkhyp(double x, double vmin, double vplus,double dmin,
   //  double iD = 1.0/(dmin*pow(dplus,r) + pow(dmin,r)*dplus);
   //  double b = (vplus*pow(dmin,r) - vmin*pow(dplus,r))*iD;
   //  double c = (vplus*dmin + vmin*dplus)*iD;
-  if(fabs(x - dplus) < 1e3*DOUBLE_EPS*dplus) return vplus;
-  if(fabs(x + dmin) < 1e3*DOUBLE_EPS*dmin) return vmin;
+  if(fabs(x - dplus) < 1e3*DBL_EPSILON*dplus) return vplus;
+  if(fabs(x + dmin) < 1e3*DBL_EPSILON*dmin) return vmin;
   // hyperbolic function
   // a+bx-a/(cx+1)
-  if(fabs(vplus*dmin + vmin*dplus) < 1e3*DOUBLE_EPS*dmin*dplus) return x*(vplus-vmin)/(dplus+dmin); //linear
+  if(fabs(vplus*dmin + vmin*dplus) < 1e3*DBL_EPSILON*dmin*dplus) return x*(vplus-vmin)/(dplus+dmin); //linear
   if(sign(vplus*vmin) < 0) {
     //monotonic, set b=0
     double a,c;
-    if(fabs(vmin-vplus) < 1e3*DOUBLE_EPS) return 0;
+    if(fabs(vmin-vplus) < 1e3*DBL_EPSILON) return 0;
 #if 1
     c = (vmin*dplus + vplus*dmin)/(dmin*dplus*(vmin-vplus));
     a = vplus + vplus/(c*dplus);
@@ -170,7 +170,7 @@ static R_INLINE double stalkhyp(double x, double vmin, double vplus,double dmin,
     // non-monotonic
     double D = dplus*dplus*vmin - dmin*dmin*vplus;
     
-    if(fabs(D) < 1e3*DOUBLE_EPS) {
+    if(fabs(D) < 1e3*DBL_EPSILON) {
       double a;
       // if c==0, it's a parabola y = a*x^2
       // we have (0,0), (-dmin,vmin), and (dplus,vplus)
